@@ -69,17 +69,33 @@ public sealed class PersonRepository
             ORDER BY Name
             """;
 
-        var rows = _connection.Query<PersonRow>(sql);
-
-        return rows.Select(row => new Person
-        {
-            Id = row.Id,
-            Name = row.Name,
-            IsSelf = row.IsSelf,
-            IsArchived = row.IsArchived,
-            CreatedUtc = IsoDateTime.ParseUtc(row.CreatedUtc),
-        }).ToList();
+        return _connection.Query<PersonRow>(sql).Select(ToPerson).ToList();
     }
+
+    /// <summary>
+    /// Fuer Auswahllisten (z. B. Zahler in der Erfassungsmaske): nur
+    /// nicht-archivierte Personen.
+    /// </summary>
+    public IReadOnlyList<Person> GetAllActive()
+    {
+        const string sql = """
+            SELECT Id, Name, IsSelf, IsArchived, CreatedUtc
+            FROM Person
+            WHERE IsArchived = 0
+            ORDER BY Name
+            """;
+
+        return _connection.Query<PersonRow>(sql).Select(ToPerson).ToList();
+    }
+
+    private static Person ToPerson(PersonRow row) => new()
+    {
+        Id = row.Id,
+        Name = row.Name,
+        IsSelf = row.IsSelf,
+        IsArchived = row.IsArchived,
+        CreatedUtc = IsoDateTime.ParseUtc(row.CreatedUtc),
+    };
 
     // CreatedUtc wird als reiner TEXT gelesen statt ueber automatische
     // Dapper/DateTime-Konvertierung, damit das Parsen des Formats

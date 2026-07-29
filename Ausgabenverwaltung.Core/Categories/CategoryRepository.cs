@@ -102,6 +102,40 @@ public sealed class CategoryRepository
         return roots;
     }
 
+    /// <summary>
+    /// Fuer die Erfassungsmaske waehlbare Kategorien: nur Blattknoten
+    /// (Kategorien ohne Kinder), nur nicht-archivierte, mit vollem Pfad
+    /// ab der Wurzel ("Pferde › Hufschmied"). Ob ein Vorfahre archiviert
+    /// ist, spielt keine Rolle - archiviert wird pro Zeile, nicht als
+    /// Kaskade ueber den Ast (Regel 8 archiviert einzelne Kategorien).
+    /// </summary>
+    public IReadOnlyList<CategoryOption> GetSelectableLeaves()
+    {
+        var leaves = new List<CategoryOption>();
+        CollectLeaves(GetTree(), parentPath: null, leaves);
+        return leaves;
+    }
+
+    private static void CollectLeaves(IReadOnlyList<CategoryNode> nodes, string? parentPath, List<CategoryOption> leaves)
+    {
+        foreach (var node in nodes)
+        {
+            var path = parentPath is null ? node.Category.Name : $"{parentPath} › {node.Category.Name}";
+
+            if (node.Children.Count == 0)
+            {
+                if (!node.Category.IsArchived)
+                {
+                    leaves.Add(new CategoryOption { Id = node.Category.Id, FullPath = path });
+                }
+            }
+            else
+            {
+                CollectLeaves(node.Children, path, leaves);
+            }
+        }
+    }
+
     // CreatedUtc wird als reiner TEXT gelesen statt ueber automatische
     // Dapper/DateTime-Konvertierung, damit das Parsen des Formats
     // 'YYYY-MM-DDTHH:MM:SSZ' zentral ueber IsoDateTime laeuft.

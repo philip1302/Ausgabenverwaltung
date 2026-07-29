@@ -85,4 +85,16 @@ public class PersonRepositoryTests : IDisposable
 
         Assert.Equal(new[] { "Anna", "Bernd" }, names);
     }
+
+    [Fact]
+    public void GetAllActive_liefert_nur_nicht_archivierte_Personen()
+    {
+        var anna = _repository.Create("Anna");
+        _repository.Create("Bernd");
+        _repository.Archive(anna.Id);
+
+        var names = _repository.GetAllActive().Select(p => p.Name).ToList();
+
+        Assert.Equal(new[] { "Bernd" }, names);
+    }
 }

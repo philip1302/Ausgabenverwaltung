@@ -106,4 +106,33 @@ public class CategoryRepositoryTests : IDisposable
         Assert.Equal(heizkosten.Id, heizkostenNode.Category.Id);
         Assert.Empty(heizkostenNode.Children);
     }
+
+    [Fact]
+    public void GetSelectableLeaves_liefert_nur_Blattknoten_mit_vollem_Pfad()
+    {
+        var pferde = _repository.Create("Pferde", null);
+        var hufschmied = _repository.Create("Hufschmied", pferde.Id);
+        _repository.Create("Freizeit", null);
+
+        var leaves = _repository.GetSelectableLeaves();
+
+        // "Pferde" hat ein Kind und ist deshalb kein Blattknoten - nur
+        // "Hufschmied" und "Freizeit" sind waehlbar.
+        Assert.Equal(2, leaves.Count);
+        var hufschmiedOption = leaves.Single(l => l.Id == hufschmied.Id);
+        Assert.Equal("Pferde › Hufschmied", hufschmiedOption.FullPath);
+        Assert.Contains(leaves, l => l.FullPath == "Freizeit");
+    }
+
+    [Fact]
+    public void GetSelectableLeaves_ignoriert_archivierte_Blattknoten()
+    {
+        var wohnen = _repository.Create("Wohnen", null);
+        var heizkosten = _repository.Create("Heizkosten", wohnen.Id);
+        _repository.Archive(heizkosten.Id);
+
+        var leaves = _repository.GetSelectableLeaves();
+
+        Assert.DoesNotContain(leaves, l => l.Id == heizkosten.Id);
+    }
 }

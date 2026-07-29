@@ -145,6 +145,37 @@ public sealed class ExpenseRepository
         return rows.Select(ToExpense).ToList();
     }
 
+    /// <summary>
+    /// Die zuletzt ERFASSTEN Ausgaben (nach CreatedUtc, nicht nach
+    /// ExpenseDate - ein nachtraeglich datiertes Buchungsdatum soll den
+    /// gerade eingegebenen Eintrag nicht nach unten schieben), mit
+    /// Kategorie- und Zahlername fuer die Anzeige.
+    /// </summary>
+    public IReadOnlyList<ExpenseOverview> GetRecent(int count)
+    {
+        const string sql = """
+            SELECT e.Id, e.ExpenseDate, e.AmountCents, c.Name AS CategoryName,
+                   p.Name AS PayerName, e.Note
+            FROM   Expense e
+            JOIN   Category c ON c.Id = e.CategoryId
+            JOIN   Person   p ON p.Id = e.PayerId
+            ORDER BY e.CreatedUtc DESC, e.Id DESC
+            LIMIT @Count
+            """;
+
+        var rows = _connection.Query<ExpenseOverviewRow>(sql, new { Count = count });
+
+        return rows.Select(row => new ExpenseOverview
+        {
+            Id = row.Id,
+            ExpenseDate = IsoDate.ParseDate(row.ExpenseDate),
+            AmountCents = row.AmountCents,
+            CategoryName = row.CategoryName,
+            PayerName = row.PayerName,
+            Note = row.Note,
+        }).ToList();
+    }
+
     private static Expense ToExpense(ExpenseRow row) => new()
     {
         Id = row.Id,
@@ -174,5 +205,15 @@ public sealed class ExpenseRepository
         public int? RecurringExpenseId { get; set; }
         public string CreatedUtc { get; set; } = string.Empty;
         public string ModifiedUtc { get; set; } = string.Empty;
+    }
+
+    private sealed class ExpenseOverviewRow
+    {
+        public int Id { get; set; }
+        public string ExpenseDate { get; set; } = string.Empty;
+        public long AmountCents { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+        public string PayerName { get; set; } = string.Empty;
+        public string? Note { get; set; }
     }
 }

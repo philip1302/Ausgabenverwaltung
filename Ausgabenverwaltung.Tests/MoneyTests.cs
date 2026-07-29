@@ -32,4 +32,34 @@ public class MoneyTests
         var amount = Money.ToDecimal(cents);
         Assert.Equal(cents, Money.ToCents(amount));
     }
+
+    [Theory]
+    [InlineData("12,50", 1250)]
+    [InlineData("12", 1200)]
+    [InlineData("0,01", 1)]
+    [InlineData("-5,00", -500)] // Erstattung
+    [InlineData(" 12,50 ", 1250)]
+    public void TryParseEuroText_erkennt_gueltige_Betraege(string text, long expectedCents)
+    {
+        var erfolgreich = Money.TryParseEuroText(text, out var cents);
+
+        Assert.True(erfolgreich);
+        Assert.Equal(expectedCents, cents);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("abc")]
+    // Punkt wird bewusst NICHT als Tausendertrennzeichen akzeptiert,
+    // damit "12.50" nicht still zu 1250 statt zu einem Fehler wird.
+    [InlineData("12.50")]
+    [InlineData("1.234,56")]
+    [InlineData("12,50,00")]
+    public void TryParseEuroText_lehnt_ungueltige_Eingabe_ab(string text)
+    {
+        var erfolgreich = Money.TryParseEuroText(text, out var cents);
+
+        Assert.False(erfolgreich);
+        Assert.Equal(0, cents);
+    }
 }

@@ -1,12 +1,89 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:categories="using:Ausgabenverwaltung.Core.Categories"
+             xmlns:entities="using:Ausgabenverwaltung.Core.Entities"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.ErfassenView"
              x:DataType="vm:ErfassenViewModel">
-    <TextBlock Text="{Binding PlatzhalterText}"
-               Margin="16"
-               TextWrapping="Wrap" />
+
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SpeichernCommand}" />
+    </UserControl.KeyBindings>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding BestaetigungSichtbar}"
+                Background="#DFF5DF"
+                BorderBrush="#8FCB8F"
+                BorderThickness="0,0,0,1"
+                Padding="8"
+                Margin="0,0,0,12">
+            <TextBlock Text="Gespeichert." />
+        </Border>
+
+        <StackPanel DockPanel.Dock="Top" Width="420" HorizontalAlignment="Left" Spacing="2">
+            <TextBlock Text="Betrag (EUR)" />
+            <TextBox x:Name="BetragBox"
+                     Text="{Binding BetragText}"
+                     PlaceholderText="0,00"
+                     TabIndex="1" />
+            <TextBlock Text="{Binding BetragFehler}"
+                       IsVisible="{Binding BetragFehlerSichtbar}"
+                       Foreground="Red" />
+
+            <TextBlock Text="Kategorie" Margin="0,10,0,0" />
+            <AutoCompleteBox ItemsSource="{Binding KategorieVorschlaege}"
+                              ValueMemberBinding="{Binding FullPath}"
+                              FilterMode="Contains"
+                              SelectedItem="{Binding AusgewaehlteKategorie}"
+                              PlaceholderText="Kategorie suchen..."
+                              TabIndex="2">
+                <AutoCompleteBox.ItemTemplate>
+                    <DataTemplate x:DataType="categories:CategoryOption">
+                        <TextBlock Text="{Binding FullPath}" />
+                    </DataTemplate>
+                </AutoCompleteBox.ItemTemplate>
+            </AutoCompleteBox>
+            <TextBlock Text="{Binding KategorieFehler}"
+                       IsVisible="{Binding KategorieFehlerSichtbar}"
+                       Foreground="Red" />
+
+            <TextBlock Text="Datum" Margin="0,10,0,0" />
+            <TextBox Text="{Binding DatumText}"
+                     PlaceholderText="TT.MM.JJJJ"
+                     TabIndex="3" />
+            <TextBlock Text="{Binding DatumFehler}"
+                       IsVisible="{Binding DatumFehlerSichtbar}"
+                       Foreground="Red" />
+
+            <TextBlock Text="Bemerkung" Margin="0,10,0,0" />
+            <TextBox Text="{Binding Bemerkung}" TabIndex="4" />
+
+            <TextBlock Text="Zahler" Margin="0,10,0,0" />
+            <ComboBox ItemsSource="{Binding ZahlerOptionen}"
+                      SelectedItem="{Binding AusgewaehlterZahler}"
+                      HorizontalAlignment="Stretch"
+                      TabIndex="5">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="entities:Person">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <Button Content="Speichern"
+                    Command="{Binding SpeichernCommand}"
+                    Margin="0,16,0,0"
+                    HorizontalAlignment="Left"
+                    TabIndex="6" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Top" Margin="0,24,0,0" Spacing="4">
+            <TextBlock Text="Letzte Ausgaben" FontWeight="Bold" />
+            <ItemsControl ItemsSource="{Binding LetzteAusgaben}" />
+        </StackPanel>
+    </DockPanel>
 </UserControl>

@@ -147,4 +147,47 @@ public class ExpenseRepositoryTests : IDisposable
 
         Assert.Equal(new[] { frueher.Id, spaeter.Id }, openItems.Select(e => e.Id));
     }
+
+    [Fact]
+    public void GetRecent_ist_nach_Erfassungsreihenfolge_sortiert_nicht_nach_ExpenseDate()
+    {
+        // Absichtlich rueckdatiert erfasst, damit ein spaeteres
+        // ExpenseDate die Erfassungsreihenfolge nicht verfaelscht.
+        var zuerstErfasst = _repository.Create(
+            _categoryId, 100, new DateOnly(2026, 5, 1), _selfId);
+        var zuletztErfasst = _repository.Create(
+            _categoryId, 100, new DateOnly(2026, 1, 1), _selfId);
+
+        var recent = _repository.GetRecent(10);
+
+        Assert.Equal(new[] { zuletztErfasst.Id, zuerstErfasst.Id }, recent.Select(e => e.Id));
+    }
+
+    [Fact]
+    public void GetRecent_begrenzt_auf_die_angegebene_Anzahl()
+    {
+        for (var i = 1; i <= 15; i++)
+        {
+            _repository.Create(_categoryId, 100, new DateOnly(2026, 1, i), _selfId);
+        }
+
+        var recent = _repository.GetRecent(10);
+
+        Assert.Equal(10, recent.Count);
+    }
+
+    [Fact]
+    public void GetRecent_liefert_Kategorie_und_Zahlername()
+    {
+        _repository.Create(
+            _categoryId, 4200, new DateOnly(2026, 3, 5), _otherId, note: "Miete");
+
+        var recent = _repository.GetRecent(10);
+
+        var item = Assert.Single(recent);
+        Assert.Equal("Wohnen", item.CategoryName);
+        Assert.Equal("Mitbewohner", item.PayerName);
+        Assert.Equal("Miete", item.Note);
+        Assert.Equal(4200, item.AmountCents);
+    }
 }
