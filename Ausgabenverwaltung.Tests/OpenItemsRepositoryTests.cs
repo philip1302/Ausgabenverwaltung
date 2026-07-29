@@ -144,4 +144,22 @@ public class OpenItemsRepositoryTests : IDisposable
         Assert.Equal(expense.Id, offen.Id);
         Assert.Null(offen.SettledDate);
     }
+
+    [Fact]
+    public void GetOpenSumsByPayer_summiert_nur_offene_Posten_mit_fremdem_Zahler()
+    {
+        _expenses.Create(_categoryId, 1000, Heute.AddDays(-1), _otherId);
+        _expenses.Create(_categoryId, 500, Heute.AddDays(-2), _otherId);
+
+        // Beglichen -> zaehlt nicht mehr mit.
+        _expenses.Create(_categoryId, 1000, Heute.AddDays(-3), _otherId, settledDate: Heute);
+
+        // SettledDate NULL, aber eigener Zahler -> wird nie ausgewertet (Regel 4).
+        _expenses.Create(_categoryId, 5000, Heute.AddDays(-4), _selfId);
+
+        var summen = _repository.GetOpenSumsByPayer();
+
+        Assert.Equal(1500, summen[_otherId]);
+        Assert.False(summen.ContainsKey(_selfId));
+    }
 }

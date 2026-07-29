@@ -53,6 +53,7 @@ public sealed partial class MainViewModel : ViewModelBase
         if (ReferenceEquals(value.ViewModel, _erfassen))
         {
             _erfassen.AktualisiereKategorieVorschlaege();
+            _erfassen.AktualisiereZahlerOptionen();
         }
 
         if (ReferenceEquals(value.ViewModel, _offenePosten))

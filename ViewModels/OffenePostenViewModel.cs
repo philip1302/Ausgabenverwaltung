@@ -222,6 +222,26 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
         LadeDaten();
     }
 
+    /// <summary>
+    /// Dauerhafter Rueckgaengig-Button an jeder beglichenen Zeile (im
+    /// Unterschied zu <see cref="Rueckgaengig"/>, dem nur kurzzeitig
+    /// sichtbaren Hinweis direkt nach dem Abhaken) - noetig, damit bei
+    /// aktivem Schalter "Beglichene der letzten 30 Tage anzeigen" auch
+    /// laenger zurueckliegende Begleichungen rueckgaengig gemacht werden
+    /// koennen.
+    /// </summary>
+    [RelayCommand]
+    private void RueckgaengigZeile(OffenerPostenZeile? zeile)
+    {
+        if (zeile is null || !zeile.IstBeglichen)
+        {
+            return;
+        }
+
+        _openItemsRepository.SetSettledDate(zeile.Id, null);
+        LadeDaten();
+    }
+
     // Bleibt fuer RueckgaengigDauer stehen, damit ein versehentliches
     // Abhaken korrigiert werden kann, und blendet sich danach selbst aus -
     // auesser ein neuerer Aufruf (weiteres Abhaken) hat den Hinweis

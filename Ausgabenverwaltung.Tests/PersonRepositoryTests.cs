@@ -1,4 +1,6 @@
+using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
+using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.People;
 using Microsoft.Data.Sqlite;
 
@@ -50,7 +52,7 @@ public class PersonRepositoryTests : IDisposable
     {
         _repository.Create("Anna");
 
-        Assert.Throws<SqliteException>(() => _repository.Create("Anna"));
+        Assert.Throws<DuplicatePersonNameException>(() => _repository.Create("Anna"));
     }
 
     [Fact]
@@ -65,6 +67,15 @@ public class PersonRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Rename_auf_bereits_vergebenen_Namen_wirft()
+    {
+        _repository.Create("Anna");
+        var bernd = _repository.Create("Bernd");
+
+        Assert.Throws<DuplicatePersonNameException>(() => _repository.Rename(bernd.Id, "Anna"));
+    }
+
+    [Fact]
     public void Archive_setzt_IsArchived_ohne_die_Zeile_zu_loeschen()
     {
         var person = _repository.Create("Anna");
@@ -73,6 +84,18 @@ public class PersonRepositoryTests : IDisposable
 
         var loaded = _repository.GetAll().Single(p => p.Id == person.Id);
         Assert.True(loaded.IsArchived);
+    }
+
+    [Fact]
+    public void Restore_macht_das_Archivieren_rueckgaengig()
+    {
+        var person = _repository.Create("Anna");
+        _repository.Archive(person.Id);
+
+        _repository.Restore(person.Id);
+
+        var loaded = _repository.GetAll().Single(p => p.Id == person.Id);
+        Assert.False(loaded.IsArchived);
     }
 
     [Fact]
@@ -96,5 +119,22 @@ public class PersonRepositoryTests : IDisposable
         var names = _repository.GetAllActive().Select(p => p.Name).ToList();
 
         Assert.Equal(new[] { "Bernd" }, names);
+    }
+
+    [Fact]
+    public void GetExpenseCounts_zaehlt_Ausgaben_je_Zahler()
+    {
+        var categoryId = new CategoryRepository(_connection).Create("Pferde", null).Id;
+        var expenses = new ExpenseRepository(_connection);
+        var anna = _repository.Create("Anna");
+        var bernd = _repository.Create("Bernd");
+
+        expenses.Create(categoryId, 100, DateOnly.FromDateTime(DateTime.Now), anna.Id);
+        expenses.Create(categoryId, 200, DateOnly.FromDateTime(DateTime.Now), anna.Id);
+
+        var counts = _repository.GetExpenseCounts();
+
+        Assert.Equal(2, counts[anna.Id]);
+        Assert.False(counts.ContainsKey(bernd.Id));
     }
 }

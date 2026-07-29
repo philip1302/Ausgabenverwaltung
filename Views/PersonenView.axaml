@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignWidth="760" d:DesignHeight="500"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="Ausgabenverwaltung.Views.PersonenView"
+             x:Name="Wurzel"
+             x:DataType="vm:PersonenViewModel">
+
+    <!-- Spaltenraster "2*,16,90,16,140,24,280" gilt fuer Kopfzeile UND
+         Zeilen-Grid gleichermassen: Name, Ausgaben, Offene Posten,
+         Aktionen, dazwischen feste Gutter-Spalten als Abstandhalter
+         (Indizes 1,3,5). Aktionen breit genug fuer "Umbenennen" +
+         "Wiederherstellen" nebeneinander, ohne dass Text abgeschnitten wird. -->
+    <UserControl.Styles>
+        <Style Selector="Border.selbst">
+            <Setter Property="Background" Value="#DDE8FF" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="4,1" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <!-- Werkzeugleiste -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <Button Content="Neue Person" Command="{Binding NeuePersonCommand}" />
+            <CheckBox Content="Archivierte anzeigen" IsChecked="{Binding ArchivierteAnzeigen}" Margin="24,0,0,0" />
+        </StackPanel>
+
+        <!-- Kopfzeile -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="2*,16,90,16,140,24,280" Margin="4,0,20,4">
+            <TextBlock Grid.Column="0" Text="Name" Classes="tabellenkopf" />
+            <TextBlock Grid.Column="2" Text="Ausgaben" Classes="tabellenkopf zahl" />
+            <TextBlock Grid.Column="4" Text="Offene Posten" Classes="tabellenkopf zahl" />
+            <Button Grid.Column="6" Content="Aktionen" Classes="tabellenkopf-aktion" />
+        </Grid>
+
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Personen}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PersonZeile">
+                        <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
+                            <Grid ColumnDefinitions="2*,16,90,16,140,24,280">
+                                <Panel Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                IsVisible="{Binding !WirdBearbeitet}">
+                                        <TextBlock Text="{Binding Name}"
+                                                   Classes="tabellenzelle"
+                                                   Classes.archiviert="{Binding IsArchived}"
+                                                   DoubleTapped="Zeile_DoubleTapped" />
+                                        <Border Classes="selbst" IsVisible="{Binding IsSelf}">
+                                            <TextBlock Text="Ich" FontSize="11" />
+                                        </Border>
+                                        <TextBlock Text="(archiviert)" FontStyle="Italic" Foreground="Gray"
+                                                   IsVisible="{Binding IsArchived}"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel IsVisible="{Binding WirdBearbeitet}" Spacing="2">
+                                        <TextBox Text="{Binding BearbeitungsText}"
+                                                 MinWidth="160"
+                                                 KeyDown="BearbeitungsTextBox_KeyDown"
+                                                 LostFocus="BearbeitungsTextBox_LostFocus" />
+                                        <TextBlock Text="{Binding BearbeitungsFehler}"
+                                                   IsVisible="{Binding BearbeitungsFehlerSichtbar}"
+                                                   Classes="fehler" />
+                                    </StackPanel>
+                                </Panel>
+
+                                <TextBlock Grid.Column="2" Text="{Binding AusgabenAnzahl}"
+                                           Classes="tabellenzelle zahl" />
+                                <TextBlock Grid.Column="4" Text="{Binding OffenePostenSummeText}"
+                                           Classes="tabellenzelle zahl" />
+
+                                <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="6"
+                                            IsVisible="{Binding !WirdBearbeitet}">
+                                    <Button Content="Umbenennen"
+                                            Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).BearbeitenStartenCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Content="Archivieren"
+                                            Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).ArchivierenCommand}"
+                                            CommandParameter="{Binding}"
+                                            IsVisible="{Binding KannArchiviertWerden}" />
+                                    <Button Content="Wiederherstellen"
+                                            Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).WiederherstellenCommand}"
+                                            CommandParameter="{Binding}"
+                                            IsVisible="{Binding IsArchived}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

@@ -12,7 +12,7 @@
             <views:KategorienView DataContext="{Binding Kategorien}" />
         </TabItem>
         <TabItem Header="Personen">
-            <TextBlock Text="{Binding PersonenPlatzhalterText}" Margin="16" TextWrapping="Wrap" />
+            <views:PersonenView DataContext="{Binding Personen}" />
         </TabItem>
         <TabItem Header="Vorlagen">
             <TextBlock Text="{Binding VorlagenPlatzhalterText}" Margin="16" TextWrapping="Wrap" />

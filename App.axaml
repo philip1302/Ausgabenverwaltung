@@ -9,7 +9,80 @@
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <!-- Wiederverwendbare Tabellen-Styles fuer alle Listen-/Tabellenansichten
+         (Offene Posten, Personen, ...): einheitliche Ausrichtung von
+         Spaltenkoepfen und -werten, damit nicht jede Ansicht ihre eigenen
+         Alignment-Werte definiert. "kopf" = klickbarer, sortierbarer
+         Spaltenkopf (Button); "tabellenkopf" = statischer Spaltenkopf
+         (TextBlock); "tabellenzelle" = Wert einer Tabellenzeile. Die
+         Modifikatoren ".zahl" (rechtsbuendig) und ".mitte" (zentriert)
+         lassen sich mit der Basisklasse kombinieren, z. B.
+         Classes="tabellenzelle zahl". -->
     <Application.Styles>
         <FluentTheme />
+
+        <!-- Padding bewusst 0: der Abstand zwischen Spalten kommt
+             ausschliesslich von den festen Gutter-Spalten im Grid, nicht
+             von Innenabstand - sonst enden rechtsbuendige/zentrierte
+             Spaltenkoepfe (zahl/mitte) nicht exakt ueber dem zugehoerigen
+             Wert. -->
+        <Style Selector="Button.kopf">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.kopf.zahl">
+            <Setter Property="HorizontalContentAlignment" Value="Right" />
+        </Style>
+        <Style Selector="Button.kopf.mitte">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+
+        <!-- Statischer Spaltenkopf "Aktionen": bewusst ein (nicht
+             interaktiver) Button statt eines TextBlock, damit er exakt
+             dieselbe Theme-Polsterung wie die echten Buttons darunter
+             erhaelt - mit einem TextBlock beginnt der Text sonst weiter
+             links als der Button-Inhalt in der Zeile darunter. -->
+        <Style Selector="Button.tabellenkopf-aktion">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="Focusable" Value="False" />
+        </Style>
+
+        <Style Selector="TextBlock.tabellenkopf">
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <Style Selector="TextBlock.tabellenkopf.zahl">
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
+        <Style Selector="TextBlock.tabellenkopf.mitte">
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="TextBlock.tabellenzelle">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.tabellenzelle.zahl">
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
+        <Style Selector="TextBlock.tabellenzelle.mitte">
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="TextBlock.archiviert">
+            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="TextBlock.fehler">
+            <Setter Property="Foreground" Value="Red" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
     </Application.Styles>
 </Application>

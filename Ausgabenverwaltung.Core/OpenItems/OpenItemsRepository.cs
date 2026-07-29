@@ -105,6 +105,26 @@ public sealed class OpenItemsRepository
         });
     }
 
+    /// <summary>
+    /// Summe der offenen Posten je Person (Regel 4: nur relevant, wenn die
+    /// Person nicht die IsSelf-Person ist), fuer die Anzeige in der
+    /// Personenverwaltung. Personen ohne offenen Posten fehlen im Ergebnis.
+    /// </summary>
+    public IReadOnlyDictionary<int, long> GetOpenSumsByPayer()
+    {
+        const string sql = """
+            SELECT e.PayerId, SUM(e.AmountCents) AS SummeCents
+            FROM   Expense e
+            JOIN   Person  p ON p.Id = e.PayerId
+            WHERE  e.SettledDate IS NULL
+              AND  p.IsSelf = 0
+            GROUP  BY e.PayerId
+            """;
+
+        return _connection.Query<PayerOpenSumRow>(sql)
+            .ToDictionary(row => row.PayerId, row => row.SummeCents);
+    }
+
     private static OpenItem ToOpenItem(OpenItemRow row) => new()
     {
         Id = row.Id,
@@ -132,5 +152,11 @@ public sealed class OpenItemsRepository
         public string PayerName { get; set; } = string.Empty;
         public string CategoryFullPath { get; set; } = string.Empty;
         public int TageOffen { get; set; }
+    }
+
+    private sealed class PayerOpenSumRow
+    {
+        public int PayerId { get; set; }
+        public long SummeCents { get; set; }
     }
 }

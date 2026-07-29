@@ -8,9 +8,12 @@ namespace Ausgabenverwaltung.Core.People;
 /// <summary>
 /// Anlegen, Umbenennen und Archivieren fuer Personen. Personen werden nie
 /// geloescht (Regel 8) - es gibt daher bewusst keine Delete-Methode.
-/// Eindeutigkeit des Namens und die Regel "hoechstens ein IsSelf = 1"
-/// werden von den DB-Constraints durchgesetzt (UNIQUE(Name),
-/// UX_Person_Self); Verstoesse schlagen als SqliteException durch.
+/// Eindeutigkeit des Namens wird zusaetzlich zum DB-Constraint
+/// (UNIQUE(Name)) hier vorab geprueft, damit Verstoesse als verstaendliche
+/// DuplicatePersonNameException statt als rohe SqliteException
+/// durchschlagen. Die Regel "hoechstens ein IsSelf = 1" wird weiterhin nur
+/// vom DB-Constraint (UX_Person_Self) durchgesetzt und schlaegt als
+/// SqliteException durch.
 /// </summary>
 public sealed class PersonRepository
 {
@@ -23,6 +26,11 @@ public sealed class PersonRepository
 
     public Person Create(string name, bool isSelf = false)
     {
+        if (NameExists(name, excludingId: null))
+        {
+            throw new DuplicatePersonNameException(name);
+        }
+
         var createdUtc = DateTime.UtcNow;
 
         const string insertSql = """
@@ -51,6 +59,11 @@ public sealed class PersonRepository
 
     public void Rename(int id, string newName)
     {
+        if (NameExists(newName, excludingId: id))
+        {
+            throw new DuplicatePersonNameException(newName);
+        }
+
         const string sql = "UPDATE Person SET Name = @Name WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id, Name = newName });
     }
@@ -59,6 +72,28 @@ public sealed class PersonRepository
     {
         const string sql = "UPDATE Person SET IsArchived = 1 WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id });
+    }
+
+    public void Restore(int id)
+    {
+        const string sql = "UPDATE Person SET IsArchived = 0 WHERE Id = @Id";
+        _connection.Execute(sql, new { Id = id });
+    }
+
+    /// <summary>
+    /// Anzahl der Ausgaben je Person als Zahler, fuer die Anzeige in der
+    /// Personenverwaltung. Personen ohne Ausgabe fehlen im Ergebnis.
+    /// </summary>
+    public IReadOnlyDictionary<int, int> GetExpenseCounts()
+    {
+        const string sql = """
+            SELECT PayerId, COUNT(*) AS Anzahl
+            FROM Expense
+            GROUP BY PayerId
+            """;
+
+        return _connection.Query<PersonExpenseCountRow>(sql)
+            .ToDictionary(row => row.PayerId, row => row.Anzahl);
     }
 
     public IReadOnlyList<Person> GetAll()
@@ -88,6 +123,19 @@ public sealed class PersonRepository
         return _connection.Query<PersonRow>(sql).Select(ToPerson).ToList();
     }
 
+    private bool NameExists(string name, int? excludingId)
+    {
+        const string sql = """
+            SELECT COUNT(*)
+            FROM Person
+            WHERE Name = @Name
+              AND (@ExcludingId IS NULL OR Id <> @ExcludingId)
+            """;
+
+        var count = _connection.ExecuteScalar<int>(sql, new { Name = name, ExcludingId = excludingId });
+        return count > 0;
+    }
+
     private static Person ToPerson(PersonRow row) => new()
     {
         Id = row.Id,
@@ -107,5 +155,11 @@ public sealed class PersonRepository
         public bool IsSelf { get; set; }
         public bool IsArchived { get; set; }
         public string CreatedUtc { get; set; } = string.Empty;
+    }
+
+    private sealed class PersonExpenseCountRow
+    {
+        public int PayerId { get; set; }
+        public int Anzahl { get; set; }
     }
 }

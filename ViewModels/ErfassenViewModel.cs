@@ -24,6 +24,7 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 {
     private readonly ExpenseRepository _expenseRepository;
     private readonly CategoryRepository _categoryRepository;
+    private readonly PersonRepository _personRepository;
 
     public event EventHandler? FokusBetragAngefordert;
 
@@ -65,7 +66,12 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     [ObservableProperty]
     private string? _bemerkung;
 
-    public IReadOnlyList<Person> ZahlerOptionen { get; }
+    // ObservableCollection statt einmalig geladener Liste, damit in der
+    // Verwaltung archivierte Personen aus der Auswahl verschwinden, ohne
+    // die Anwendung neu zu starten (siehe AktualisiereZahlerOptionen,
+    // aufgerufen bei Navigation zu diesem Bereich - analog zu
+    // KategorieVorschlaege).
+    public ObservableCollection<Person> ZahlerOptionen { get; } = new();
 
     [ObservableProperty]
     private Person _ausgewaehlterZahler;
@@ -82,10 +88,14 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     {
         _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
+        _personRepository = personRepository;
 
         AktualisiereKategorieVorschlaege();
 
-        ZahlerOptionen = personRepository.GetAllActive();
+        foreach (var person in _personRepository.GetAllActive())
+        {
+            ZahlerOptionen.Add(person);
+        }
         _ausgewaehlterZahler = ZahlerOptionen.First(p => p.IsSelf);
 
         _datumText = GermanDateInput.ToText(DateOnly.FromDateTime(DateTime.Now));
@@ -112,6 +122,28 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         AusgewaehlteKategorie = ausgewaehlteId is int id
             ? KategorieVorschlaege.FirstOrDefault(o => o.Id == id)
             : null;
+    }
+
+    /// <summary>
+    /// Laedt die waehlbaren Zahler neu. Wird bei Navigation zu diesem
+    /// Bereich aufgerufen (siehe MainViewModel), damit in der Verwaltung
+    /// archivierte Personen ohne Neustart aus der Auswahl verschwinden. Ein
+    /// bereits ausgewaehlter Zahler bleibt erhalten, sofern er weiterhin
+    /// waehlbar ist - wird er inzwischen archiviert, faellt die Auswahl auf
+    /// die IsSelf-Person zurueck, da diese nie archiviert werden kann.
+    /// </summary>
+    public void AktualisiereZahlerOptionen()
+    {
+        var ausgewaehlteId = AusgewaehlterZahler.Id;
+
+        ZahlerOptionen.Clear();
+        foreach (var person in _personRepository.GetAllActive())
+        {
+            ZahlerOptionen.Add(person);
+        }
+
+        AusgewaehlterZahler = ZahlerOptionen.FirstOrDefault(p => p.Id == ausgewaehlteId)
+            ?? ZahlerOptionen.First(p => p.IsSelf);
     }
 
     [RelayCommand]
