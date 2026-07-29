@@ -1,6 +1,7 @@
 using System.Data;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Reports;
 using Dapper;
 
 namespace Ausgabenverwaltung.Core.Expenses;
@@ -112,6 +113,22 @@ public sealed class ExpenseRepository
         _connection.Execute(sql, new { Id = id });
     }
 
+    /// <summary>
+    /// Loescht mehrere Ausgaben in einer Anweisung - fuer das
+    /// Sammel-Loeschen in der Ausgabenliste. Eine leere Liste ist
+    /// zulaessig und veraendert nichts.
+    /// </summary>
+    public void DeleteMany(IReadOnlyList<int> ids)
+    {
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        const string sql = "DELETE FROM Expense WHERE Id IN @Ids";
+        _connection.Execute(sql, new { Ids = ids });
+    }
+
     public Expense? GetById(int id)
     {
         const string sql = """
@@ -156,6 +173,123 @@ public sealed class ExpenseRepository
         }).ToList();
     }
 
+    /// <summary>
+    /// Die Ausgabenliste: alle Buchungen, die auf den Filter passen, mit
+    /// Zahlername, vollem Kategoriepfad und Vorlagentitel. Gefiltert UND
+    /// sortiert wird in SQL, nicht im Speicher - die Liste kann ueber
+    /// Jahre tausende Zeilen umfassen.
+    /// </summary>
+    public IReadOnlyList<ExpenseListItem> Query(
+        ReportFilter filter, ExpenseSortColumn sort, bool ascending)
+    {
+        // Kopf und Filter stehen als Konstante fest, nur die ORDER-BY-
+        // Klausel kommt hinzu - und die stammt aus einer Weissliste ueber
+        // ExpenseSortColumn, nie aus Anwendereingabe.
+        var sql = QuerySql + "\n" + OrderBySql(sort, ascending);
+
+        var rows = _connection.Query<ExpenseListRow>(sql, ReportFilterSql.ToParameters(filter));
+
+        return rows.Select(row => new ExpenseListItem
+        {
+            Id = row.Id,
+            ExpenseDate = IsoDate.ParseDate(row.ExpenseDate),
+            CategoryId = row.CategoryId,
+            CategoryFullPath = row.CategoryFullPath,
+            AmountCents = row.AmountCents,
+            PayerId = row.PayerId,
+            PayerName = row.PayerName,
+            PayerIsSelf = row.PayerIsSelf,
+            SettledDate = row.SettledDate is null ? null : IsoDate.ParseDate(row.SettledDate),
+            Note = row.Note,
+            RecurringExpenseId = row.RecurringExpenseId,
+            RecurringExpenseTitle = row.RecurringExpenseTitle,
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Anzahl und Summe der Treffer DESSELBEN Filters wie
+    /// <see cref="Query"/> - eigene Aggregatabfrage statt einer Summe ueber
+    /// die geladenen Zeilen, damit die Fusszeile der Liste unabhaengig von
+    /// der Anzeige stimmt.
+    /// </summary>
+    public ExpenseListSummary Summarize(ReportFilter filter)
+    {
+        const string sql = """
+            SELECT COUNT(*)                        AS Anzahl,
+                   COALESCE(SUM(e.AmountCents), 0) AS SummeCents
+            FROM   Expense e
+            JOIN   Person  p ON p.Id = e.PayerId
+            WHERE
+            """ + ReportFilterSql.Where;
+
+        var row = _connection.QueryFirst<SummaryRow>(sql, ReportFilterSql.ToParameters(filter));
+        return new ExpenseListSummary(row.Anzahl, row.SummeCents);
+    }
+
+    // Der Kategoriepfad wird per rekursiver CTE gebildet - dasselbe Muster
+    // wie in OpenItems.OpenItemsRepository (siehe docs/schema_v1.sql,
+    // Abfrage 2). Das Trennzeichen entspricht
+    // Categories.CategoryPaths.Separator.
+    // Der LEFT JOIN auf RecurringExpense holt den Vorlagentitel; er bleibt
+    // NULL bei handerfassten Buchungen und bei Buchungen, deren Vorlage
+    // inzwischen geloescht wurde (ON DELETE SET NULL).
+    private const string QuerySql = """
+        WITH RECURSIVE Pfad(Id, ParentId, FullPath) AS (
+            SELECT Id, ParentId, Name FROM Category WHERE ParentId IS NULL
+            UNION ALL
+            SELECT c.Id, c.ParentId, Pfad.FullPath || ' › ' || c.Name
+            FROM   Category c
+            JOIN   Pfad ON c.ParentId = Pfad.Id
+        )
+        SELECT
+            e.Id, e.ExpenseDate, e.CategoryId,
+            pfad.FullPath      AS CategoryFullPath,
+            e.AmountCents, e.PayerId,
+            p.Name             AS PayerName,
+            p.IsSelf           AS PayerIsSelf,
+            e.SettledDate, e.Note, e.RecurringExpenseId,
+            r.Title            AS RecurringExpenseTitle
+        FROM      Expense e
+        JOIN      Person  p    ON p.Id = e.PayerId
+        JOIN      Pfad    pfad ON pfad.Id = e.CategoryId
+        LEFT JOIN RecurringExpense r ON r.Id = e.RecurringExpenseId
+        WHERE
+        """ + ReportFilterSql.Where;
+
+    // Rangfolge der Statusspalte beim Sortieren. Eigene Ausgaben haben
+    // keinen Status (Regel 4) und landen deshalb hinter offen und
+    // beglichen, statt mit einem der beiden vermischt zu werden.
+    private const string StatusRankSql = """
+        CASE WHEN p.IsSelf = 1          THEN 2
+             WHEN e.SettledDate IS NULL THEN 0
+             ELSE                            1
+        END
+        """;
+
+    /// <summary>
+    /// ORDER-BY-Klausel zur gewaehlten Spalte. Textspalten werden
+    /// gross-/kleinschreibungsunabhaengig sortiert (COLLATE NOCASE), sonst
+    /// stuenden alle Kleinbuchstaben hinter allen Grossbuchstaben. Die Id
+    /// als zweites Kriterium haelt die Reihenfolge bei gleichen Werten
+    /// stabil - ohne sie waere sie in SQLite unbestimmt.
+    /// </summary>
+    private static string OrderBySql(ExpenseSortColumn sort, bool ascending)
+    {
+        var spalte = sort switch
+        {
+            ExpenseSortColumn.Datum => "e.ExpenseDate",
+            ExpenseSortColumn.Kategorie => "pfad.FullPath COLLATE NOCASE",
+            ExpenseSortColumn.Betrag => "e.AmountCents",
+            ExpenseSortColumn.Zahler => "p.Name COLLATE NOCASE",
+            ExpenseSortColumn.Status => StatusRankSql,
+            ExpenseSortColumn.Bemerkung => "e.Note COLLATE NOCASE",
+            _ => throw new ArgumentOutOfRangeException(nameof(sort)),
+        };
+
+        var richtung = ascending ? "ASC" : "DESC";
+        return $"ORDER BY {spalte} {richtung}, e.Id DESC";
+    }
+
     private static Expense ToExpense(ExpenseRow row) => new()
     {
         Id = row.Id,
@@ -195,5 +329,27 @@ public sealed class ExpenseRepository
         public string CategoryName { get; set; } = string.Empty;
         public string PayerName { get; set; } = string.Empty;
         public string? Note { get; set; }
+    }
+
+    private sealed class ExpenseListRow
+    {
+        public int Id { get; set; }
+        public string ExpenseDate { get; set; } = string.Empty;
+        public int CategoryId { get; set; }
+        public string CategoryFullPath { get; set; } = string.Empty;
+        public long AmountCents { get; set; }
+        public int PayerId { get; set; }
+        public string PayerName { get; set; } = string.Empty;
+        public bool PayerIsSelf { get; set; }
+        public string? SettledDate { get; set; }
+        public string? Note { get; set; }
+        public int? RecurringExpenseId { get; set; }
+        public string? RecurringExpenseTitle { get; set; }
+    }
+
+    private sealed class SummaryRow
+    {
+        public int Anzahl { get; set; }
+        public long SummeCents { get; set; }
     }
 }

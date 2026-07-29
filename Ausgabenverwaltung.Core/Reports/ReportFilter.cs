@@ -24,6 +24,19 @@ public sealed class ReportFilter
     public PayerScope PayerScope { get; init; } = PayerScope.All;
 
     /// <summary>
+    /// Optionaler einzelner Zahler. NULL = keine Einschraenkung. Wirkt
+    /// zusaetzlich zu <see cref="PayerScope"/> - beide Bedingungen muessen
+    /// erfuellt sein.
+    /// </summary>
+    public int? PayerId { get; init; }
+
+    /// <summary>
+    /// Einschraenkung auf offene bzw. beglichene Posten. Beachtet Regel 4
+    /// (siehe <see cref="SettlementStatus"/>).
+    /// </summary>
+    public SettlementStatus Status { get; init; } = SettlementStatus.Alle;
+
+    /// <summary>
     /// Optionale Volltextsuche in der Bemerkung (Note). NULL = kein Filter.
     /// </summary>
     public string? SearchText { get; init; }

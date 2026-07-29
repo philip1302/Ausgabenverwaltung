@@ -152,4 +152,55 @@ public class ReportRepositoryTests : IDisposable
         var group = Assert.Single(result);
         Assert.Equal(4200, group.SumCents);
     }
+
+    // PayerId und Status kommen aus demselben Filtermodell wie die
+    // Ausgabenliste (ReportFilterSql) und muessen deshalb auch hier wirken.
+    [Fact]
+    public void PayerId_schraenkt_auf_einen_einzelnen_Zahler_ein()
+    {
+        var kategorie = _categories.Create("Sonstiges", null);
+        _expenses.Create(kategorie.Id, 1000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(kategorie.Id, 2500, new DateOnly(2026, 3, 2), _otherId);
+
+        var result = _repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            PayerId = _otherId,
+            Grouping = ReportGrouping.Year,
+        });
+
+        Assert.Equal(2500, Assert.Single(result).SumCents);
+    }
+
+    // Regel 4: eigene Ausgaben haben keinen Status und zaehlen weder als
+    // offen noch als beglichen.
+    [Fact]
+    public void Status_NurOffene_laesst_eigene_Ausgaben_aussen_vor()
+    {
+        var kategorie = _categories.Create("Sonstiges", null);
+        _expenses.Create(kategorie.Id, 1000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(kategorie.Id, 2500, new DateOnly(2026, 3, 2), _otherId);
+        _expenses.Create(
+            kategorie.Id, 700, new DateOnly(2026, 3, 3), _otherId,
+            settledDate: new DateOnly(2026, 3, 9));
+
+        var offene = _repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Status = SettlementStatus.NurOffene,
+            Grouping = ReportGrouping.Year,
+        });
+        var beglichene = _repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Status = SettlementStatus.NurBeglichene,
+            Grouping = ReportGrouping.Year,
+        });
+
+        Assert.Equal(2500, Assert.Single(offene).SumCents);
+        Assert.Equal(700, Assert.Single(beglichene).SumCents);
+    }
 }

@@ -12,6 +12,7 @@ public sealed partial class MainViewModel : ViewModelBase
 {
     private readonly ErfassenViewModel _erfassen;
     private readonly OffenePostenViewModel _offenePosten;
+    private readonly AusgabenlisteViewModel _ausgabenliste;
 
     public StartupNoticeViewModel StartupNotice { get; }
 
@@ -31,6 +32,7 @@ public sealed partial class MainViewModel : ViewModelBase
         StartupNotice = startupNotice;
         _erfassen = erfassen;
         _offenePosten = offenePosten;
+        _ausgabenliste = ausgabenliste;
 
         NavigationItems = new List<NavigationItem>
         {
@@ -59,6 +61,11 @@ public sealed partial class MainViewModel : ViewModelBase
         if (ReferenceEquals(value.ViewModel, _offenePosten))
         {
             _offenePosten.AktualisiereListe();
+        }
+
+        if (ReferenceEquals(value.ViewModel, _ausgabenliste))
+        {
+            _ausgabenliste.AktualisiereListe();
         }
     }
 }

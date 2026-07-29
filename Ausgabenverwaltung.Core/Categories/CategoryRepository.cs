@@ -287,7 +287,7 @@ public sealed class CategoryRepository
     {
         foreach (var node in nodes)
         {
-            var path = parentPath is null ? node.Category.Name : $"{parentPath} › {node.Category.Name}";
+            var path = CategoryPaths.Append(parentPath, node.Category.Name);
 
             if (node.Children.Count == 0)
             {

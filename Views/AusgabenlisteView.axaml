@@ -1,12 +1,395 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:categories="using:Ausgabenverwaltung.Core.Categories"
+             xmlns:entities="using:Ausgabenverwaltung.Core.Entities"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="650"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.AusgabenlisteView"
+             x:Name="Wurzel"
              x:DataType="vm:AusgabenlisteViewModel">
-    <TextBlock Text="{Binding PlatzhalterText}"
-               Margin="16"
-               TextWrapping="Wrap" />
+
+    <!-- Spaltenraster "32,24,90,16,2*,16,90,24,110,16,120,16,2*,16,200"
+         gilt fuer Kopfzeile UND Zeilen gleichermassen: Auswahl,
+         Vorlagen-Marker, Datum, Kategorie, Betrag, Zahler, Status,
+         Bemerkung, Aktionen - dazwischen feste Gutter-Spalten als
+         Abstandhalter (Indizes 3,5,7,9,11,13). Die Tabellen-Styles
+         (Button.kopf, TextBlock.tabellenzelle, ...) kommen aus App.axaml.
+
+         Die Aktionsspalte fasst "Bearbeiten" und "Löschen" nebeneinander;
+         200 statt der urspruenglichen 150 Pixel, weil die beiden
+         Schaltflaechen mit der Theme-Polsterung sonst nicht nebeneinander
+         passen und die zweite abgeschnitten wird. -->
+    <UserControl.Styles>
+        <!-- Die ListBox dient hier nur als virtualisierender Behaelter:
+             ausgewaehlt wird ueber die Checkbox-Spalte, weil die Zeilen
+             eigene Schaltflaechen enthalten und ein Klick auf die Zeile
+             sonst mit der Listenauswahl kollidiert. Deshalb Polsterung
+             und Auswahl-Optik entfernen. -->
+        <Style Selector="ListBox.tabelle > ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.tabelle > ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.tabelle > ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#F5F5F5" />
+        </Style>
+
+        <Style Selector="TextBlock.vorlage">
+            <Setter Property="Foreground" Value="#7A5C00" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <!-- Knoten der Kategorie-Auswahl: sieht wie eine Beschriftung aus,
+             ist aber die Schaltflaeche, ueber die gewaehlt wird. -->
+        <Style Selector="Button.kategoriewahl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+
+        <Style Selector="TextBlock.filterbeschriftung">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
+        <DockPanel>
+            <!-- ============ Filterleiste ============ -->
+            <Border DockPanel.Dock="Top"
+                    BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"
+                    Padding="0,0,0,10" Margin="0,0,0,10">
+                <StackPanel Spacing="8">
+                    <!-- Zeitraum -->
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel>
+                            <TextBlock Text="Von" Classes="filterbeschriftung" />
+                            <TextBox Text="{Binding VonText}"
+                                     Width="110"
+                                     PlaceholderText="TT.MM.JJJJ" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Bis" Classes="filterbeschriftung" />
+                            <TextBox Text="{Binding BisText}"
+                                     Width="110"
+                                     PlaceholderText="TT.MM.JJJJ" />
+                        </StackPanel>
+
+                        <StackPanel VerticalAlignment="Bottom">
+                            <TextBlock Text="Schnellwahl" Classes="filterbeschriftung" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Dieser Monat"
+                                        Command="{Binding SchnellwahlCommand}"
+                                        CommandParameter="DieserMonat" />
+                                <Button Content="Dieses Jahr"
+                                        Command="{Binding SchnellwahlCommand}"
+                                        CommandParameter="DiesesJahr" />
+                                <Button Content="Letzte 12 Monate"
+                                        Command="{Binding SchnellwahlCommand}"
+                                        CommandParameter="Letzte12Monate" />
+                                <Button Content="Alles"
+                                        ToolTip.Tip="Ohne zeitliche Einschränkung"
+                                        Command="{Binding SchnellwahlCommand}"
+                                        CommandParameter="Alles" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding ZeitraumFehler}"
+                                   IsVisible="{Binding ZeitraumFehlerSichtbar}"
+                                   Classes="fehler"
+                                   VerticalAlignment="Bottom"
+                                   Margin="4,0,0,6" />
+                    </StackPanel>
+
+                    <!-- Kategorie, Zahler, Status, Suche -->
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel>
+                            <TextBlock Text="Kategorie (immer inkl. Unterkategorien)"
+                                       Classes="filterbeschriftung" />
+                            <Button x:Name="KategorieAuswahl"
+                                    Content="{Binding KategorieFilterText}"
+                                    Width="260"
+                                    HorizontalContentAlignment="Left">
+                                <Button.Flyout>
+                                    <!-- Gewaehlt wird ueber den Knoten-Button, NICHT ueber
+                                         TreeView.SelectedItem: beim Schliessen des Flyouts
+                                         setzt der TreeView seine Auswahl zurueck und wuerde
+                                         den Filter ueber die Bindung sofort wieder leeren.
+                                         Der TreeView liefert hier nur noch die Aufklapp-
+                                         Struktur. -->
+                                    <Flyout Placement="BottomEdgeAlignedLeft">
+                                        <StackPanel Width="320" Spacing="6">
+                                            <Button Content="Alle Kategorien"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    Command="{Binding AlleKategorienCommand}"
+                                                    Click="KategorieFlyout_Schliessen" />
+                                            <TreeView MaxHeight="320"
+                                                      ItemsSource="{Binding KategorieWurzeln}">
+                                                <TreeView.ItemTemplate>
+                                                    <TreeDataTemplate x:DataType="vm:KategorieFilterKnoten"
+                                                                      ItemsSource="{Binding Children}">
+                                                        <Button Classes="kategoriewahl"
+                                                                Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).KategorieWaehlenCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                Click="KategorieFlyout_Schliessen">
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       Classes.archiviert="{Binding IsArchived}" />
+                                                        </Button>
+                                                    </TreeDataTemplate>
+                                                </TreeView.ItemTemplate>
+                                            </TreeView>
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="Zahler" Classes="filterbeschriftung" />
+                            <ComboBox ItemsSource="{Binding ZahlerOptionen}"
+                                      SelectedItem="{Binding AusgewaehlterZahler}"
+                                      Width="160">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ZahlerOption">
+                                        <TextBlock Text="{Binding Bezeichnung}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="Status" Classes="filterbeschriftung" />
+                            <ComboBox ItemsSource="{Binding StatusOptionen}"
+                                      SelectedItem="{Binding AusgewaehlterStatus}"
+                                      Width="150">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StatusOption">
+                                        <TextBlock Text="{Binding Bezeichnung}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="Suche in der Bemerkung" Classes="filterbeschriftung" />
+                            <TextBox Text="{Binding Suchtext}"
+                                     Width="220"
+                                     PlaceholderText="Volltext…" />
+                        </StackPanel>
+
+                        <Button Content="Filter zurücksetzen"
+                                Command="{Binding FilterZuruecksetzenCommand}"
+                                VerticalAlignment="Bottom" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ Werkzeugleiste ============ -->
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12"
+                        Margin="0,0,0,10">
+                <Button Content="Ausgewählte löschen"
+                        Command="{Binding AusgewaehlteLoeschenCommand}" />
+                <TextBlock Text="{Binding AnzahlAusgewaehlt, StringFormat='{}{0} ausgewählt'}"
+                           IsVisible="{Binding HatAuswahl}"
+                           Foreground="Gray"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- ============ Fusszeile ============ -->
+            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto"
+                  Margin="4,10,20,0">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding TrefferText}"
+                           Foreground="Gray"
+                           VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2"
+                           FontWeight="Bold"
+                           Text="{Binding SummeText, StringFormat='Summe: {0} EUR'}" />
+            </Grid>
+
+            <!-- ============ Kopfzeile ============ -->
+            <Grid DockPanel.Dock="Top"
+                  ColumnDefinitions="32,24,90,16,2*,16,90,24,110,16,120,16,2*,16,200"
+                  Margin="4,0,20,4">
+                <TextBlock Grid.Column="0" />
+                <TextBlock Grid.Column="1" />
+                <Button Grid.Column="2" Classes="kopf" Content="{Binding DatumHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
+                <Button Grid.Column="4" Classes="kopf" Content="{Binding KategorieHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
+                <Button Grid.Column="6" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
+                <Button Grid.Column="8" Classes="kopf" Content="{Binding ZahlerHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Zahler" />
+                <Button Grid.Column="10" Classes="kopf" Content="{Binding StatusHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Status" />
+                <Button Grid.Column="12" Classes="kopf" Content="{Binding BemerkungHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
+                <Button Grid.Column="14" Content="Aktionen" Classes="tabellenkopf-aktion" />
+            </Grid>
+
+            <TextBlock Text="Keine Ausgaben für diesen Filter."
+                       IsVisible="{Binding KeineTreffer}"
+                       DockPanel.Dock="Top"
+                       Foreground="Gray"
+                       FontStyle="Italic"
+                       Margin="4,8" />
+
+            <!-- ============ Tabelle ============
+                 ListBox statt ItemsControl: ihr Standard-ItemsPanel ist
+                 ein VirtualizingStackPanel und sie bringt den ScrollViewer
+                 mit - noetig, weil die Liste ueber Jahre tausende Zeilen
+                 enthalten kann. -->
+            <ListBox Classes="tabelle"
+                     ItemsSource="{Binding Zeilen}"
+                     SelectionMode="Single"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AusgabeZeile">
+                        <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
+                            <Grid ColumnDefinitions="32,24,90,16,2*,16,90,24,110,16,120,16,2*,16,200">
+                                <CheckBox Grid.Column="0"
+                                          IsChecked="{Binding IstAusgewaehlt}"
+                                          VerticalAlignment="Center" />
+
+                                <TextBlock Grid.Column="1"
+                                           Text="⟳"
+                                           Classes="vorlage"
+                                           IsVisible="{Binding IstAusVorlage}"
+                                           ToolTip.Tip="{Binding VorlageHinweis}" />
+
+                                <TextBlock Grid.Column="2" Text="{Binding DatumText}"
+                                           Classes="tabellenzelle" />
+                                <TextBlock Grid.Column="4" Text="{Binding CategoryFullPath}"
+                                           Classes="tabellenzelle" TextWrapping="Wrap" />
+                                <TextBlock Grid.Column="6" Text="{Binding BetragText}"
+                                           Classes="tabellenzelle zahl" />
+                                <TextBlock Grid.Column="8" Text="{Binding PayerName}"
+                                           Classes="tabellenzelle" TextWrapping="Wrap" />
+                                <TextBlock Grid.Column="10" Text="{Binding StatusText}"
+                                           Classes="tabellenzelle" />
+                                <TextBlock Grid.Column="12" Text="{Binding Note}"
+                                           Classes="tabellenzelle" TextWrapping="Wrap" />
+
+                                <StackPanel Grid.Column="14" Orientation="Horizontal" Spacing="6">
+                                    <Button Content="Bearbeiten"
+                                            Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenOeffnenCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Content="Löschen"
+                                            Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).LoeschenCommand}"
+                                            CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <!-- ============ Overlay: Loesch-Sicherheitsabfrage ============ -->
+        <Panel IsVisible="{Binding LoeschAnfrageAktiv}" Background="#60000000">
+            <Border Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                    CornerRadius="2" Padding="16"
+                    MaxWidth="520"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
+                        <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============ Overlay: Bearbeiten ============
+             Dieselben Felder und dieselbe Reihenfolge wie die
+             Erfassungsmaske (Views/ErfassenView.axaml). -->
+        <Panel IsVisible="{Binding BearbeitenAktiv}" Background="#60000000">
+            <Border Background="White" BorderBrush="#C0C0C0" BorderThickness="1"
+                    CornerRadius="2" Padding="16"
+                    Width="460"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel DataContext="{Binding Bearbeiten}"
+                            x:DataType="vm:AusgabeBearbeitenViewModel"
+                            Spacing="2">
+                    <TextBlock Text="Ausgabe bearbeiten" FontWeight="Bold" FontSize="14"
+                               Margin="0,0,0,10" />
+
+                    <!-- Regel 6: die Vorlage bleibt unberuehrt -->
+                    <Border IsVisible="{Binding IstAusVorlage}"
+                            Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                            Padding="8" Margin="0,0,0,10">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding VorlageHinweis}" TextWrapping="Wrap" />
+                            <TextBlock Text="Die Änderung betrifft nur diese eine Buchung, nicht die Vorlage."
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Betrag (EUR)" />
+                    <TextBox Text="{Binding BetragText}" PlaceholderText="0,00" />
+                    <TextBlock Text="{Binding BetragFehler}"
+                               IsVisible="{Binding BetragFehlerSichtbar}"
+                               Foreground="Red" />
+
+                    <TextBlock Text="Kategorie" Margin="0,10,0,0" />
+                    <AutoCompleteBox ItemsSource="{Binding KategorieVorschlaege}"
+                                     ValueMemberBinding="{Binding FullPath}"
+                                     FilterMode="Contains"
+                                     SelectedItem="{Binding AusgewaehlteKategorie}"
+                                     PlaceholderText="Kategorie suchen...">
+                        <AutoCompleteBox.ItemTemplate>
+                            <DataTemplate x:DataType="categories:CategoryOption">
+                                <TextBlock Text="{Binding FullPath}" />
+                            </DataTemplate>
+                        </AutoCompleteBox.ItemTemplate>
+                    </AutoCompleteBox>
+                    <TextBlock Text="{Binding KategorieFehler}"
+                               IsVisible="{Binding KategorieFehlerSichtbar}"
+                               Foreground="Red" />
+
+                    <TextBlock Text="Datum" Margin="0,10,0,0" />
+                    <TextBox Text="{Binding DatumText}" PlaceholderText="TT.MM.JJJJ" />
+                    <TextBlock Text="{Binding DatumFehler}"
+                               IsVisible="{Binding DatumFehlerSichtbar}"
+                               Foreground="Red" />
+
+                    <TextBlock Text="Bemerkung" Margin="0,10,0,0" />
+                    <TextBox Text="{Binding Bemerkung}" />
+
+                    <TextBlock Text="Zahler" Margin="0,10,0,0" />
+                    <ComboBox ItemsSource="{Binding ZahlerOptionen}"
+                              SelectedItem="{Binding AusgewaehlterZahler}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="entities:Person">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button Content="Speichern"
+                                Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenSpeichernCommand}" />
+                        <Button Content="Abbrechen"
+                                Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenAbbrechenCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+    </Panel>
 </UserControl>
