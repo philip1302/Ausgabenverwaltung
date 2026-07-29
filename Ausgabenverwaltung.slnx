@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Ausgabenverwaltung.Core/Ausgabenverwaltung.Core.csproj" />
+  <Project Path="Ausgabenverwaltung.csproj" />
+  <Project Path="Ausgabenverwaltung.Tests/Ausgabenverwaltung.Tests.csproj" />
+</Solution>

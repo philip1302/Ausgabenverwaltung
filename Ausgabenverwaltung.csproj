@@ -4,10 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Core und Tests liegen als eigene Projekte unterhalb dieses
+         Ordners; ohne diesen Ausschluss wuerde die implizite Datei-
+         Suche des SDK ihre .cs-Dateien versehentlich mit einsammeln. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);Ausgabenverwaltung.Core\**;Ausgabenverwaltung.Tests\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 

@@ -13,7 +13,7 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
 - `Ausgabenverwaltung.Core`  — Domaene, Datenzugriff, Reportlogik.
                                Enthaelt KEINEN UI-Code.
 - `Ausgabenverwaltung.Tests` — Tests gegen Core
-- `Ausgabenverwaltung.App`   — Avalonia-Oberflaeche
+- `Ausgabenverwaltung`      — Avalonia-Oberflaeche
 - `docs/schema_v1.sql`       — massgebliches DB-Schema
 
 ## Harte Regeln

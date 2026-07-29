@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <!-- Transitive Abhaengigkeit auf gepatchte Version anheben (GHSA-2m69-gcr7-jv3q) -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Massgebliches DB-Schema aus docs/ einbetten, damit die
+         Initialisierung unabhaengig vom Arbeitsverzeichnis funktioniert. -->
+    <EmbeddedResource Include="..\docs\schema_v1.sql" Link="schema_v1.sql" />
+  </ItemGroup>
+
+</Project>
