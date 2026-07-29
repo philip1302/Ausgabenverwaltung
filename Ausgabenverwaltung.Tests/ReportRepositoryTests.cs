@@ -139,7 +139,7 @@ public class ReportRepositoryTests : IDisposable
     {
         var kategorie = _categories.Create("Altlast", null);
         _expenses.Create(kategorie.Id, 4200, new DateOnly(2026, 3, 1), _selfId);
-        _categories.Archive(kategorie.Id);
+        _categories.Archive(kategorie.Id, includeDescendants: false);
 
         var result = _repository.Evaluate(new ReportFilter
         {

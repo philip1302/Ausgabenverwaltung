@@ -1,12 +1,21 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:views="using:Ausgabenverwaltung.Views"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.VerwaltungView"
              x:DataType="vm:VerwaltungViewModel">
-    <TextBlock Text="{Binding PlatzhalterText}"
-               Margin="16"
-               TextWrapping="Wrap" />
+    <TabControl Margin="16">
+        <TabItem Header="Kategorien">
+            <views:KategorienView DataContext="{Binding Kategorien}" />
+        </TabItem>
+        <TabItem Header="Personen">
+            <TextBlock Text="{Binding PersonenPlatzhalterText}" Margin="16" TextWrapping="Wrap" />
+        </TabItem>
+        <TabItem Header="Vorlagen">
+            <TextBlock Text="{Binding VorlagenPlatzhalterText}" Margin="16" TextWrapping="Wrap" />
+        </TabItem>
+    </TabControl>
 </UserControl>

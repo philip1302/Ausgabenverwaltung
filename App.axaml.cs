@@ -80,6 +80,7 @@ public partial class App : Application
         services.AddSingleton<OffenePostenViewModel>();
         services.AddSingleton<ReportViewModel>();
         services.AddSingleton<AusgabenlisteViewModel>();
+        services.AddSingleton<KategorienViewModel>();
         services.AddSingleton<VerwaltungViewModel>();
         services.AddSingleton<MainViewModel>();
 

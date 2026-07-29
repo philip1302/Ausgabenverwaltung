@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="Ausgabenverwaltung.Views.KategorienView"
+             x:DataType="vm:KategorienViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.archiviert">
+            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="TreeViewItem" x:DataType="vm:KategorieKnoten">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <!-- Werkzeugleiste: alle Aktionen wirken auf AusgewaehlterKnoten -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <Button Content="Neue Oberkategorie" Command="{Binding NeueOberkategorieCommand}" />
+            <Button Content="Neue Unterkategorie"
+                    Command="{Binding NeueUnterkategorieCommand}"
+                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
+            <Button Content="Umbenennen"
+                    Command="{Binding BearbeitenStartenCommand}"
+                    CommandParameter="{Binding AusgewaehlterKnoten}"
+                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
+            <Button Content="Archivieren"
+                    Command="{Binding ArchivierenCommand}"
+                    CommandParameter="{Binding AusgewaehlterKnoten}"
+                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}"
+                    IsVisible="{Binding !AusgewaehlterKnotenIstArchiviert}" />
+            <Button Content="Wiederherstellen"
+                    Command="{Binding WiederherstellenCommand}"
+                    CommandParameter="{Binding AusgewaehlterKnoten}"
+                    IsVisible="{Binding AusgewaehlterKnotenIstArchiviert}" />
+            <Button Content="▲" ToolTip.Tip="Nach oben verschieben"
+                    Command="{Binding NachObenVerschiebenCommand}"
+                    CommandParameter="{Binding AusgewaehlterKnoten}"
+                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
+            <Button Content="▼" ToolTip.Tip="Nach unten verschieben"
+                    Command="{Binding NachUntenVerschiebenCommand}"
+                    CommandParameter="{Binding AusgewaehlterKnoten}"
+                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
+            <CheckBox Content="Archivierte anzeigen" IsChecked="{Binding ArchivierteAnzeigen}" Margin="24,0,0,0" />
+        </StackPanel>
+
+        <!-- Nachfrage, ob Unterkategorien beim Archivieren mitgenommen werden sollen -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding ArchivierungAnfrageAktiv}"
+                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                Padding="8" Margin="0,0,0,8">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding ArchivierungAnfrageText}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Nur diese Kategorie" Command="{Binding ArchivierungNurDieseBestaetigenCommand}" />
+                    <Button Content="Mit Unterkategorien" Command="{Binding ArchivierungMitUnterkategorienBestaetigenCommand}" />
+                    <Button Content="Abbrechen" Command="{Binding ArchivierungAbbrechenCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <TreeView x:Name="Baum"
+                  ItemsSource="{Binding Wurzelknoten}"
+                  SelectedItem="{Binding AusgewaehlterKnoten}"
+                  KeyDown="Baum_KeyDown">
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate x:DataType="vm:KategorieKnoten" ItemsSource="{Binding Children}">
+                    <Panel>
+                        <TextBlock Text="{Binding Anzeigename}"
+                                   Classes.archiviert="{Binding IsArchived}"
+                                   IsVisible="{Binding !WirdBearbeitet}"
+                                   DoubleTapped="Knoten_DoubleTapped"
+                                   VerticalAlignment="Center" />
+                        <StackPanel IsVisible="{Binding WirdBearbeitet}" Spacing="2">
+                            <TextBox Text="{Binding BearbeitungsText}"
+                                     MinWidth="160"
+                                     KeyDown="BearbeitungsTextBox_KeyDown"
+                                     LostFocus="BearbeitungsTextBox_LostFocus" />
+                            <TextBlock Text="{Binding BearbeitungsFehler}"
+                                       IsVisible="{Binding BearbeitungsFehlerSichtbar}"
+                                       Foreground="Red" FontSize="11" />
+                        </StackPanel>
+                    </Panel>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </DockPanel>
+</UserControl>

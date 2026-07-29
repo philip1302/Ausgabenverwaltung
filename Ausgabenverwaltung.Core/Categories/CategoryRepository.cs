@@ -8,9 +8,11 @@ namespace Ausgabenverwaltung.Core.Categories;
 /// <summary>
 /// Anlegen, Umbenennen, Archivieren und Baum-Laden fuer Kategorien.
 /// Kategorien werden nie geloescht (Regel 8) - es gibt daher bewusst
-/// keine Delete-Methode. Eindeutigkeit von Namen wird von den
-/// DB-Constraints durchgesetzt (UNIQUE(ParentId, Name) und
-/// UX_Category_RootName); Verstoesse schlagen als SqliteException durch.
+/// keine Delete-Methode. Eindeutigkeit von Namen wird zusaetzlich zu den
+/// DB-Constraints (UNIQUE(ParentId, Name) und UX_Category_RootName) hier
+/// vorab geprueft, damit Verstoesse als verstaendliche
+/// DuplicateCategoryNameException statt als rohe SqliteException
+/// durchschlagen.
 /// </summary>
 public sealed class CategoryRepository
 {
@@ -23,17 +25,24 @@ public sealed class CategoryRepository
 
     public Category Create(string name, int? parentId)
     {
+        if (SiblingNameExists(parentId, name, excludingId: null))
+        {
+            throw new DuplicateCategoryNameException(name);
+        }
+
         var createdUtc = DateTime.UtcNow;
+        var sortOrder = GetNextSortOrder(parentId);
 
         const string insertSql = """
             INSERT INTO Category (ParentId, Name, SortOrder, IsArchived, CreatedUtc)
-            VALUES (@ParentId, @Name, 0, 0, @CreatedUtcText)
+            VALUES (@ParentId, @Name, @SortOrder, 0, @CreatedUtcText)
             """;
 
         _connection.Execute(insertSql, new
         {
             ParentId = parentId,
             Name = name,
+            SortOrder = sortOrder,
             CreatedUtcText = IsoDateTime.ToUtcText(createdUtc),
         });
 
@@ -44,7 +53,7 @@ public sealed class CategoryRepository
             Id = (int)id,
             ParentId = parentId,
             Name = name,
-            SortOrder = 0,
+            SortOrder = sortOrder,
             IsArchived = false,
             CreatedUtc = createdUtc,
         };
@@ -52,14 +61,172 @@ public sealed class CategoryRepository
 
     public void Rename(int id, string newName)
     {
+        var parentId = _connection.ExecuteScalar<int?>(
+            "SELECT ParentId FROM Category WHERE Id = @Id", new { Id = id });
+
+        if (SiblingNameExists(parentId, newName, excludingId: id))
+        {
+            throw new DuplicateCategoryNameException(newName);
+        }
+
         const string sql = "UPDATE Category SET Name = @Name WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id, Name = newName });
     }
 
-    public void Archive(int id)
+    /// <summary>
+    /// Archiviert den Knoten. Bei includeDescendants = true werden auch
+    /// alle Unterkategorien archiviert (die Oberflaeche fragt das bei
+    /// Knoten mit Kindern vorher nach, siehe <see cref="GetDescendantIds"/>).
+    /// </summary>
+    public void Archive(int id, bool includeDescendants)
     {
-        const string sql = "UPDATE Category SET IsArchived = 1 WHERE Id = @Id";
+        var ids = new List<int> { id };
+        if (includeDescendants)
+        {
+            ids.AddRange(GetDescendantIds(id));
+        }
+
+        const string sql = "UPDATE Category SET IsArchived = 1 WHERE Id IN @Ids";
+        _connection.Execute(sql, new { Ids = ids });
+    }
+
+    public void Restore(int id)
+    {
+        const string sql = "UPDATE Category SET IsArchived = 0 WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id });
+    }
+
+    /// <summary>
+    /// Alle Nachfahren-Ids eines Knotens (ohne den Knoten selbst), fuer
+    /// die Nachfrage vor dem Archivieren und fuer die Archivierungs-
+    /// Kaskade. Ueber den bereits geladenen Baum ermittelt statt per
+    /// rekursivem SQL, weil GetTree() ohnehin fuer die Anzeige gebraucht wird.
+    /// </summary>
+    public IReadOnlyList<int> GetDescendantIds(int id)
+    {
+        var node = FindNode(GetTree(), id);
+        if (node is null)
+        {
+            return Array.Empty<int>();
+        }
+
+        var result = new List<int>();
+        CollectIds(node.Children, result);
+        return result;
+    }
+
+    public void MoveUp(int id) => Reorder(id, delta: -1);
+
+    public void MoveDown(int id) => Reorder(id, delta: +1);
+
+    /// <summary>
+    /// Vertauscht die SortOrder mit dem vorherigen (delta -1) bzw.
+    /// naechsten (delta +1) Geschwisterknoten in der Anzeigereihenfolge.
+    /// Steht der Knoten bereits am Anfang/Ende, passiert nichts.
+    /// </summary>
+    private void Reorder(int id, int delta)
+    {
+        var current = _connection.QueryFirstOrDefault<CurrentNodeRow>(
+            "SELECT ParentId, SortOrder FROM Category WHERE Id = @Id", new { Id = id });
+        if (current is null)
+        {
+            return;
+        }
+
+        const string siblingsSql = """
+            SELECT Id, SortOrder
+            FROM Category
+            WHERE ParentId IS @ParentId
+            ORDER BY SortOrder, Name
+            """;
+        var siblings = _connection.Query<SiblingRow>(siblingsSql, new { current.ParentId }).ToList();
+
+        var index = siblings.FindIndex(s => s.Id == id);
+        var neighbourIndex = index + delta;
+        if (index < 0 || neighbourIndex < 0 || neighbourIndex >= siblings.Count)
+        {
+            return;
+        }
+
+        var self = siblings[index];
+        var neighbour = siblings[neighbourIndex];
+
+        const string updateSql = "UPDATE Category SET SortOrder = @SortOrder WHERE Id = @Id";
+        _connection.Execute(updateSql, new { Id = self.Id, SortOrder = neighbour.SortOrder });
+        _connection.Execute(updateSql, new { Id = neighbour.Id, SortOrder = self.SortOrder });
+    }
+
+    /// <summary>
+    /// Anzahl der direkt zugeordneten Ausgaben je Kategorie, fuer die
+    /// Anzeige im Baum vor dem Archivieren (Kategorien ohne Eintrag fehlen
+    /// im Ergebnis).
+    /// </summary>
+    public IReadOnlyDictionary<int, int> GetExpenseCounts()
+    {
+        const string sql = """
+            SELECT CategoryId, COUNT(*) AS Anzahl
+            FROM Expense
+            GROUP BY CategoryId
+            """;
+
+        return _connection.Query<CategoryExpenseCountRow>(sql)
+            .ToDictionary(row => row.CategoryId, row => row.Anzahl);
+    }
+
+    // IS statt = , damit auch Oberkategorien (ParentId NULL) korrekt
+    // verglichen werden - zwei NULL-Werte sind mit = nie gleich.
+    private bool SiblingNameExists(int? parentId, string name, int? excludingId)
+    {
+        const string sql = """
+            SELECT COUNT(*)
+            FROM Category
+            WHERE ParentId IS @ParentId
+              AND Name = @Name
+              AND (@ExcludingId IS NULL OR Id <> @ExcludingId)
+            """;
+
+        var count = _connection.ExecuteScalar<int>(
+            sql, new { ParentId = parentId, Name = name, ExcludingId = excludingId });
+        return count > 0;
+    }
+
+    private int GetNextSortOrder(int? parentId)
+    {
+        const string sql = """
+            SELECT COALESCE(MAX(SortOrder), -1) + 1
+            FROM Category
+            WHERE ParentId IS @ParentId
+            """;
+
+        return _connection.ExecuteScalar<int>(sql, new { ParentId = parentId });
+    }
+
+    private static CategoryNode? FindNode(IReadOnlyList<CategoryNode> nodes, int id)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.Category.Id == id)
+            {
+                return node;
+            }
+
+            var found = FindNode(node.Children, id);
+            if (found is not null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static void CollectIds(IReadOnlyList<CategoryNode> nodes, List<int> result)
+    {
+        foreach (var node in nodes)
+        {
+            result.Add(node.Category.Id);
+            CollectIds(node.Children, result);
+        }
     }
 
     public IReadOnlyList<CategoryNode> GetTree()
@@ -147,5 +314,23 @@ public sealed class CategoryRepository
         public int SortOrder { get; set; }
         public bool IsArchived { get; set; }
         public string CreatedUtc { get; set; } = string.Empty;
+    }
+
+    private sealed class CurrentNodeRow
+    {
+        public int? ParentId { get; set; }
+        public int SortOrder { get; set; }
+    }
+
+    private sealed class SiblingRow
+    {
+        public int Id { get; set; }
+        public int SortOrder { get; set; }
+    }
+
+    private sealed class CategoryExpenseCountRow
+    {
+        public int CategoryId { get; set; }
+        public int Anzahl { get; set; }
     }
 }

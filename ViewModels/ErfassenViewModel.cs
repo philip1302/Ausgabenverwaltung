@@ -23,6 +23,7 @@ namespace Ausgabenverwaltung.ViewModels;
 public sealed partial class ErfassenViewModel : ViewModelBase
 {
     private readonly ExpenseRepository _expenseRepository;
+    private readonly CategoryRepository _categoryRepository;
 
     public event EventHandler? FokusBetragAngefordert;
 
@@ -35,7 +36,13 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
     public bool BetragFehlerSichtbar => !string.IsNullOrEmpty(BetragFehler);
 
-    public IReadOnlyList<CategoryOption> KategorieVorschlaege { get; }
+    // ObservableCollection statt einmalig geladener Liste, damit in der
+    // Verwaltung angelegte/umbenannte/archivierte Kategorien sichtbar
+    // werden, ohne die Anwendung neu zu starten (siehe
+    // AktualisiereKategorieVorschlaege, aufgerufen bei Navigation zu
+    // diesem Bereich - ErfassenViewModel ist ein DI-Singleton und laedt
+    // sonst nur einmal beim Start).
+    public ObservableCollection<CategoryOption> KategorieVorschlaege { get; } = new();
 
     [ObservableProperty]
     private CategoryOption? _ausgewaehlteKategorie;
@@ -74,8 +81,9 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         PersonRepository personRepository)
     {
         _expenseRepository = expenseRepository;
+        _categoryRepository = categoryRepository;
 
-        KategorieVorschlaege = categoryRepository.GetSelectableLeaves();
+        AktualisiereKategorieVorschlaege();
 
         ZahlerOptionen = personRepository.GetAllActive();
         _ausgewaehlterZahler = ZahlerOptionen.First(p => p.IsSelf);
@@ -83,6 +91,27 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         _datumText = GermanDateInput.ToText(DateOnly.FromDateTime(DateTime.Now));
 
         LadeLetzteAusgaben();
+    }
+
+    /// <summary>
+    /// Laedt die waehlbaren Kategorien neu. Wird bei Navigation zu diesem
+    /// Bereich aufgerufen (siehe MainViewModel), damit Aenderungen aus der
+    /// Verwaltung ohne Neustart sichtbar werden. Eine bereits ausgewaehlte
+    /// Kategorie bleibt erhalten, sofern sie weiterhin waehlbar ist.
+    /// </summary>
+    public void AktualisiereKategorieVorschlaege()
+    {
+        var ausgewaehlteId = AusgewaehlteKategorie?.Id;
+
+        KategorieVorschlaege.Clear();
+        foreach (var option in _categoryRepository.GetSelectableLeaves())
+        {
+            KategorieVorschlaege.Add(option);
+        }
+
+        AusgewaehlteKategorie = ausgewaehlteId is int id
+            ? KategorieVorschlaege.FirstOrDefault(o => o.Id == id)
+            : null;
     }
 
     [RelayCommand]

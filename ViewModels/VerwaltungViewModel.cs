@@ -1,30 +1,22 @@
-using Ausgabenverwaltung.Core.Categories;
-using Ausgabenverwaltung.Core.People;
-using Ausgabenverwaltung.Core.RecurringExpenses;
-
 namespace Ausgabenverwaltung.ViewModels;
 
 /// <summary>
 /// Bereich "Verwaltung" - Personen, Kategorien und Vorlagen fuer
-/// wiederkehrende Buchungen pflegen. Noch ohne Fachfunktion, nur der
-/// Rahmen.
+/// wiederkehrende Buchungen pflegen. Der Kategorien-Unterbereich ist
+/// bereits fachlich fertig (siehe <see cref="KategorienViewModel"/>),
+/// Personen und Vorlagen sind noch Platzhalter.
 /// </summary>
 public sealed class VerwaltungViewModel : ViewModelBase
 {
-    private readonly PersonRepository _personRepository;
-    private readonly CategoryRepository _categoryRepository;
-    private readonly RecurringExpenseRepository _recurringExpenseRepository;
+    public KategorienViewModel Kategorien { get; }
 
-    public VerwaltungViewModel(
-        PersonRepository personRepository,
-        CategoryRepository categoryRepository,
-        RecurringExpenseRepository recurringExpenseRepository)
+    public VerwaltungViewModel(KategorienViewModel kategorien)
     {
-        _personRepository = personRepository;
-        _categoryRepository = categoryRepository;
-        _recurringExpenseRepository = recurringExpenseRepository;
+        Kategorien = kategorien;
     }
 
-    public string PlatzhalterText =>
-        "Verwaltung - hier entsteht spaeter die Pflege von Personen, Kategorien und Vorlagen.";
+    public string PersonenPlatzhalterText => "Personen - hier entsteht spaeter die Pflege der Personen.";
+
+    public string VorlagenPlatzhalterText =>
+        "Vorlagen - hier entsteht spaeter die Pflege wiederkehrender Buchungen.";
 }

@@ -10,6 +10,8 @@ namespace Ausgabenverwaltung.ViewModels;
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase
 {
+    private readonly ErfassenViewModel _erfassen;
+
     public StartupNoticeViewModel StartupNotice { get; }
 
     public IReadOnlyList<NavigationItem> NavigationItems { get; }
@@ -26,6 +28,7 @@ public sealed partial class MainViewModel : ViewModelBase
         VerwaltungViewModel verwaltung)
     {
         StartupNotice = startupNotice;
+        _erfassen = erfassen;
 
         NavigationItems = new List<NavigationItem>
         {
@@ -37,5 +40,17 @@ public sealed partial class MainViewModel : ViewModelBase
         };
 
         _selectedNavigationItem = NavigationItems[0];
+    }
+
+    // Bereichs-ViewModels sind DI-Singletons und laden Daten wie die
+    // Kategorienliste nur einmal. Beim Wechsel zurueck zu "Erfassen"
+    // deshalb neu laden, damit Aenderungen aus der Verwaltung (neue,
+    // umbenannte oder archivierte Kategorien) ohne Neustart sichtbar sind.
+    partial void OnSelectedNavigationItemChanged(NavigationItem value)
+    {
+        if (ReferenceEquals(value.ViewModel, _erfassen))
+        {
+            _erfassen.AktualisiereKategorieVorschlaege();
+        }
     }
 }
