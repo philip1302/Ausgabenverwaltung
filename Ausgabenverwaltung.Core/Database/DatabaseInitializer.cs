@@ -15,6 +15,10 @@ public static class DatabaseInitializer
     // des auszufuehrenden Schemas und wuerden beim Ausfuehren fehlschlagen.
     private const string ExampleQueriesMarker = "-- ABFRAGE 1";
 
+    // Von schema_v1.sql eingetragene SchemaVersion. Steigt mit jeder
+    // Migration, die der Code beherrscht.
+    public const int ExpectedSchemaVersion = 1;
+
     public static void Initialize(IDbConnection connection)
     {
         if (SchemaAlreadyApplied(connection))
@@ -24,6 +28,15 @@ public static class DatabaseInitializer
 
         var script = LoadSchemaScript();
         connection.Execute(script);
+    }
+
+    // MAX() statt einer einfachen SELECT Version, damit die Abfrage auch
+    // dann eindeutig bleibt, wenn kuenftige Migrationen mehrere Zeilen in
+    // SchemaVersion hinterlassen.
+    public static int GetSchemaVersion(IDbConnection connection)
+    {
+        const string sql = "SELECT MAX(Version) FROM SchemaVersion";
+        return connection.ExecuteScalar<int>(sql);
     }
 
     private static bool SchemaAlreadyApplied(IDbConnection connection)

@@ -188,17 +188,17 @@ public sealed class RecurringExpenseRepository
     /// siehe <see cref="RecurrenceGenerator"/>) und schreibt je Vorlage
     /// GeneratedThrough auf <paramref name="asOf"/> fort. Laeuft
     /// vollstaendig in einer Transaktion: schlaegt eine einzelne Buchung
-    /// fehl, wird fuer KEINE Vorlage etwas uebernommen. Gibt die Anzahl
-    /// der neu erzeugten Buchungen zurueck.
+    /// fehl, wird fuer KEINE Vorlage etwas uebernommen. Gibt die neu
+    /// erzeugten Buchungen zurueck.
     /// </summary>
-    public int GenerateDueOccurrences(DateOnly asOf)
+    public IReadOnlyList<Expense> GenerateDueOccurrences(DateOnly asOf)
     {
         var templates = GetAllActive();
 
         using var transaction = _connection.BeginTransaction();
         try
         {
-            var totalCreated = 0;
+            var created = new List<Expense>();
 
             foreach (var template in templates)
             {
@@ -213,15 +213,14 @@ public sealed class RecurringExpenseRepository
 
                 foreach (var occurrenceDate in occurrences)
                 {
-                    InsertGeneratedExpense(template, occurrenceDate, transaction);
-                    totalCreated++;
+                    created.Add(InsertGeneratedExpense(template, occurrenceDate, transaction));
                 }
 
                 UpdateGeneratedThrough(template.Id, asOf, transaction);
             }
 
             transaction.Commit();
-            return totalCreated;
+            return created;
         }
         catch
         {
@@ -230,7 +229,7 @@ public sealed class RecurringExpenseRepository
         }
     }
 
-    private void InsertGeneratedExpense(RecurringExpense template, DateOnly occurrenceDate, IDbTransaction transaction)
+    private Expense InsertGeneratedExpense(RecurringExpense template, DateOnly occurrenceDate, IDbTransaction transaction)
     {
         var nowUtc = DateTime.UtcNow;
 
@@ -253,6 +252,22 @@ public sealed class RecurringExpenseRepository
             RecurringExpenseId = template.Id,
             NowUtcText = IsoDateTime.ToUtcText(nowUtc),
         }, transaction);
+
+        var id = _connection.ExecuteScalar<long>("SELECT last_insert_rowid()", transaction: transaction);
+
+        return new Expense
+        {
+            Id = (int)id,
+            CategoryId = template.CategoryId,
+            AmountCents = template.AmountCents,
+            ExpenseDate = occurrenceDate,
+            Note = template.Note,
+            PayerId = template.PayerId,
+            SettledDate = null,
+            RecurringExpenseId = template.Id,
+            CreatedUtc = nowUtc,
+            ModifiedUtc = nowUtc,
+        };
     }
 
     private void UpdateGeneratedThrough(int id, DateOnly asOf, IDbTransaction transaction)

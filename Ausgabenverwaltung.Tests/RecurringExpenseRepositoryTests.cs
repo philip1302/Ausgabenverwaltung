@@ -142,7 +142,10 @@ public class RecurringExpenseRepositoryTests : IDisposable
 
         var created = _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 1));
 
-        Assert.Equal(3, created); // Januar, Februar, Maerz
+        Assert.Equal(3, created.Count); // Januar, Februar, Maerz
+        Assert.Equal(1200, created[0].AmountCents);
+        Assert.Equal("Familientarif", created[0].Note);
+        Assert.Equal(template.Id, created[0].RecurringExpenseId);
         var buchungen = GetGeneratedExpenses(template.Id);
         Assert.Equal(
             new[] { new DateOnly(2026, 1, 1), new DateOnly(2026, 2, 1), new DateOnly(2026, 3, 1) },
@@ -165,8 +168,8 @@ public class RecurringExpenseRepositoryTests : IDisposable
         var ersterLauf = _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 15));
         var zweiterLauf = _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 15));
 
-        Assert.Equal(3, ersterLauf);
-        Assert.Equal(0, zweiterLauf);
+        Assert.Equal(3, ersterLauf.Count);
+        Assert.Empty(zweiterLauf);
         Assert.Equal(3, GetGeneratedExpenses(template.Id).Count);
     }
 
@@ -178,13 +181,13 @@ public class RecurringExpenseRepositoryTests : IDisposable
             new DateOnly(2026, 1, 1), new DateOnly(2026, 3, 1));
 
         var vollstaendig = _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 1));
-        Assert.Equal(3, vollstaendig);
+        Assert.Equal(3, vollstaendig.Count);
 
         // EndDate liegt jetzt in der Vergangenheit - ein spaeterer Lauf
         // (das Abo ist laengst ausgelaufen) darf nichts mehr erzeugen.
         var weitererLauf = _repository.GenerateDueOccurrences(new DateOnly(2026, 12, 1));
 
-        Assert.Equal(0, weitererLauf);
+        Assert.Empty(weitererLauf);
         Assert.Equal(3, GetGeneratedExpenses(template.Id).Count);
     }
 
@@ -204,7 +207,7 @@ public class RecurringExpenseRepositoryTests : IDisposable
         // zurueckkommen, GeneratedThrough steht bereits dahinter.
         var weitererLauf = _repository.GenerateDueOccurrences(new DateOnly(2026, 5, 1));
 
-        Assert.Equal(2, weitererLauf); // nur April, Mai
+        Assert.Equal(2, weitererLauf.Count); // nur April, Mai
         var verbleibendeDaten = GetGeneratedExpenses(template.Id).Select(e => e.ExpenseDate).ToList();
         Assert.DoesNotContain(new DateOnly(2026, 2, 1), verbleibendeDaten);
     }
