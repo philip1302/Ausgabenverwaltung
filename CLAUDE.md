@@ -56,3 +56,6 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
 - SQL sichtbar und lesbar — keine Query-Generierung verstecken
 
 ## Build
+- Zur Pruefung nur `dotnet build` und `dotnet test` ausfuehren.
+  **Niemals `dotnet run` zur Pruefung** - die Avalonia-App blockiert das
+  Terminal, weil sie auf die GUI-Ereignisschleife wartet.
