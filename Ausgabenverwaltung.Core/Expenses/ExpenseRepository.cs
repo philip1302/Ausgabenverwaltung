@@ -6,11 +6,13 @@ using Dapper;
 namespace Ausgabenverwaltung.Core.Expenses;
 
 /// <summary>
-/// Anlegen, Aendern, Loeschen und Laden einzelner Ausgaben, sowie die
-/// offene-Posten-Liste (Regel 4: nicht beglichene Ausgaben, fuer die ein
-/// fremder Zahler zustaendig ist). Betraege sind immer long-Cent
-/// (Regel 1), Datumsangaben werden ueber IsoDate/IsoDateTime als
-/// 'YYYY-MM-DD' bzw. 'YYYY-MM-DDTHH:MM:SSZ'-TEXT gespeichert (Regel 3).
+/// Anlegen, Aendern, Loeschen und Laden einzelner Ausgaben. Die
+/// Offene-Posten-Liste (Regel 4) steckt in
+/// Ausgabenverwaltung.Core.OpenItems.OpenItemsRepository, weil sie
+/// zusaetzlich Personenname und vollen Kategoriepfad braucht. Betraege
+/// sind immer long-Cent (Regel 1), Datumsangaben werden ueber
+/// IsoDate/IsoDateTime als 'YYYY-MM-DD' bzw. 'YYYY-MM-DDTHH:MM:SSZ'-TEXT
+/// gespeichert (Regel 3).
 /// </summary>
 public sealed class ExpenseRepository
 {
@@ -121,28 +123,6 @@ public sealed class ExpenseRepository
 
         var row = _connection.QueryFirstOrDefault<ExpenseRow>(sql, new { Id = id });
         return row is null ? null : ToExpense(row);
-    }
-
-    /// <summary>
-    /// Offene-Posten-Liste: nicht beglichene Ausgaben, fuer die eine
-    /// fremde Person (IsSelf = 0) zustaendig ist. Bei eigenen Ausgaben
-    /// bleibt SettledDate unausgewertet (Regel 4), sie tauchen hier
-    /// deshalb nie auf.
-    /// </summary>
-    public IReadOnlyList<Expense> GetOpenItems()
-    {
-        const string sql = """
-            SELECT e.Id, e.CategoryId, e.AmountCents, e.ExpenseDate, e.Note, e.PayerId,
-                   e.SettledDate, e.RecurringExpenseId, e.CreatedUtc, e.ModifiedUtc
-            FROM   Expense e
-            JOIN   Person  p ON p.Id = e.PayerId
-            WHERE  e.SettledDate IS NULL
-              AND  p.IsSelf = 0
-            ORDER BY e.ExpenseDate
-            """;
-
-        var rows = _connection.Query<ExpenseRow>(sql);
-        return rows.Select(ToExpense).ToList();
     }
 
     /// <summary>

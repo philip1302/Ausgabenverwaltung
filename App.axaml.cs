@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Expenses;
+using Ausgabenverwaltung.Core.OpenItems;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.RecurringExpenses;
 using Ausgabenverwaltung.Core.Reports;
@@ -70,6 +71,7 @@ public partial class App : Application
         services.AddSingleton<PersonRepository>();
         services.AddSingleton<CategoryRepository>();
         services.AddSingleton<ExpenseRepository>();
+        services.AddSingleton<OpenItemsRepository>();
         services.AddSingleton<RecurringExpenseRepository>();
         services.AddSingleton<ReportRepository>();
 

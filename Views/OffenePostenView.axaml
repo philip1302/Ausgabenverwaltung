@@ -2,11 +2,168 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.OffenePostenView"
+             x:Name="Wurzel"
              x:DataType="vm:OffenePostenViewModel">
-    <TextBlock Text="{Binding PlatzhalterText}"
-               Margin="16"
-               TextWrapping="Wrap" />
+
+    <UserControl.Styles>
+        <Style Selector="Button.kopf">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="TextBlock.beglichen">
+            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="TextBlock.fehler">
+            <Setter Property="Foreground" Value="Red" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <!-- Rueckgaengig-Hinweis nach dem Abhaken -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding RueckgaengigSichtbar}"
+                Background="#DFF5DF"
+                BorderBrush="#8FCB8F"
+                BorderThickness="0,0,0,1"
+                Padding="8"
+                Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{Binding RueckgaengigText}" VerticalAlignment="Center" />
+                <Button Content="Rückgängig" Command="{Binding RueckgaengigCommand}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Werkzeugleiste -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
+                <Button Content="Ausgewählte abhaken" Command="{Binding AusgewaehlteAbhakenCommand}" />
+                <CheckBox Content="Beglichene der letzten 30 Tage anzeigen"
+                          IsChecked="{Binding BeglicheneLetzte30TageAnzeigen}"
+                          VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock Grid.Column="2"
+                       VerticalAlignment="Center"
+                       FontWeight="Bold"
+                       Text="{Binding GesamtsummeText, StringFormat='Gesamt offen: {0} EUR'}" />
+        </Grid>
+
+        <TextBlock DockPanel.Dock="Top"
+                    Text="Keine offenen Posten."
+                    IsVisible="{Binding KeineEintraege}"
+                    Foreground="Gray"
+                    FontStyle="Italic"
+                    Margin="0,8" />
+
+        <!-- Kopfzeile -->
+        <Grid DockPanel.Dock="Top"
+              ColumnDefinitions="32,90,2*,90,2*,80,180"
+              IsVisible="{Binding !KeineEintraege}"
+              Margin="4,0,20,4">
+            <TextBlock Grid.Column="0" />
+            <Button Grid.Column="1" Classes="kopf" Content="{Binding DatumHeaderText}"
+                    Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
+            <Button Grid.Column="2" Classes="kopf" Content="{Binding KategorieHeaderText}"
+                    Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
+            <Button Grid.Column="3" Classes="kopf" Content="{Binding BetragHeaderText}"
+                    Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
+            <Button Grid.Column="4" Classes="kopf" Content="{Binding BemerkungHeaderText}"
+                    Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
+            <Button Grid.Column="5" Classes="kopf" Content="{Binding TageOffenHeaderText}"
+                    Command="{Binding SpalteSortierenCommand}" CommandParameter="TageOffen" />
+            <TextBlock Grid.Column="6" Text="Aktionen" FontWeight="Bold" />
+        </Grid>
+
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Gruppen}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PersonenGruppe">
+                        <StackPanel Margin="0,0,0,16">
+                            <TextBlock Text="{Binding PersonName}" FontWeight="Bold" FontSize="14" Margin="0,8,0,4" />
+
+                            <ItemsControl ItemsSource="{Binding Zeilen}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:OffenerPostenZeile">
+                                        <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
+                                            <StackPanel>
+                                                <Grid ColumnDefinitions="32,90,2*,90,2*,80,180">
+                                                    <CheckBox Grid.Column="0"
+                                                              IsChecked="{Binding IstAusgewaehlt}"
+                                                              IsVisible="{Binding !IstBeglichen}"
+                                                              VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding DatumText}"
+                                                               Classes.beglichen="{Binding IstBeglichen}"
+                                                               VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding CategoryFullPath}"
+                                                               Classes.beglichen="{Binding IstBeglichen}"
+                                                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding BetragText}"
+                                                               Classes.beglichen="{Binding IstBeglichen}"
+                                                               TextAlignment="Right" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="4" Text="{Binding Note}"
+                                                               Classes.beglichen="{Binding IstBeglichen}"
+                                                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="5" Text="{Binding TageOffen}"
+                                                               Classes.beglichen="{Binding IstBeglichen}"
+                                                               TextAlignment="Right" VerticalAlignment="Center" />
+
+                                                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="6">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                    IsVisible="{Binding !IstBeglichen}">
+                                                            <Button Content="Abhaken"
+                                                                    ToolTip.Tip="Heute als beglichen markieren"
+                                                                    Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbhakenCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                            <Button Content="Datum…"
+                                                                    ToolTip.Tip="Mit abweichendem Datum abhaken"
+                                                                    Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumOeffnenCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding BeglichenText}"
+                                                                   IsVisible="{Binding IstBeglichen}"
+                                                                   FontStyle="Italic" Foreground="Gray"
+                                                                   VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!-- Eingabe eines abweichenden Begleichungsdatums -->
+                                                <StackPanel Orientation="Horizontal" Spacing="6"
+                                                            Margin="32,6,0,0"
+                                                            IsVisible="{Binding WaehltAbweichendesDatum}">
+                                                    <TextBox Text="{Binding AbweichendesDatumText}"
+                                                             Width="110"
+                                                             PlaceholderText="TT.MM.JJJJ" />
+                                                    <Button Content="Übernehmen"
+                                                            Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumUebernehmenCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                    <Button Content="Abbrechen"
+                                                            Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumAbbrechenCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                    <TextBlock Text="{Binding AbweichendesDatumFehler}"
+                                                               IsVisible="{Binding AbweichendesDatumFehlerSichtbar}"
+                                                               Classes="fehler"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock HorizontalAlignment="Right" FontWeight="Bold" Margin="0,4,20,0"
+                                       Text="{Binding ZwischensummeText, StringFormat='Zwischensumme: {0} EUR'}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
 </UserControl>

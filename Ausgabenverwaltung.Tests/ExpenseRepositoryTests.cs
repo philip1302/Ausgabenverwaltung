@@ -114,41 +114,6 @@ public class ExpenseRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void GetOpenItems_enthaelt_nur_unbeglichene_Ausgaben_mit_fremdem_Zahler()
-    {
-        // Offen, fremder Zahler -> gehoert in die Liste.
-        var offen = _repository.Create(
-            _categoryId, 1000, new DateOnly(2026, 3, 1), _otherId);
-
-        // Beglichen, fremder Zahler -> nicht mehr offen.
-        _repository.Create(
-            _categoryId, 1000, new DateOnly(2026, 3, 2), _otherId,
-            settledDate: new DateOnly(2026, 3, 3));
-
-        // SettledDate NULL, aber eigener Zahler -> wird nie ausgewertet (Regel 4).
-        _repository.Create(
-            _categoryId, 1000, new DateOnly(2026, 3, 4), _selfId);
-
-        var openItems = _repository.GetOpenItems();
-
-        var item = Assert.Single(openItems);
-        Assert.Equal(offen.Id, item.Id);
-    }
-
-    [Fact]
-    public void GetOpenItems_ist_nach_ExpenseDate_sortiert()
-    {
-        var spaeter = _repository.Create(
-            _categoryId, 100, new DateOnly(2026, 3, 20), _otherId);
-        var frueher = _repository.Create(
-            _categoryId, 100, new DateOnly(2026, 3, 1), _otherId);
-
-        var openItems = _repository.GetOpenItems();
-
-        Assert.Equal(new[] { frueher.Id, spaeter.Id }, openItems.Select(e => e.Id));
-    }
-
-    [Fact]
     public void GetRecent_ist_nach_Erfassungsreihenfolge_sortiert_nicht_nach_ExpenseDate()
     {
         // Absichtlich rueckdatiert erfasst, damit ein spaeteres

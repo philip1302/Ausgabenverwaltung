@@ -11,6 +11,7 @@ namespace Ausgabenverwaltung.ViewModels;
 public sealed partial class MainViewModel : ViewModelBase
 {
     private readonly ErfassenViewModel _erfassen;
+    private readonly OffenePostenViewModel _offenePosten;
 
     public StartupNoticeViewModel StartupNotice { get; }
 
@@ -29,6 +30,7 @@ public sealed partial class MainViewModel : ViewModelBase
     {
         StartupNotice = startupNotice;
         _erfassen = erfassen;
+        _offenePosten = offenePosten;
 
         NavigationItems = new List<NavigationItem>
         {
@@ -51,6 +53,11 @@ public sealed partial class MainViewModel : ViewModelBase
         if (ReferenceEquals(value.ViewModel, _erfassen))
         {
             _erfassen.AktualisiereKategorieVorschlaege();
+        }
+
+        if (ReferenceEquals(value.ViewModel, _offenePosten))
+        {
+            _offenePosten.AktualisiereListe();
         }
     }
 }
