@@ -54,7 +54,8 @@ public class ExpenseListQueryTests : IDisposable
         int? categoryRootId = null,
         int? payerId = null,
         SettlementStatus status = SettlementStatus.Alle,
-        string? searchText = null) => new()
+        string? searchText = null,
+        int? recurringExpenseId = null) => new()
     {
         From = DateOnly.MinValue,
         To = DateOnly.MaxValue,
@@ -62,6 +63,7 @@ public class ExpenseListQueryTests : IDisposable
         PayerId = payerId,
         Status = status,
         SearchText = searchText,
+        RecurringExpenseId = recurringExpenseId,
     };
 
     private IReadOnlyList<ExpenseListItem> Query(
@@ -119,6 +121,61 @@ public class ExpenseListQueryTests : IDisposable
 
         Assert.Null(items[1].RecurringExpenseId);
         Assert.Null(items[1].RecurringExpenseTitle);
+    }
+
+    [Fact]
+    public void Query_kann_auf_die_Buchungen_einer_Vorlage_eingeschraenkt_werden()
+    {
+        // Der Sprung "zeig mir, was diese Vorlage bisher gebucht hat" aus
+        // der Vorlagenverwaltung.
+        var vorlagen = new RecurringExpenseRepository(_connection);
+        var stallmiete = vorlagen.Create(
+            _pferdeId, _selfId, 12000, "Stallmiete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+        var versicherung = vorlagen.Create(
+            _pferdeId, _selfId, 3000, "Versicherung", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        _expenses.Create(_pferdeId, 12000, new DateOnly(2026, 1, 1), _selfId, recurringExpenseId: stallmiete.Id);
+        _expenses.Create(_pferdeId, 12000, new DateOnly(2026, 2, 1), _selfId, recurringExpenseId: stallmiete.Id);
+        _expenses.Create(_pferdeId, 3000, new DateOnly(2026, 1, 1), _selfId, recurringExpenseId: versicherung.Id);
+        _expenses.Create(_pferdeId, 500, new DateOnly(2026, 1, 3), _selfId);
+
+        var items = Query(Alles(recurringExpenseId: stallmiete.Id));
+
+        Assert.Equal(2, items.Count);
+        Assert.All(items, item => Assert.Equal(stallmiete.Id, item.RecurringExpenseId));
+    }
+
+    [Fact]
+    public void Summarize_beachtet_den_Vorlagenfilter()
+    {
+        // Liste, Trefferzahl und Summe muessen bei gleichem Filter
+        // zwingend dieselbe Menge treffen - dafuer gibt es den gemeinsamen
+        // WHERE-Block in ReportFilterSql.
+        var vorlagen = new RecurringExpenseRepository(_connection);
+        var vorlage = vorlagen.Create(
+            _pferdeId, _selfId, 12000, "Stallmiete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        _expenses.Create(_pferdeId, 12000, new DateOnly(2026, 1, 1), _selfId, recurringExpenseId: vorlage.Id);
+        _expenses.Create(_pferdeId, 12000, new DateOnly(2026, 2, 1), _selfId, recurringExpenseId: vorlage.Id);
+        _expenses.Create(_pferdeId, 99900, new DateOnly(2026, 1, 3), _selfId);
+
+        var summary = _expenses.Summarize(Alles(recurringExpenseId: vorlage.Id));
+
+        Assert.Equal(2, summary.Count);
+        Assert.Equal(24000, summary.SumCents);
+    }
+
+    [Fact]
+    public void Ohne_Vorlagenfilter_erscheinen_weiterhin_alle_Buchungen()
+    {
+        var vorlagen = new RecurringExpenseRepository(_connection);
+        var vorlage = vorlagen.Create(
+            _pferdeId, _selfId, 12000, "Stallmiete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        _expenses.Create(_pferdeId, 12000, new DateOnly(2026, 1, 1), _selfId, recurringExpenseId: vorlage.Id);
+        _expenses.Create(_pferdeId, 500, new DateOnly(2026, 1, 3), _selfId);
+
+        Assert.Equal(2, Query(Alles()).Count);
     }
 
     // ---------------------------------------------------------------

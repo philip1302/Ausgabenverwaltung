@@ -14,8 +14,8 @@
         <TabItem Header="Personen">
             <views:PersonenView DataContext="{Binding Personen}" />
         </TabItem>
-        <TabItem Header="Vorlagen">
-            <TextBlock Text="{Binding VorlagenPlatzhalterText}" Margin="16" TextWrapping="Wrap" />
+        <TabItem Header="Wiederkehrende Ausgaben">
+            <views:VorlagenView DataContext="{Binding Vorlagen}" />
         </TabItem>
     </TabControl>
 </UserControl>

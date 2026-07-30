@@ -191,6 +191,23 @@
                                 Command="{Binding FilterZuruecksetzenCommand}"
                                 VerticalAlignment="Bottom" />
                     </StackPanel>
+
+                    <!-- Einschraenkung auf eine Vorlage. Sie steht in keinem
+                         Bedienelement der Filterleiste, deshalb muss sie hier
+                         sichtbar sein - sonst waere unerklaerlich, warum
+                         ploetzlich fast alle Buchungen fehlen. -->
+                    <Border IsVisible="{Binding VorlageFilterAktiv}"
+                            Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                            CornerRadius="2" Padding="8,4"
+                            HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{Binding VorlageFilterText}"
+                                       VerticalAlignment="Center" />
+                            <Button Content="✕"
+                                    ToolTip.Tip="Einschränkung auf die Vorlage aufheben"
+                                    Command="{Binding VorlagenFilterEntfernenCommand}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
 

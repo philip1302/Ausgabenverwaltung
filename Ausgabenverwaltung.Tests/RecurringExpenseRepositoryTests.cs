@@ -255,6 +255,163 @@ public class RecurringExpenseRepositoryTests : IDisposable
         Assert.Equal("alt", geladeneBuchung.Note);
     }
 
+    // ---------------------------------------------------------------
+    // Verwaltung: alle laden, aktivieren, loeschen, zaehlen
+    // ---------------------------------------------------------------
+
+    [Fact]
+    public void GetAll_liefert_auch_inaktive_Vorlagen_aktive_zuerst()
+    {
+        _repository.Create(_categoryId, _payerId, 1000, "Bernd-Abo", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+        var inaktiv = _repository.Create(_categoryId, _payerId, 1000, "Anna-Abo", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+        _repository.Deactivate(inaktiv.Id);
+
+        var titel = _repository.GetAll().Select(t => t.Title).ToList();
+
+        // Aktive zuerst, deshalb steht Bernd trotz des Alphabets vorn.
+        Assert.Equal(new[] { "Bernd-Abo", "Anna-Abo" }, titel);
+    }
+
+    [Fact]
+    public void Activate_macht_eine_deaktivierte_Vorlage_wieder_aktiv()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        _repository.Deactivate(template.Id);
+        Assert.False(_repository.GetById(template.Id)!.IsActive);
+
+        _repository.Activate(template.Id);
+
+        Assert.True(_repository.GetById(template.Id)!.IsActive);
+    }
+
+    [Fact]
+    public void SetGeneratedThrough_unterdrueckt_den_Rueckstand_ohne_etwas_zu_erzeugen()
+    {
+        // Der Fall "Vorlage nach langer Pause reaktivieren, aber erst ab
+        // heute weiterlaufen".
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        _repository.SetGeneratedThrough(template.Id, new DateOnly(2026, 7, 30));
+
+        Assert.Empty(GetGeneratedExpenses(template.Id));
+        Assert.Equal(new DateOnly(2026, 7, 30), _repository.GetById(template.Id)!.GeneratedThrough);
+
+        // Der naechste Lauf holt jetzt nichts mehr nach.
+        Assert.Empty(_repository.GenerateDueOccurrences(new DateOnly(2026, 7, 30)));
+    }
+
+    [Fact]
+    public void Delete_entfernt_die_Vorlage_und_loest_nur_die_Zuordnung_der_Buchungen()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        var erzeugt = _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 1));
+        Assert.Equal(3, erzeugt.Count);
+
+        _repository.Delete(template.Id);
+
+        Assert.Null(_repository.GetById(template.Id));
+
+        // ON DELETE SET NULL: die Buchungen bleiben, gelten aber danach als
+        // handerfasst.
+        foreach (var buchung in erzeugt)
+        {
+            var geladen = _expenseRepository.GetById(buchung.Id);
+            Assert.NotNull(geladen);
+            Assert.Null(geladen!.RecurringExpenseId);
+        }
+    }
+
+    [Fact]
+    public void GetGeneratedExpenseCounts_zaehlt_je_Vorlage()
+    {
+        var mitBuchungen = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+        var ohneBuchungen = _repository.Create(
+            _categoryId, _payerId, 1000, "Kuenftig", "month", 1, 1, new DateOnly(2027, 1, 1), null);
+
+        _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 1));
+
+        var anzahlen = _repository.GetGeneratedExpenseCounts();
+
+        Assert.Equal(3, anzahlen[mitBuchungen.Id]);
+
+        // Vorlagen ohne Buchung fehlen im Ergebnis - gleiches Muster wie
+        // bei Kategorien und Personen.
+        Assert.False(anzahlen.ContainsKey(ohneBuchungen.Id));
+    }
+
+    [Fact]
+    public void GetGeneratedExpenseCounts_zaehlt_handerfasste_Buchungen_nicht_mit()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        _repository.GenerateDueOccurrences(new DateOnly(2026, 1, 1));
+        _expenseRepository.Create(_categoryId, 500, new DateOnly(2026, 1, 5), _payerId);
+
+        Assert.Equal(1, _repository.GetGeneratedExpenseCounts()[template.Id]);
+    }
+
+    // ---------------------------------------------------------------
+    // Einzelerzeugung
+    // ---------------------------------------------------------------
+
+    [Fact]
+    public void Einzelerzeugung_laesst_andere_Vorlagen_unberuehrt()
+    {
+        // Beim Speichern einer neuen Vorlage darf nicht nebenbei die
+        // Historie aller anderen Vorlagen entstehen.
+        var gespeicherte = _repository.Create(
+            _categoryId, _payerId, 1000, "Neu angelegt", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+        var andere = _repository.Create(
+            _categoryId, _payerId, 2000, "Laeuft schon", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        var erzeugt = _repository.GenerateDueOccurrences(gespeicherte.Id, new DateOnly(2026, 3, 1));
+
+        Assert.Equal(3, erzeugt.Count);
+        Assert.All(erzeugt, e => Assert.Equal(gespeicherte.Id, e.RecurringExpenseId));
+
+        Assert.Empty(GetGeneratedExpenses(andere.Id));
+        Assert.Null(_repository.GetById(andere.Id)!.GeneratedThrough);
+    }
+
+    [Fact]
+    public void Einzelerzeugung_schreibt_GeneratedThrough_fort()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        _repository.GenerateDueOccurrences(template.Id, new DateOnly(2026, 3, 1));
+
+        Assert.Equal(new DateOnly(2026, 3, 1), _repository.GetById(template.Id)!.GeneratedThrough);
+        Assert.Empty(_repository.GenerateDueOccurrences(template.Id, new DateOnly(2026, 3, 1)));
+    }
+
+    [Fact]
+    public void Einzelerzeugung_erzeugt_fuer_eine_inaktive_Vorlage_nichts()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Stillgelegt", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+        _repository.Deactivate(template.Id);
+
+        Assert.Empty(_repository.GenerateDueOccurrences(template.Id, new DateOnly(2026, 3, 1)));
+
+        // Auch GeneratedThrough darf sich dabei nicht bewegen - sonst waere
+        // der Rueckstand beim Reaktivieren stillschweigend verschwunden.
+        Assert.Null(_repository.GetById(template.Id)!.GeneratedThrough);
+    }
+
+    [Fact]
+    public void Einzelerzeugung_fuer_eine_unbekannte_Vorlage_erzeugt_nichts()
+    {
+        Assert.Empty(_repository.GenerateDueOccurrences(99999, new DateOnly(2026, 3, 1)));
+    }
+
     private void InsertRawExpense(int recurringExpenseId, DateOnly date)
     {
         var nowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow);

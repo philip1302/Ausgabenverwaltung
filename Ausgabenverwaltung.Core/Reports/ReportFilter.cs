@@ -40,4 +40,12 @@ public sealed class ReportFilter
     /// Optionale Volltextsuche in der Bemerkung (Note). NULL = kein Filter.
     /// </summary>
     public string? SearchText { get; init; }
+
+    /// <summary>
+    /// Optionale Einschraenkung auf die aus EINER Vorlage erzeugten
+    /// Buchungen - fuer den Sprung "zeig mir, was diese Vorlage bisher
+    /// gebucht hat" aus der Vorlagenverwaltung. NULL = keine
+    /// Einschraenkung.
+    /// </summary>
+    public int? RecurringExpenseId { get; init; }
 }

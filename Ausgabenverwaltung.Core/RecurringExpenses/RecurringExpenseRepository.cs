@@ -151,6 +151,83 @@ public sealed class RecurringExpenseRepository
         _connection.Execute(sql, new { Id = id, NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow) });
     }
 
+    /// <summary>
+    /// Nimmt eine deaktivierte Vorlage wieder in Betrieb. ACHTUNG:
+    /// GeneratedThrough bleibt dabei stehen, wo es beim Deaktivieren stand -
+    /// der naechste Erzeugungslauf holt die gesamte Pause nach. Wer das
+    /// nicht will, ruft anschliessend
+    /// <see cref="SetGeneratedThrough"/> mit dem heutigen Datum auf.
+    /// </summary>
+    public void Activate(int id)
+    {
+        const string sql = """
+            UPDATE RecurringExpense
+            SET IsActive = 1,
+                ModifiedUtc = @NowUtcText
+            WHERE Id = @Id
+            """;
+
+        _connection.Execute(sql, new { Id = id, NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow) });
+    }
+
+    /// <summary>
+    /// Schreibt GeneratedThrough fort, OHNE etwas zu erzeugen. Gebraucht
+    /// beim Reaktivieren einer laenger stillgelegten Vorlage, wenn der
+    /// Rueckstand bewusst uebersprungen werden soll ("erst ab heute
+    /// weiterlaufen").
+    /// </summary>
+    public void SetGeneratedThrough(int id, DateOnly through)
+    {
+        const string sql = """
+            UPDATE RecurringExpense
+            SET GeneratedThrough = @GeneratedThroughText,
+                ModifiedUtc = @NowUtcText
+            WHERE Id = @Id
+            """;
+
+        _connection.Execute(sql, new
+        {
+            Id = id,
+            GeneratedThroughText = IsoDate.ToDateText(through),
+            NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow),
+        });
+    }
+
+    /// <summary>
+    /// Loescht die Vorlage endgueltig. Bereits erzeugte Buchungen bleiben
+    /// erhalten und verlieren lediglich ihre Zuordnung: der Fremdschluessel
+    /// Expense.RecurringExpenseId steht auf ON DELETE SET NULL, die
+    /// Buchungen zaehlen danach als handerfasst. Regel 8 (archivieren statt
+    /// loeschen) betrifft nur Kategorien und Personen, an denen die
+    /// Historie haengt - bei einer Vorlage haengt sie das nicht, weil die
+    /// Werte beim Erzeugen kopiert wurden (Regel 6).
+    ///
+    /// Der Normalfall bleibt trotzdem <see cref="Deactivate"/>.
+    /// </summary>
+    public void Delete(int id)
+    {
+        const string sql = "DELETE FROM RecurringExpense WHERE Id = @Id";
+        _connection.Execute(sql, new { Id = id });
+    }
+
+    /// <summary>
+    /// Anzahl der bereits aus jeder Vorlage erzeugten Buchungen. Vorlagen
+    /// ohne Buchung fehlen im Ergebnis - gleiches Muster wie
+    /// Categories.CategoryRepository.GetExpenseCounts.
+    /// </summary>
+    public IReadOnlyDictionary<int, int> GetGeneratedExpenseCounts()
+    {
+        const string sql = """
+            SELECT RecurringExpenseId, COUNT(*) AS Anzahl
+            FROM   Expense
+            WHERE  RecurringExpenseId IS NOT NULL
+            GROUP  BY RecurringExpenseId
+            """;
+
+        return _connection.Query<GeneratedCountRow>(sql)
+            .ToDictionary(row => row.RecurringExpenseId, row => row.Anzahl);
+    }
+
     public RecurringExpense? GetById(int id)
     {
         const string sql = """
@@ -183,6 +260,26 @@ public sealed class RecurringExpenseRepository
     }
 
     /// <summary>
+    /// Aktive UND inaktive Vorlagen fuer die Verwaltungsliste, aktive
+    /// zuerst - inaktive werden dort ausgegraut mit angezeigt, damit sie
+    /// nicht unauffindbar werden.
+    /// </summary>
+    public IReadOnlyList<RecurringExpense> GetAll()
+    {
+        const string sql = """
+            SELECT Id, CategoryId, PayerId, AmountCents, Note, Title,
+                   IntervalUnit, IntervalCount, AnchorDay,
+                   StartDate, EndDate, GeneratedThrough,
+                   IsActive, CreatedUtc, ModifiedUtc
+            FROM RecurringExpense
+            ORDER BY IsActive DESC, Title COLLATE NOCASE
+            """;
+
+        var rows = _connection.Query<RecurringExpenseRow>(sql);
+        return rows.Select(ToRecurringExpense).ToList();
+    }
+
+    /// <summary>
     /// Erzeugt fuer alle aktiven Vorlagen die bis <paramref name="asOf"/>
     /// faelligen, aber noch nicht erzeugten Buchungen (Datumsberechnung
     /// siehe <see cref="RecurrenceGenerator"/>) und schreibt je Vorlage
@@ -202,21 +299,7 @@ public sealed class RecurringExpenseRepository
 
             foreach (var template in templates)
             {
-                var occurrences = RecurrenceGenerator.GetDueOccurrences(
-                    template.StartDate,
-                    template.EndDate,
-                    template.IntervalUnit,
-                    template.IntervalCount,
-                    template.AnchorDay,
-                    template.GeneratedThrough,
-                    asOf);
-
-                foreach (var occurrenceDate in occurrences)
-                {
-                    created.Add(InsertGeneratedExpense(template, occurrenceDate, transaction));
-                }
-
-                UpdateGeneratedThrough(template.Id, asOf, transaction);
+                created.AddRange(GenerateForTemplate(template, asOf, transaction));
             }
 
             transaction.Commit();
@@ -227,6 +310,70 @@ public sealed class RecurringExpenseRepository
             transaction.Rollback();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Erzeugt die faelligen Buchungen EINER Vorlage. Gebraucht direkt nach
+    /// dem Anlegen oder Aendern einer Vorlage: sonst entstuende die erste
+    /// Buchung erst beim naechsten Sammellauf, und die frisch angelegte
+    /// Vorlage saehe wirkungslos aus.
+    ///
+    /// Eine unbekannte oder inaktive Vorlage erzeugt nichts und veraendert
+    /// auch GeneratedThrough nicht - stillgelegt heisst stillgelegt.
+    /// </summary>
+    public IReadOnlyList<Expense> GenerateDueOccurrences(int templateId, DateOnly asOf)
+    {
+        var template = GetById(templateId);
+        if (template is null || !template.IsActive)
+        {
+            return Array.Empty<Expense>();
+        }
+
+        using var transaction = _connection.BeginTransaction();
+        try
+        {
+            var created = GenerateForTemplate(template, asOf, transaction);
+            transaction.Commit();
+            return created;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Der gemeinsame Kern beider Erzeugungswege: faellige Vorkommen
+    /// einfuegen und GeneratedThrough fortschreiben.
+    ///
+    /// GeneratedThrough wird auch dann gesetzt, wenn KEIN Vorkommen
+    /// entstanden ist. Das ist kein Versehen, sondern der Grund, warum eine
+    /// von Hand geloeschte Buchung nicht beim naechsten Lauf wieder
+    /// auftaucht.
+    /// </summary>
+    private List<Expense> GenerateForTemplate(
+        RecurringExpense template, DateOnly asOf, IDbTransaction transaction)
+    {
+        var occurrences = RecurrenceGenerator.GetDueOccurrences(
+            template.StartDate,
+            template.EndDate,
+            template.IntervalUnit,
+            template.IntervalCount,
+            template.AnchorDay,
+            template.GeneratedThrough,
+            asOf);
+
+        var created = new List<Expense>();
+
+        foreach (var occurrenceDate in occurrences)
+        {
+            created.Add(InsertGeneratedExpense(template, occurrenceDate, transaction));
+        }
+
+        UpdateGeneratedThrough(template.Id, asOf, transaction);
+
+        return created;
     }
 
     private Expense InsertGeneratedExpense(RecurringExpense template, DateOnly occurrenceDate, IDbTransaction transaction)
@@ -326,5 +473,11 @@ public sealed class RecurringExpenseRepository
         public bool IsActive { get; set; }
         public string CreatedUtc { get; set; } = string.Empty;
         public string ModifiedUtc { get; set; } = string.Empty;
+    }
+
+    private sealed class GeneratedCountRow
+    {
+        public int RecurringExpenseId { get; set; }
+        public int Anzahl { get; set; }
     }
 }

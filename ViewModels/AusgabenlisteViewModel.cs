@@ -89,6 +89,18 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     [ObservableProperty]
     private string _suchtext = string.Empty;
 
+    // Einschraenkung auf eine Vorlage. Kommt nicht aus der Filterleiste,
+    // sondern ueber den Sprung aus der Vorlagenverwaltung
+    // (siehe ZeigeVorlagenBuchungen) - deshalb ein eigenes Feld statt einer
+    // gebundenen Auswahl.
+    private int? _vorlageFilterId;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VorlageFilterAktiv))]
+    private string? _vorlageFilterText;
+
+    public bool VorlageFilterAktiv => VorlageFilterText is not null;
+
     // ---------------- Sortierung ----------------
 
     [ObservableProperty]
@@ -245,9 +257,53 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         AusgewaehlterZahler = ZahlerOptionen[0];
         AusgewaehlterStatus = StatusOptionen[0];
         Suchtext = string.Empty;
+        _vorlageFilterId = null;
+        VorlageFilterText = null;
         SetzeVorgabeZeitraum();
         _ladenGesperrt = false;
 
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Zeigt genau die aus einer Vorlage erzeugten Buchungen. Wird aus der
+    /// Vorlagenverwaltung heraus aufgerufen (siehe
+    /// <see cref="MainViewModel"/>).
+    ///
+    /// Der Zeitraum wird dabei geoeffnet und die uebrigen Filter geleert:
+    /// die Buchungen einer Vorlage reichen typischerweise weiter zurueck
+    /// als die Vorgabe "dieses Jahr", und ein stehen gebliebener
+    /// Kategoriefilter wuerde sie zusaetzlich ausduennen. Der Anwender
+    /// erwartet nach dem Sprung genau diese Buchungen - alle davon.
+    /// </summary>
+    public void ZeigeVorlagenBuchungen(int vorlageId, string vorlageTitel)
+    {
+        _ladenGesperrt = true;
+        AusgewaehlteFilterKategorie = null;
+        AusgewaehlterZahler = ZahlerOptionen[0];
+        AusgewaehlterStatus = StatusOptionen[0];
+        Suchtext = string.Empty;
+        VonText = string.Empty;
+        BisText = string.Empty;
+        SortSpalte = ExpenseSortColumn.Datum;
+        SortAufsteigend = false;
+
+        _vorlageFilterId = vorlageId;
+        VorlageFilterText = $"Nur Buchungen aus Vorlage: {vorlageTitel}";
+        _ladenGesperrt = false;
+
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Hebt die Einschraenkung auf eine Vorlage auf, ohne die uebrigen
+    /// Filter anzufassen.
+    /// </summary>
+    [RelayCommand]
+    private void VorlagenFilterEntfernen()
+    {
+        _vorlageFilterId = null;
+        VorlageFilterText = null;
         LadeDaten();
     }
 
@@ -475,6 +531,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             PayerId = AusgewaehlterZahler?.Id,
             Status = AusgewaehlterStatus.Wert,
             SearchText = string.IsNullOrWhiteSpace(Suchtext) ? null : Suchtext.Trim(),
+            RecurringExpenseId = _vorlageFilterId,
         };
 
         return true;

@@ -54,6 +54,10 @@ public static class ReportFilterSql
               ))
 
         AND  (@SearchText IS NULL OR e.Note LIKE '%' || @SearchText || '%')
+
+        -- Nur die aus einer bestimmten Vorlage erzeugten Buchungen.
+        -- NULL => keine Einschraenkung.
+        AND  (@RecurringExpenseId IS NULL OR e.RecurringExpenseId = @RecurringExpenseId)
         """;
 
     /// <summary>
@@ -71,6 +75,7 @@ public static class ReportFilterSql
         Status = StatusText(filter.Status),
         filter.CategoryRootId,
         filter.SearchText,
+        filter.RecurringExpenseId,
     };
 
     private static string PayerScopeText(PayerScope scope) => scope switch

@@ -1,0 +1,397 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:categories="using:Ausgabenverwaltung.Core.Categories"
+             xmlns:entities="using:Ausgabenverwaltung.Core.Entities"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="650"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="Ausgabenverwaltung.Views.VorlagenView"
+             x:Name="Wurzel"
+             x:DataType="vm:VorlagenViewModel">
+
+    <!-- Spaltenraster "2*,16,2*,16,85,16,135,16,95,16,90,16,70,16,80,24,300"
+         gilt fuer Kopfzeile UND Zeilen gleichermassen: Titel, Kategorie,
+         Betrag, Rhythmus, Zahler, naechste Faelligkeit, erzeugte Buchungen,
+         Status, Aktionen - dazwischen feste Gutter-Spalten als Abstandhalter
+         (ungerade Indizes). Die Tabellen-Styles (TextBlock.tabellenkopf,
+         .tabellenzelle, .archiviert, ...) kommen aus App.axaml.
+
+         Bewusst ScrollViewer + ItemsControl statt der virtualisierenden
+         ListBox der Ausgabenliste: Vorlagen sind eine Handvoll, nicht
+         tausende - dasselbe Muster wie in PersonenView. -->
+    <UserControl.Styles>
+        <Style Selector="TextBlock.formularbeschriftung">
+            <Setter Property="Margin" Value="0,10,0,2" />
+        </Style>
+        <Style Selector="TextBlock.hinweis">
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
+        <DockPanel>
+            <!-- ============ Werkzeugleiste ============ -->
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+                        Margin="0,0,0,8">
+                <Button Content="Neue Vorlage" Command="{Binding NeueVorlageCommand}" />
+                <Button Content="Jetzt erzeugen"
+                        Command="{Binding JetztErzeugenCommand}"
+                        ToolTip.Tip="Erzeugt alle bis heute fälligen Buchungen aller aktiven Vorlagen — dasselbe, was auch beim Programmstart läuft." />
+            </StackPanel>
+
+            <!-- ============ Band: Ergebnis der Erzeugung ============ -->
+            <Border DockPanel.Dock="Top"
+                    IsVisible="{Binding ErgebnisSichtbar}"
+                    Background="#DFF5DF" BorderBrush="#8FCB8F" BorderThickness="1"
+                    CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                <StackPanel Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding ErgebnisText}"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="Schliessen"
+                                Command="{Binding ErgebnisSchliessenCommand}" />
+                    </Grid>
+                    <Expander Header="Details anzeigen"
+                              IsVisible="{Binding ErgebnisHatZeilen}">
+                        <ItemsControl ItemsSource="{Binding ErgebnisZeilen}" />
+                    </Expander>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ Band: Rueckstand beim Reaktivieren ============
+                 GeneratedThrough bleibt beim Deaktivieren stehen. Ohne diese
+                 Abfrage wuerde ein einziger Klick die gesamte Pause
+                 nachbuchen. -->
+            <Border DockPanel.Dock="Top"
+                    IsVisible="{Binding ReaktivierungAnfrageAktiv}"
+                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                    CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{Binding ReaktivierungAnfrageText}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Rückstand nachholen"
+                                Command="{Binding ReaktivierungNachholenCommand}" />
+                        <Button Content="Erst ab heute weiterlaufen"
+                                Command="{Binding ReaktivierungAbHeuteCommand}" />
+                        <Button Content="Abbrechen"
+                                Command="{Binding ReaktivierungAbbrechenCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ Fusszeile ============ -->
+            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto"
+                  Margin="4,10,20,0">
+                <TextBlock Grid.Column="0" Text="{Binding AnzahlText}"
+                           Foreground="Gray" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" FontWeight="Bold"
+                           ToolTip.Tip="Alle aktiven, nicht abgelaufenen Vorlagen auf Monatsbasis umgerechnet (jährlich durch zwölf, wöchentlich mit der mittleren Monatslänge)."
+                           Text="{Binding MonatlicheBelastungText, StringFormat='Monatliche Belastung: {0} EUR'}" />
+            </Grid>
+
+            <!-- ============ Kopfzeile ============
+                 Die Breite kommt aus der Zeilenliste, statt ueber einen
+                 rechten Rand die Bildlaufleiste zu schaetzen. Der Grund:
+                 die Differenz zwischen geschaetzter und tatsaechlicher
+                 Breite landet vollstaendig in den beiden 2*-Spalten, und
+                 damit stehen ALLE Spalten ab der zweiten um einige Pixel
+                 versetzt ueber ihren Werten. Mit gleicher Breite und
+                 gleichem Innenabstand (hier Padding 4, in der Zeile das
+                 Padding des Borders) fallen die Spaltengrenzen exakt
+                 aufeinander. -->
+            <Border DockPanel.Dock="Top"
+                    Width="{Binding #Zeilenliste.Bounds.Width}"
+                    HorizontalAlignment="Left"
+                    Padding="4,0,4,4">
+                <Grid ColumnDefinitions="2*,16,2*,16,85,16,135,16,95,16,90,16,70,16,80,24,300">
+                    <TextBlock Grid.Column="0"  Text="Titel"       Classes="tabellenkopf" />
+                    <TextBlock Grid.Column="2"  Text="Kategorie"   Classes="tabellenkopf" />
+                    <TextBlock Grid.Column="4"  Text="Betrag"      Classes="tabellenkopf zahl" />
+                    <TextBlock Grid.Column="6"  Text="Rhythmus"    Classes="tabellenkopf" />
+                    <TextBlock Grid.Column="8"  Text="Zahler"      Classes="tabellenkopf" />
+                    <TextBlock Grid.Column="10" Text="Nächste"     Classes="tabellenkopf" />
+                    <TextBlock Grid.Column="12" Text="Erzeugt"     Classes="tabellenkopf mitte" />
+                    <TextBlock Grid.Column="14" Text="Status"      Classes="tabellenkopf" />
+                    <Button    Grid.Column="16" Content="Aktionen" Classes="tabellenkopf-aktion" />
+                </Grid>
+            </Border>
+
+            <TextBlock Text="Noch keine Vorlagen angelegt. „Neue Vorlage“ legt die erste an."
+                       IsVisible="{Binding KeineVorlagen}"
+                       DockPanel.Dock="Top"
+                       Foreground="Gray" FontStyle="Italic"
+                       Margin="4,8" />
+
+            <!-- ============ Tabelle ============ -->
+            <ScrollViewer>
+                <ItemsControl x:Name="Zeilenliste" ItemsSource="{Binding Zeilen}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:VorlageZeile">
+                            <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
+                                <Grid ColumnDefinitions="2*,16,2*,16,85,16,135,16,95,16,90,16,70,16,80,24,300">
+                                    <TextBlock Grid.Column="0" Text="{Binding Titel}"
+                                               Classes="tabellenzelle"
+                                               Classes.archiviert="{Binding !IstAktiv}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="2" Text="{Binding CategoryFullPath}"
+                                               Classes="tabellenzelle"
+                                               Classes.archiviert="{Binding !IstAktiv}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="4" Text="{Binding BetragText}"
+                                               Classes="tabellenzelle zahl"
+                                               Classes.archiviert="{Binding !IstAktiv}" />
+                                    <TextBlock Grid.Column="6" Text="{Binding RhythmusText}"
+                                               Classes="tabellenzelle"
+                                               Classes.archiviert="{Binding !IstAktiv}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="8" Text="{Binding PayerName}"
+                                               Classes="tabellenzelle"
+                                               Classes.archiviert="{Binding !IstAktiv}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="10" Text="{Binding NaechsteFaelligkeitText}"
+                                               Classes="tabellenzelle"
+                                               Classes.archiviert="{Binding !IstAktiv}" />
+
+                                    <!-- Anzahl bereits erzeugter Buchungen, zugleich der
+                                         Sprung in die gefilterte Ausgabenliste. -->
+                                    <Panel Grid.Column="12">
+                                        <Button Content="{Binding ErzeugtText}"
+                                                IsVisible="{Binding HatErzeugteBuchungen}"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Center"
+                                                ToolTip.Tip="Diese Buchungen in der Ausgabenliste zeigen"
+                                                Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BuchungenAnzeigenCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <TextBlock Text="—"
+                                                   IsVisible="{Binding !HatErzeugteBuchungen}"
+                                                   Classes="tabellenzelle mitte" />
+                                    </Panel>
+
+                                    <TextBlock Grid.Column="14" Text="{Binding StatusText}"
+                                               Classes="tabellenzelle"
+                                               Classes.archiviert="{Binding !IstAktiv}" />
+
+                                    <StackPanel Grid.Column="16" Orientation="Horizontal" Spacing="6">
+                                        <Button Content="Bearbeiten"
+                                                Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenOeffnenCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Content="Deaktivieren"
+                                                IsVisible="{Binding IstAktiv}"
+                                                ToolTip.Tip="Stoppt die künftige Erzeugung. Bereits erzeugte Buchungen bleiben unverändert."
+                                                Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).DeaktivierenCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Content="Aktivieren"
+                                                IsVisible="{Binding !IstAktiv}"
+                                                Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).AktivierenCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Content="Löschen"
+                                                Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).LoeschenCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+
+        <!-- ============ Overlay: Loesch-Sicherheitsabfrage ============ -->
+        <Panel IsVisible="{Binding LoeschAnfrageAktiv}" Background="#60000000">
+            <Border Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                    CornerRadius="2" Padding="16"
+                    MaxWidth="560"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
+                        <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============ Overlay: Formular ============ -->
+        <Panel IsVisible="{Binding BearbeitenAktiv}" Background="#60000000">
+            <Border Background="White" BorderBrush="#C0C0C0" BorderThickness="1"
+                    CornerRadius="2" Padding="16"
+                    Width="520" MaxHeight="620"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <DockPanel DataContext="{Binding Bearbeiten}"
+                           x:DataType="vm:VorlageBearbeitenViewModel">
+
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="{Binding Titelzeile}"
+                               FontWeight="Bold" FontSize="14" Margin="0,0,0,10" />
+
+                    <!-- Abschluss unten festgenagelt, damit die Schaltflaechen
+                         beim Scrollen im Formular sichtbar bleiben. -->
+                    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,12,0,0">
+                        <!-- Rueckwirkende Erzeugung ab elf Buchungen: ausdrueckliche Abfrage -->
+                        <Border IsVisible="{Binding RueckwirkendAbfrageSichtbar}"
+                                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                CornerRadius="2" Padding="8">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding RueckwirkendAbfrageText}" Classes="hinweis" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Ja, erzeugen"
+                                            Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).RueckwirkendBestaetigenCommand}" />
+                                    <Button Content="Abbrechen"
+                                            Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).RueckwirkendAbbrechenCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                            <Button Content="Speichern"
+                                    Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenSpeichernCommand}" />
+                            <Button Content="Abbrechen"
+                                    Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenAbbrechenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <ScrollViewer>
+                        <StackPanel Spacing="2">
+                            <!-- Regel 6: die Historie haengt nicht an der Vorlage -->
+                            <Border IsVisible="{Binding BetragHinweisSichtbar}"
+                                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                    Padding="8" Margin="0,0,0,10">
+                                <TextBlock Classes="hinweis"
+                                           Text="Änderungen wirken nur auf künftig erzeugte Buchungen. Bereits erzeugte Buchungen behalten Betrag, Kategorie und Zahler, die zum Zeitpunkt ihrer Erzeugung galten." />
+                            </Border>
+
+                            <!-- Startdatum nach vorne verschoben, obwohl schon erzeugt wurde -->
+                            <Border IsVisible="{Binding StartVorverlegtHinweisSichtbar}"
+                                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                    Padding="8" Margin="0,0,0,10">
+                                <TextBlock Text="{Binding StartVorverlegtHinweis}" Classes="hinweis" />
+                            </Border>
+
+                            <TextBlock Text="Titel" />
+                            <TextBox Text="{Binding Titel}" PlaceholderText="z. B. Stallmiete Ponyhof Weber" />
+                            <TextBlock Text="{Binding TitelFehler}"
+                                       IsVisible="{Binding TitelFehlerSichtbar}" Foreground="Red" />
+
+                            <TextBlock Text="Betrag (EUR)" Classes="formularbeschriftung" />
+                            <TextBox Text="{Binding BetragText}" PlaceholderText="0,00" />
+                            <TextBlock Text="{Binding BetragFehler}"
+                                       IsVisible="{Binding BetragFehlerSichtbar}" Foreground="Red" />
+
+                            <TextBlock Text="Kategorie" Classes="formularbeschriftung" />
+                            <AutoCompleteBox ItemsSource="{Binding KategorieVorschlaege}"
+                                             ValueMemberBinding="{Binding FullPath}"
+                                             FilterMode="Contains"
+                                             SelectedItem="{Binding AusgewaehlteKategorie}"
+                                             PlaceholderText="Kategorie suchen...">
+                                <AutoCompleteBox.ItemTemplate>
+                                    <DataTemplate x:DataType="categories:CategoryOption">
+                                        <TextBlock Text="{Binding FullPath}" />
+                                    </DataTemplate>
+                                </AutoCompleteBox.ItemTemplate>
+                            </AutoCompleteBox>
+                            <TextBlock Text="{Binding KategorieFehler}"
+                                       IsVisible="{Binding KategorieFehlerSichtbar}" Foreground="Red" />
+
+                            <TextBlock Text="Zahler" Classes="formularbeschriftung" />
+                            <ComboBox ItemsSource="{Binding ZahlerOptionen}"
+                                      SelectedItem="{Binding AusgewaehlterZahler}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="entities:Person">
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{Binding ZahlerFehler}"
+                                       IsVisible="{Binding ZahlerFehlerSichtbar}" Foreground="Red" />
+
+                            <TextBlock Text="Bemerkung" Classes="formularbeschriftung" />
+                            <TextBox Text="{Binding Bemerkung}" />
+
+                            <TextBlock Text="Rhythmus" FontWeight="Bold" Margin="0,16,0,4" />
+
+                            <Grid ColumnDefinitions="*,12,*,12,*">
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Einheit" />
+                                    <ComboBox ItemsSource="{Binding IntervallOptionen}"
+                                              SelectedItem="{Binding AusgewaehlteIntervallEinheit}"
+                                              HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:IntervallOption">
+                                                <TextBlock Text="{Binding Bezeichnung}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="alle ..." />
+                                    <TextBox Text="{Binding IntervallAnzahlText}" />
+                                </StackPanel>
+
+                                <!-- Ankertag gibt es nur bei Monat und Jahr;
+                                     bei Tag und Woche waere er sinnlos. -->
+                                <StackPanel Grid.Column="4" IsVisible="{Binding AnkertagSichtbar}">
+                                    <TextBlock Text="Tag im Monat" />
+                                    <TextBox Text="{Binding AnkertagText}" PlaceholderText="1-31" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding IntervallAnzahlFehler}"
+                                       IsVisible="{Binding IntervallAnzahlFehlerSichtbar}" Foreground="Red" />
+                            <TextBlock Text="{Binding AnkertagFehler}"
+                                       IsVisible="{Binding AnkertagFehlerSichtbar}" Foreground="Red" />
+
+                            <!-- Regel 5: Kuerzung auf den Monatsletzten -->
+                            <Border IsVisible="{Binding AnkertagHinweisSichtbar}"
+                                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                    Padding="8" Margin="0,8,0,0">
+                                <TextBlock Classes="hinweis"
+                                           Text="Diesen Tag gibt es nicht in jedem Monat. In kürzeren Monaten wird auf den letzten Tag des Monats gekürzt — der Termin wandert dadurch nicht dauerhaft, im nächsten langen Monat trifft er wieder genau." />
+                            </Border>
+
+                            <Grid ColumnDefinitions="*,12,*" Margin="0,10,0,0">
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Startdatum" />
+                                    <TextBox Text="{Binding StartDatumText}" PlaceholderText="TT.MM.JJJJ" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Enddatum (optional)" />
+                                    <TextBox Text="{Binding EndDatumText}" PlaceholderText="leer = unbefristet" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding StartDatumFehler}"
+                                       IsVisible="{Binding StartDatumFehlerSichtbar}" Foreground="Red" />
+                            <TextBlock Text="{Binding EndDatumFehler}"
+                                       IsVisible="{Binding EndDatumFehlerSichtbar}" Foreground="Red" />
+
+                            <CheckBox Content="Aktiv" IsChecked="{Binding IstAktiv}" Margin="0,10,0,0"
+                                      ToolTip.Tip="Inaktive Vorlagen erzeugen nichts mehr, bleiben aber erhalten." />
+
+                            <TextBlock Text="Nächste Fälligkeiten" FontWeight="Bold" Margin="0,16,0,4" />
+
+                            <Border Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="1"
+                                    CornerRadius="2" Padding="8">
+                                <StackPanel Spacing="4">
+                                    <ItemsControl ItemsSource="{Binding VorschauTermine}"
+                                                  IsVisible="{Binding VorschauSichtbar}" />
+                                    <TextBlock Text="{Binding VorschauLeerText}"
+                                               IsVisible="{Binding !VorschauSichtbar}"
+                                               Foreground="Gray" FontStyle="Italic"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border IsVisible="{Binding RueckwirkendSichtbar}"
+                                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                    Padding="8" Margin="0,8,0,0">
+                                <TextBlock Text="{Binding RueckwirkendText}" Classes="hinweis" />
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Panel>
+    </Panel>
+</UserControl>

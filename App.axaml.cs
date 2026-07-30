@@ -75,6 +75,14 @@ public partial class App : Application
         services.AddSingleton<RecurringExpenseRepository>();
         services.AddSingleton<ReportRepository>();
 
+        // Der Erzeugungslauf des Programmstarts ist gerade gelaufen (siehe
+        // StartupService.Run) und zaehlt als der heutige - der Scheduler
+        // startet deshalb mit dem heutigen Datum und laesst den naechsten
+        // Lauf erst morgen zu.
+        services.AddSingleton(provider => new RecurringExpenseScheduler(
+            provider.GetRequiredService<RecurringExpenseRepository>(),
+            DateOnly.FromDateTime(DateTime.Now)));
+
         services.AddSingleton(startupResult);
         services.AddSingleton<StartupNoticeViewModel>();
 
@@ -84,6 +92,7 @@ public partial class App : Application
         services.AddSingleton<AusgabenlisteViewModel>();
         services.AddSingleton<KategorienViewModel>();
         services.AddSingleton<PersonenViewModel>();
+        services.AddSingleton<VorlagenViewModel>();
         services.AddSingleton<VerwaltungViewModel>();
         services.AddSingleton<MainViewModel>();
 

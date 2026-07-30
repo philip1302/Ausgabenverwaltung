@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Ausgabenverwaltung.Core;
+using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Startup;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,24 +11,41 @@ using CommunityToolkit.Mvvm.Input;
 namespace Ausgabenverwaltung.ViewModels;
 
 /// <summary>
-/// Wegklickbarer Hinweis nach dem Start: wie viele wiederkehrende
-/// Buchungen erzeugt wurden, mit aufklappbarer Liste. Baut den Anzeige-
-/// text aus dem <see cref="StartupResult"/> des Startdiensts - reine
-/// Darstellung, keine Fachlogik (die steckt in StartupService/Core).
+/// Wegklickbarer Hinweis ueber wiederkehrende Buchungen, die gerade
+/// automatisch erzeugt wurden - beim Programmstart und, weil die Erzeugung
+/// sonst am Start haengen wuerde, auch bei den Laeufen waehrend der
+/// Sitzung (siehe <see cref="MainViewModel"/> und
+/// Core.RecurringExpenses.RecurringExpenseScheduler). Baut nur den
+/// Anzeigetext, keine Fachlogik (die steckt in Core).
 /// </summary>
 public sealed partial class StartupNoticeViewModel : ViewModelBase
 {
     [ObservableProperty]
     private bool _isVisible;
 
-    public string SummaryText { get; }
-    public int GeneratedExpenseCount { get; }
-    public IReadOnlyList<string> GeneratedExpenseDescriptions { get; }
+    [ObservableProperty]
+    private string _summaryText = string.Empty;
+
+    [ObservableProperty]
+    private int _generatedExpenseCount;
+
+    [ObservableProperty]
+    private IReadOnlyList<string> _generatedExpenseDescriptions = [];
 
     public StartupNoticeViewModel(StartupResult startupResult)
     {
-        GeneratedExpenseCount = startupResult.GeneratedExpenseCount;
-        GeneratedExpenseDescriptions = startupResult.GeneratedExpenses
+        Zeige(startupResult.GeneratedExpenses);
+    }
+
+    /// <summary>
+    /// Zeigt einen Erzeugungslauf an. Bei null Buchungen bleibt das Banner
+    /// unsichtbar - ein "es war nichts faellig" beim Bereichswechsel waere
+    /// nur Rauschen.
+    /// </summary>
+    public void Zeige(IReadOnlyList<Expense> erzeugte)
+    {
+        GeneratedExpenseCount = erzeugte.Count;
+        GeneratedExpenseDescriptions = erzeugte
             .Select(expense =>
                 $"{IsoDate.ToDateText(expense.ExpenseDate)} - " +
                 $"{Money.ToDecimal(expense.AmountCents).ToString("N2", CultureInfo.InvariantCulture)} EUR" +
