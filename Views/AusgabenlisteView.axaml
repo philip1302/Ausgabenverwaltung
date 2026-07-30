@@ -10,12 +10,21 @@
              x:Name="Wurzel"
              x:DataType="vm:AusgabenlisteViewModel">
 
-    <!-- Spaltenraster "32,24,90,16,2*,16,90,24,110,16,120,16,2*,16,200"
+    <!-- Spaltenraster "32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200"
          gilt fuer Kopfzeile UND Zeilen gleichermassen: Auswahl,
          Vorlagen-Marker, Datum, Kategorie, Betrag, Zahler, Status,
          Bemerkung, Aktionen - dazwischen feste Gutter-Spalten als
          Abstandhalter (Indizes 3,5,7,9,11,13). Die Tabellen-Styles
          (Button.kopf, TextBlock.tabellenzelle, ...) kommen aus App.axaml.
+
+         Die Statusspalte ist 175 statt der urspruenglichen 120 Pixel
+         breit: der laengste Wert ist "beglichen am 29.09.2025" und wurde
+         vorher abgeschnitten. Die Spalte umbricht bewusst NICHT - ein
+         zweizeiliger Status wuerde die ganze Zeile hoeher machen.
+         Der Zuwachs geht zu Lasten der Bemerkung, nicht der Kategorie:
+         deshalb steht Kategorie jetzt auf 3* und Bemerkung auf 2*, was
+         der Kategorie bei den ueblichen Fensterbreiten genau ihre
+         bisherige Breite laesst. Die Bemerkung umbricht ohnehin.
 
          Die Aktionsspalte fasst "Bearbeiten" und "Löschen" nebeneinander;
          200 statt der urspruenglichen 150 Pixel, weil die beiden
@@ -244,7 +253,7 @@
                     Width="{Binding #Zeilenliste.Scroll.Viewport.Width}"
                     HorizontalAlignment="Left"
                     Padding="4,0,4,4">
-                <Grid ColumnDefinitions="32,24,90,16,2*,16,90,24,110,16,120,16,2*,16,200">
+                <Grid ColumnDefinitions="32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200">
                     <TextBlock Grid.Column="0" />
                     <TextBlock Grid.Column="1" />
                     <Button Grid.Column="2" Classes="kopf" Content="{Binding DatumHeaderText}"
@@ -285,7 +294,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:AusgabeZeile">
                         <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
-                            <Grid ColumnDefinitions="32,24,90,16,2*,16,90,24,110,16,120,16,2*,16,200">
+                            <Grid ColumnDefinitions="32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200">
                                 <CheckBox Grid.Column="0"
                                           IsChecked="{Binding IstAusgewaehlt}"
                                           VerticalAlignment="Center" />
