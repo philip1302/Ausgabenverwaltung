@@ -10,14 +10,6 @@
         Title="Ausgabenverwaltung">
 
     <DockPanel>
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_Datensicherung">
-                <MenuItem Header="Sicherung _jetzt"
-                          Command="{Binding SicherungJetztCommand}"
-                          ToolTip.Tip="Sichert sofort, unabhängig davon, ob heute schon gesichert wurde." />
-            </MenuItem>
-        </Menu>
-
         <!-- Gescheiterte Sicherung beim Start: melden, aber nicht
              aufhalten. -->
         <Border DockPanel.Dock="Top"

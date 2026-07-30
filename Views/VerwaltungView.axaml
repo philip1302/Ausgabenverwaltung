@@ -7,11 +7,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.VerwaltungView"
              x:DataType="vm:VerwaltungViewModel">
-    <!-- SelectedIndex gebunden, damit der Menuepunkt "Sicherung jetzt"
-         auch den passenden Reiter oeffnen kann. Die Reihenfolge der
-         Reiter ist deshalb nicht mehr beliebig, siehe
-         VerwaltungViewModel.DatensicherungTabIndex. -->
-    <TabControl Margin="16" SelectedIndex="{Binding AusgewaehlterTabIndex}">
+    <TabControl Margin="16">
         <TabItem Header="Kategorien">
             <views:KategorienView DataContext="{Binding Kategorien}" />
         </TabItem>
