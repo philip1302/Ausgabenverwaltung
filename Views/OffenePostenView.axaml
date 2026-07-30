@@ -55,27 +55,32 @@
                     FontStyle="Italic"
                     Margin="0,8" />
 
-        <!-- Kopfzeile -->
-        <Grid DockPanel.Dock="Top"
-              ColumnDefinitions="32,90,16,2*,16,90,24,2*,16,100,24,190"
-              IsVisible="{Binding !KeineEintraege}"
-              Margin="4,0,20,4">
-            <TextBlock Grid.Column="0" />
-            <Button Grid.Column="1" Classes="kopf" Content="{Binding DatumHeaderText}"
-                    Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
-            <Button Grid.Column="3" Classes="kopf" Content="{Binding KategorieHeaderText}"
-                    Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
-            <Button Grid.Column="5" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
-                    Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
-            <Button Grid.Column="7" Classes="kopf" Content="{Binding BemerkungHeaderText}"
-                    Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
-            <Button Grid.Column="9" Classes="kopf mitte" Content="{Binding TageOffenHeaderText}"
-                    Command="{Binding SpalteSortierenCommand}" CommandParameter="TageOffen" />
-            <Button Grid.Column="11" Content="Aktionen" Classes="tabellenkopf-aktion" />
-        </Grid>
+        <!-- Kopfzeile
+             Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste -
+             siehe die gleichlautende Stelle in PersonenView. -->
+        <Border DockPanel.Dock="Top"
+                Width="{Binding #Zeilenliste.Bounds.Width}"
+                HorizontalAlignment="Left"
+                IsVisible="{Binding !KeineEintraege}"
+                Padding="4,0,4,4">
+            <Grid ColumnDefinitions="32,90,16,2*,16,90,24,2*,16,100,24,190">
+                <TextBlock Grid.Column="0" />
+                <Button Grid.Column="1" Classes="kopf" Content="{Binding DatumHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
+                <Button Grid.Column="3" Classes="kopf" Content="{Binding KategorieHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
+                <Button Grid.Column="5" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
+                <Button Grid.Column="7" Classes="kopf" Content="{Binding BemerkungHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
+                <Button Grid.Column="9" Classes="kopf mitte" Content="{Binding TageOffenHeaderText}"
+                        Command="{Binding SpalteSortierenCommand}" CommandParameter="TageOffen" />
+                <Button Grid.Column="11" Content="Aktionen" Classes="tabellenkopf-aktion" />
+            </Grid>
+        </Border>
 
         <ScrollViewer>
-            <ItemsControl ItemsSource="{Binding Gruppen}">
+            <ItemsControl x:Name="Zeilenliste" ItemsSource="{Binding Gruppen}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:PersonenGruppe">
                         <StackPanel Margin="0,0,0,16">

@@ -234,26 +234,34 @@
                            Text="{Binding SummeText, StringFormat='Summe: {0} EUR'}" />
             </Grid>
 
-            <!-- ============ Kopfzeile ============ -->
-            <Grid DockPanel.Dock="Top"
-                  ColumnDefinitions="32,24,90,16,2*,16,90,24,110,16,120,16,2*,16,200"
-                  Margin="4,0,20,4">
-                <TextBlock Grid.Column="0" />
-                <TextBlock Grid.Column="1" />
-                <Button Grid.Column="2" Classes="kopf" Content="{Binding DatumHeaderText}"
-                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
-                <Button Grid.Column="4" Classes="kopf" Content="{Binding KategorieHeaderText}"
-                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
-                <Button Grid.Column="6" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
-                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
-                <Button Grid.Column="8" Classes="kopf" Content="{Binding ZahlerHeaderText}"
-                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Zahler" />
-                <Button Grid.Column="10" Classes="kopf" Content="{Binding StatusHeaderText}"
-                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Status" />
-                <Button Grid.Column="12" Classes="kopf" Content="{Binding BemerkungHeaderText}"
-                        Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
-                <Button Grid.Column="14" Content="Aktionen" Classes="tabellenkopf-aktion" />
-            </Grid>
+            <!-- ============ Kopfzeile ============
+                 Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste
+                 (siehe PersonenView). Hier aber ueber Scroll.Viewport und
+                 nicht ueber Bounds: die ListBox scrollt selbst, ihre
+                 Gesamtbreite enthaelt also die Bildlaufleiste, waehrend die
+                 Zeilen nur den Viewport davor fuellen. -->
+            <Border DockPanel.Dock="Top"
+                    Width="{Binding #Zeilenliste.Scroll.Viewport.Width}"
+                    HorizontalAlignment="Left"
+                    Padding="4,0,4,4">
+                <Grid ColumnDefinitions="32,24,90,16,2*,16,90,24,110,16,120,16,2*,16,200">
+                    <TextBlock Grid.Column="0" />
+                    <TextBlock Grid.Column="1" />
+                    <Button Grid.Column="2" Classes="kopf" Content="{Binding DatumHeaderText}"
+                            Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
+                    <Button Grid.Column="4" Classes="kopf" Content="{Binding KategorieHeaderText}"
+                            Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
+                    <Button Grid.Column="6" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
+                            Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
+                    <Button Grid.Column="8" Classes="kopf" Content="{Binding ZahlerHeaderText}"
+                            Command="{Binding SpalteSortierenCommand}" CommandParameter="Zahler" />
+                    <Button Grid.Column="10" Classes="kopf" Content="{Binding StatusHeaderText}"
+                            Command="{Binding SpalteSortierenCommand}" CommandParameter="Status" />
+                    <Button Grid.Column="12" Classes="kopf" Content="{Binding BemerkungHeaderText}"
+                            Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
+                    <Button Grid.Column="14" Content="Aktionen" Classes="tabellenkopf-aktion" />
+                </Grid>
+            </Border>
 
             <TextBlock Text="Keine Ausgaben für diesen Filter."
                        IsVisible="{Binding KeineTreffer}"
@@ -267,7 +275,8 @@
                  ein VirtualizingStackPanel und sie bringt den ScrollViewer
                  mit - noetig, weil die Liste ueber Jahre tausende Zeilen
                  enthalten kann. -->
-            <ListBox Classes="tabelle"
+            <ListBox x:Name="Zeilenliste"
+                     Classes="tabelle"
                      ItemsSource="{Binding Zeilen}"
                      SelectionMode="Single"
                      Background="Transparent"

@@ -28,16 +28,27 @@
             <CheckBox Content="Archivierte anzeigen" IsChecked="{Binding ArchivierteAnzeigen}" Margin="24,0,0,0" />
         </StackPanel>
 
-        <!-- Kopfzeile -->
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="2*,16,90,16,140,24,280" Margin="4,0,20,4">
-            <TextBlock Grid.Column="0" Text="Name" Classes="tabellenkopf" />
-            <TextBlock Grid.Column="2" Text="Ausgaben" Classes="tabellenkopf zahl" />
-            <TextBlock Grid.Column="4" Text="Offene Posten" Classes="tabellenkopf zahl" />
-            <Button Grid.Column="6" Content="Aktionen" Classes="tabellenkopf-aktion" />
-        </Grid>
+        <!-- Kopfzeile
+             Die Breite kommt aus der Zeilenliste, statt die Bildlaufleiste
+             ueber einen festen rechten Rand zu schaetzen: die Differenz
+             zwischen Schaetzung und tatsaechlicher Breite landet sonst
+             vollstaendig in der Sternspalte und verschiebt alle folgenden
+             Spalten gegen ihre Werte. Innenabstand 4 entspricht dem Padding
+             des Zeilen-Borders, damit die Spaltengrenzen aufeinanderfallen. -->
+        <Border DockPanel.Dock="Top"
+                Width="{Binding #Zeilenliste.Bounds.Width}"
+                HorizontalAlignment="Left"
+                Padding="4,0,4,4">
+            <Grid ColumnDefinitions="2*,16,90,16,140,24,280">
+                <TextBlock Grid.Column="0" Text="Name" Classes="tabellenkopf" />
+                <TextBlock Grid.Column="2" Text="Ausgaben" Classes="tabellenkopf zahl" />
+                <TextBlock Grid.Column="4" Text="Offene Posten" Classes="tabellenkopf zahl" />
+                <Button Grid.Column="6" Content="Aktionen" Classes="tabellenkopf-aktion" />
+            </Grid>
+        </Border>
 
         <ScrollViewer>
-            <ItemsControl ItemsSource="{Binding Personen}">
+            <ItemsControl x:Name="Zeilenliste" ItemsSource="{Binding Personen}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:PersonZeile">
                         <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
