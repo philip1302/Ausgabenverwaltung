@@ -9,16 +9,34 @@
              x:Name="Wurzel"
              x:DataType="vm:OffenePostenViewModel">
 
-    <!-- Spaltenraster "32,90,16,2*,16,110,24,2*,16,100,24,190" gilt fuer
-         Kopfzeile UND Zeilen-Grid gleichermassen: Checkbox, Datum,
+    <!-- Spaltenraster "32,90,16,Kategorie,16,110,24,*,16,100,24,270" gilt
+         fuer Kopfzeile UND Zeilen-Grid gleichermassen: Checkbox, Datum,
          Kategorie, Betrag, Bemerkung, TageOffen, Aktionen, dazwischen feste
          Gutter-Spalten als Abstandhalter (Indizes 2,4,6,8,10).
 
+         Alle Spalten sind fest oder anteilig - keine richtet sich nach
+         ihrem Inhalt, die Gesamtbreite bleibt konstant. Kategorie und
+         Bemerkung sind anzeige:Textzelle: einzeilig, mit
+         Auslassungspunkten gekuerzt und mit Hilfetext nur dort, wo
+         wirklich etwas fehlt. Die Kategorie kuerzt vorne (aus
+         "Pferde › Gesundheit › Medizin › Impfungen" wird
+         "… › Medizin › Impfungen"), die Bemerkung hinten.
+
+         Die Kategoriespalte traegt dieselbe einstellbare Breite wie in
+         der Ausgabenliste; gezogen wird am Griff in der Kopfzeile.
+
          Die Betragsspalte ist 110 statt der urspruenglichen 90 Pixel
          breit: seit die Betraege das €-Zeichen tragen, braucht
-         "-1.234,56 €" mehr Platz als vorher "1.234,56". -->
+         "-1.234,56 €" mehr Platz als vorher "1.234,56".
+
+         Die Aktionsspalte ist 270 statt der urspruenglichen 190 Pixel
+         breit: bei einer beglichenen Zeile stehen Datum und
+         "Rückgängig" NEBENeinander statt untereinander, damit alle Zeilen
+         gleich hoch bleiben. -->
     <UserControl.Styles>
-        <Style Selector="TextBlock.beglichen">
+        <!-- ":is(TextBlock)", weil die Klasse auch an den Textzellen der
+             Kategorie- und Bemerkungsspalte haengt (siehe App.axaml). -->
+        <Style Selector=":is(TextBlock).beglichen">
             <Setter Property="Foreground" Value="Gray" />
             <Setter Property="Opacity" Value="0.7" />
         </Style>
@@ -61,20 +79,44 @@
                     FontStyle="Italic"
                     Margin="0,8" />
 
-        <!-- Kopfzeile
-             Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste -
+        <!-- ============ Kopfzeile und Tabelle ============
+             Beides in einem waagerechten Bildlauf: bei den grossen
+             Schriftstufen summieren sich die festen Spalten auf mehr, als
+             das Fenster breit ist, und ohne ihn waeren die Schaltflaechen
+             der letzten Spalte nicht mehr erreichbar. Aeusserer Bildlauf
+             waagerecht, innerer senkrecht - dasselbe Muster wie in der
+             Ausgabenliste.
+
+             Die feste Breite aus dem Bildlauffeld ist noetig, damit die
+             Sternspalte eine Sternspalte bleibt: ohne sie misst der
+             waagerechte Bildlauf seinen Inhalt mit unbegrenzter Breite,
+             und eine lange Bemerkung wuerde die Spalten dahinter nach
+             rechts schieben. Die MinWidth ist die Summe der uebrigen
+             Spalten (698) plus rund 140 Pixel Rest fuer die Bemerkung;
+             die einstellbare Kategoriebreite kommt hinzu. -->
+        <ScrollViewer x:Name="Waagerecht"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
+        <DockPanel Width="{Binding #Waagerecht.Viewport.Width}"
+                   MinWidth="{anzeige:BreitePlusKategorie 840}">
+        <!-- Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste -
              siehe die gleichlautende Stelle in PersonenView. -->
         <Border DockPanel.Dock="Top"
                 Width="{Binding #Zeilenliste.Bounds.Width}"
                 HorizontalAlignment="Left"
                 IsVisible="{Binding !KeineEintraege}"
                 Padding="4,0,4,4">
-            <Grid anzeige:Raster.Spalten="32,90,16,2*,16,110,24,2*,16,100,24,190">
+            <Grid anzeige:Raster.Spalten="32,90,16,Kategorie,16,110,24,*,16,100,24,270">
                 <TextBlock Grid.Column="0" />
                 <Button Grid.Column="1" Classes="kopf" Content="{Binding DatumHeaderText}"
                         Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
                 <Button Grid.Column="3" Classes="kopf" Content="{Binding KategorieHeaderText}"
                         Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
+
+                <!-- Griff auf der Trennlinie hinter der Kategorie -->
+                <anzeige:Spaltengriff Grid.Column="4"
+                                      ToolTip.Tip="Breite der Kategoriespalte ziehen" />
+
                 <Button Grid.Column="5" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
                         Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
                 <Button Grid.Column="7" Classes="kopf" Content="{Binding BemerkungHeaderText}"
@@ -97,7 +139,7 @@
                                     <DataTemplate x:DataType="vm:OffenerPostenZeile">
                                         <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
                                             <StackPanel>
-                                                <Grid anzeige:Raster.Spalten="32,90,16,2*,16,110,24,2*,16,100,24,190">
+                                                <Grid anzeige:Raster.Spalten="32,90,16,Kategorie,16,110,24,*,16,100,24,270">
                                                     <CheckBox Grid.Column="0"
                                                               IsChecked="{Binding IstAusgewaehlt}"
                                                               IsVisible="{Binding !IstBeglichen}"
@@ -105,18 +147,18 @@
                                                     <TextBlock Grid.Column="1" Text="{Binding DatumText}"
                                                                Classes="tabellenzelle"
                                                                Classes.beglichen="{Binding IstBeglichen}" />
-                                                    <TextBlock Grid.Column="3" Text="{Binding CategoryFullPath}"
-                                                               Classes="tabellenzelle"
-                                                               Classes.beglichen="{Binding IstBeglichen}"
-                                                               TextWrapping="Wrap" />
+                                                    <anzeige:Textzelle Grid.Column="3"
+                                                                       Inhalt="{Binding CategoryFullPath}"
+                                                                       Kuerzung="Vorne"
+                                                                       Classes="tabellenzelle"
+                                                                       Classes.beglichen="{Binding IstBeglichen}" />
                                                     <TextBlock Grid.Column="5" Text="{Binding BetragText}"
                                                                Classes="tabellenzelle zahl"
                                                                Classes.erstattung="{Binding IstErstattung}"
                                                                Classes.beglichen="{Binding IstBeglichen}" />
-                                                    <TextBlock Grid.Column="7" Text="{Binding Note}"
-                                                               Classes="tabellenzelle"
-                                                               Classes.beglichen="{Binding IstBeglichen}"
-                                                               TextWrapping="Wrap" />
+                                                    <anzeige:Textzelle Grid.Column="7" Inhalt="{Binding Note}"
+                                                                       Classes="tabellenzelle"
+                                                                       Classes.beglichen="{Binding IstBeglichen}" />
                                                     <TextBlock Grid.Column="9" Text="{Binding TageOffen}"
                                                                Classes="tabellenzelle mitte"
                                                                Classes.beglichen="{Binding IstBeglichen}" />
@@ -132,13 +174,17 @@
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumOeffnenCommand}"
                                                                 CommandParameter="{Binding}" />
                                                     </StackPanel>
-                                                    <StackPanel Grid.Column="11" Orientation="Vertical" Spacing="2"
+                                                    <!-- Nebeneinander und nicht untereinander:
+                                                         eine zweizeilige Zelle machte die
+                                                         beglichenen Zeilen hoeher als die
+                                                         offenen daneben. -->
+                                                    <StackPanel Grid.Column="11" Orientation="Horizontal" Spacing="6"
                                                                 IsVisible="{Binding IstBeglichen}">
                                                         <TextBlock Text="{Binding BeglichenText}"
-                                                                   FontStyle="Italic" Foreground="Gray" />
+                                                                   FontStyle="Italic" Foreground="Gray"
+                                                                   VerticalAlignment="Center" />
                                                         <Button Content="Rückgängig"
                                                                 ToolTip.Tip="Begleichung rückgängig machen"
-                                                                HorizontalAlignment="Left"
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).RueckgaengigZeileCommand}"
                                                                 CommandParameter="{Binding}" />
                                                     </StackPanel>
@@ -175,6 +221,8 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+        </ScrollViewer>
+        </DockPanel>
         </ScrollViewer>
     </DockPanel>
 </UserControl>

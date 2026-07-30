@@ -64,6 +64,12 @@ public sealed class AppSettingsStore
                 FontScale = document.FontScale is double faktor
                     ? FontScales.Normalize(faktor)
                     : FontScales.DefaultFactor,
+
+                // Fehlt der Wert, gilt die Vorgabebreite - und nicht das,
+                // was Normalize aus einer 0 machen wuerde.
+                CategoryColumnWidth = document.CategoryColumnWidth is double breite
+                    ? ColumnWidths.NormalizeCategory(breite)
+                    : ColumnWidths.CategoryDefault,
             };
         }
         catch (Exception)
@@ -81,6 +87,7 @@ public sealed class AppSettingsStore
                 ? IsoDateTime.ToUtcText(utc)
                 : null,
             FontScale = settings.FontScale,
+            CategoryColumnWidth = settings.CategoryColumnWidth,
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -122,5 +129,6 @@ public sealed class AppSettingsStore
         public string? ExternalFolderPath { get; set; }
         public string? LastExternalBackupUtc { get; set; }
         public double? FontScale { get; set; }
+        public double? CategoryColumnWidth { get; set; }
     }
 }

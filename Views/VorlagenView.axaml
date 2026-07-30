@@ -11,12 +11,23 @@
              x:Name="Wurzel"
              x:DataType="vm:VorlagenViewModel">
 
-    <!-- Spaltenraster "2*,16,2*,16,105,16,135,16,95,16,90,16,70,16,80,24,300"
+    <!-- Spaltenraster "2*,16,Kategorie,16,105,16,135,16,95,16,90,16,70,16,80,24,300"
          gilt fuer Kopfzeile UND Zeilen gleichermassen: Titel, Kategorie,
          Betrag, Rhythmus, Zahler, naechste Faelligkeit, erzeugte Buchungen,
          Status, Aktionen - dazwischen feste Gutter-Spalten als Abstandhalter
          (ungerade Indizes). Die Tabellen-Styles (TextBlock.tabellenkopf,
          .tabellenzelle, .archiviert, ...) kommen aus App.axaml.
+
+         Alle Spalten sind fest oder anteilig, keine richtet sich nach
+         ihrem Inhalt - die Gesamtbreite bleibt dadurch konstant. Titel,
+         Kategorie, Rhythmus und Zahler sind anzeige:Textzelle: einzeilig,
+         mit Auslassungspunkten gekuerzt und mit Hilfetext nur dort, wo
+         wirklich etwas fehlt. Die Kategorie kuerzt vorne, damit der Name
+         der Kategorie selbst stehen bleibt; alles uebrige hinten.
+
+         Die Kategoriespalte traegt dieselbe einstellbare Breite wie in der
+         Ausgabenliste und den Offenen Posten - eine gezogene Breite, die
+         nur in einem Bereich gilt, waere schwer zu erklaeren.
 
          Die Betragsspalte ist 105 statt der urspruenglichen 85 Pixel
          breit: seit die Betraege das €-Zeichen tragen, braucht
@@ -101,10 +112,20 @@
                  Spalten dieser Tabelle summieren sich bei der Stufe
                  "Sehr groß" auf annaehernd zweitausend Pixel, mehr als
                  jedes Fenster hergibt. Aeusserer Bildlauf waagerecht,
-                 innerer senkrecht - dasselbe Muster wie in ReportView. -->
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                 innerer senkrecht - dasselbe Muster wie in ReportView.
+
+                 Die feste Breite aus dem Bildlauffeld ist noetig, damit
+                 die Sternspalte eine Sternspalte bleibt: ohne sie misst
+                 der waagerechte Bildlauf seinen Inhalt mit unbegrenzter
+                 Breite, und der Titel wuerde alle Spalten dahinter nach
+                 rechts schieben. Die MinWidth ist die Summe der uebrigen
+                 Spalten (1011) plus rund 150 Pixel Rest fuer den Titel;
+                 die einstellbare Kategoriebreite kommt hinzu. -->
+            <ScrollViewer x:Name="Waagerecht"
+                          HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
-            <DockPanel MinWidth="{anzeige:Breite 1310}">
+            <DockPanel Width="{Binding #Waagerecht.Viewport.Width}"
+                       MinWidth="{anzeige:BreitePlusKategorie 1160}">
             <!-- Die Breite kommt aus der Zeilenliste, statt ueber einen
                  rechten Rand die Bildlaufleiste zu schaetzen. Der Grund:
                  die Differenz zwischen geschaetzter und tatsaechlicher
@@ -118,9 +139,13 @@
                     Width="{Binding #Zeilenliste.Bounds.Width}"
                     HorizontalAlignment="Left"
                     Padding="4,0,4,4">
-                <Grid anzeige:Raster.Spalten="2*,16,2*,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
+                <Grid anzeige:Raster.Spalten="2*,16,Kategorie,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
                     <TextBlock Grid.Column="0"  Text="Titel"       Classes="tabellenkopf" />
                     <TextBlock Grid.Column="2"  Text="Kategorie"   Classes="tabellenkopf" />
+
+                    <!-- Griff auf der Trennlinie hinter der Kategorie -->
+                    <anzeige:Spaltengriff Grid.Column="3"
+                                          ToolTip.Tip="Breite der Kategoriespalte ziehen" />
                     <TextBlock Grid.Column="4"  Text="Betrag"      Classes="tabellenkopf zahl" />
                     <TextBlock Grid.Column="6"  Text="Rhythmus"    Classes="tabellenkopf" />
                     <TextBlock Grid.Column="8"  Text="Zahler"      Classes="tabellenkopf" />
@@ -143,27 +168,24 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:VorlageZeile">
                             <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
-                                <Grid anzeige:Raster.Spalten="2*,16,2*,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
-                                    <TextBlock Grid.Column="0" Text="{Binding Titel}"
-                                               Classes="tabellenzelle"
-                                               Classes.archiviert="{Binding !IstAktiv}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Grid.Column="2" Text="{Binding CategoryFullPath}"
-                                               Classes="tabellenzelle"
-                                               Classes.archiviert="{Binding !IstAktiv}"
-                                               TextWrapping="Wrap" />
+                                <Grid anzeige:Raster.Spalten="2*,16,Kategorie,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
+                                    <anzeige:Textzelle Grid.Column="0" Inhalt="{Binding Titel}"
+                                                       Classes="tabellenzelle"
+                                                       Classes.archiviert="{Binding !IstAktiv}" />
+                                    <anzeige:Textzelle Grid.Column="2" Inhalt="{Binding CategoryFullPath}"
+                                                       Kuerzung="Vorne"
+                                                       Classes="tabellenzelle"
+                                                       Classes.archiviert="{Binding !IstAktiv}" />
                                     <TextBlock Grid.Column="4" Text="{Binding BetragText}"
                                                Classes="tabellenzelle zahl"
                                                Classes.erstattung="{Binding IstErstattung}"
                                                Classes.archiviert="{Binding !IstAktiv}" />
-                                    <TextBlock Grid.Column="6" Text="{Binding RhythmusText}"
-                                               Classes="tabellenzelle"
-                                               Classes.archiviert="{Binding !IstAktiv}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Grid.Column="8" Text="{Binding PayerName}"
-                                               Classes="tabellenzelle"
-                                               Classes.archiviert="{Binding !IstAktiv}"
-                                               TextWrapping="Wrap" />
+                                    <anzeige:Textzelle Grid.Column="6" Inhalt="{Binding RhythmusText}"
+                                                       Classes="tabellenzelle"
+                                                       Classes.archiviert="{Binding !IstAktiv}" />
+                                    <anzeige:Textzelle Grid.Column="8" Inhalt="{Binding PayerName}"
+                                                       Classes="tabellenzelle"
+                                                       Classes.archiviert="{Binding !IstAktiv}" />
                                     <TextBlock Grid.Column="10" Text="{Binding NaechsteFaelligkeitText}"
                                                Classes="tabellenzelle"
                                                Classes.archiviert="{Binding !IstAktiv}" />

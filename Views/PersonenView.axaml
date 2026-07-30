@@ -55,19 +55,31 @@
                         <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
                             <Grid anzeige:Raster.Spalten="2*,16,90,16,140,24,280">
                                 <Panel Grid.Column="0">
-                                    <StackPanel Orientation="Horizontal" Spacing="6"
-                                                IsVisible="{Binding !WirdBearbeitet}">
-                                        <TextBlock Text="{Binding Name}"
-                                                   Classes="tabellenzelle"
-                                                   Classes.archiviert="{Binding IsArchived}"
-                                                   DoubleTapped="Zeile_DoubleTapped" />
-                                        <Border Classes="selbst" IsVisible="{Binding IsSelf}">
-                                            <TextBlock Text="Ich" Classes="klein" />
-                                        </Border>
-                                        <TextBlock Text="(archiviert)" FontStyle="Italic" Foreground="Gray"
-                                                   IsVisible="{Binding IsArchived}"
-                                                   VerticalAlignment="Center" />
-                                    </StackPanel>
+                                    <!-- Raster statt eines waagerechten StackPanels:
+                                         das StackPanel misst seine Kinder ohne
+                                         Breitenbegrenzung, ein langer Name wuerde
+                                         damit die Spalten dahinter nach rechts
+                                         schieben. So bekommt der Name die
+                                         Restbreite und wird gekuerzt, die Marken
+                                         behalten ihren Platz am rechten Rand der
+                                         Namensspalte. -->
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding !WirdBearbeitet}">
+                                        <anzeige:Textzelle Grid.Column="0"
+                                                           Inhalt="{Binding Name}"
+                                                           Margin="0,0,6,0"
+                                                           Classes="tabellenzelle"
+                                                           Classes.archiviert="{Binding IsArchived}"
+                                                           DoubleTapped="Zeile_DoubleTapped" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                            <Border Classes="selbst" IsVisible="{Binding IsSelf}">
+                                                <TextBlock Text="Ich" Classes="klein" />
+                                            </Border>
+                                            <TextBlock Text="(archiviert)" FontStyle="Italic" Foreground="Gray"
+                                                       IsVisible="{Binding IsArchived}"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
                                     <StackPanel IsVisible="{Binding WirdBearbeitet}" Spacing="2">
                                         <TextBox Text="{Binding BearbeitungsText}"
                                                  MinWidth="{anzeige:Breite 160}"

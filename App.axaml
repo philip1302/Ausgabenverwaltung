@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Ausgabenverwaltung.App"
              xmlns:local="using:Ausgabenverwaltung"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
@@ -61,7 +62,13 @@
         <Style Selector=":is(TopLevel)">
             <Setter Property="FontSize" Value="{DynamicResource SchriftNormal}" />
         </Style>
-        <Style Selector="TextBlock">
+        <!-- anzeige:Textzelle ausdruecklich mitgenannt: ein Selektor auf
+             einen Typ trifft in Avalonia nur diesen Typ, nicht seine
+             Ableitungen. Ohne die Ergaenzung stuenden die Tabellenzellen
+             in der Groesse des Themas statt in der eingestellten. Bewusst
+             nicht ":is(TextBlock)": davon waeren auch AccessText und
+             TextPresenter aus den Theme-Vorlagen betroffen. -->
+        <Style Selector="TextBlock, anzeige|Textzelle">
             <Setter Property="FontSize" Value="{DynamicResource SchriftNormal}" />
         </Style>
 
@@ -110,13 +117,17 @@
             <Setter Property="TextAlignment" Value="Center" />
         </Style>
 
-        <Style Selector="TextBlock.tabellenzelle">
+        <!-- Ab hier ":is(TextBlock)" statt "TextBlock": diese Klassen
+             tragen auch die Textzellen der Tabellen (anzeige:Textzelle),
+             und ein Selektor auf den blossen Typ wuerde eine Ableitung
+             nicht erfassen. -->
+        <Style Selector=":is(TextBlock).tabellenzelle">
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-        <Style Selector="TextBlock.tabellenzelle.zahl">
+        <Style Selector=":is(TextBlock).tabellenzelle.zahl">
             <Setter Property="TextAlignment" Value="Right" />
         </Style>
-        <Style Selector="TextBlock.tabellenzelle.mitte">
+        <Style Selector=":is(TextBlock).tabellenzelle.mitte">
             <Setter Property="TextAlignment" Value="Center" />
         </Style>
 
@@ -126,14 +137,14 @@
              Schaltflaechen greift die Regel im Vorlagenbaum, weil das
              Thema die Vordergrundfarbe im Zustand "pointerover" sonst am
              ContentPresenter selbst ueberschreibt. -->
-        <Style Selector="TextBlock.erstattung">
+        <Style Selector=":is(TextBlock).erstattung">
             <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
         </Style>
         <Style Selector="Button.erstattung /template/ ContentPresenter">
             <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
         </Style>
 
-        <Style Selector="TextBlock.archiviert">
+        <Style Selector=":is(TextBlock).archiviert">
             <Setter Property="Foreground" Value="Gray" />
             <Setter Property="Opacity" Value="0.6" />
         </Style>
@@ -153,6 +164,31 @@
         <Style Selector="TextBlock.ueberschrift">
             <Setter Property="FontSize" Value="{DynamicResource SchriftUeberschrift}" />
             <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
+        <!-- Der Griff auf der Trennlinie hinter der Kategoriespalte. Er
+             fuellt die ganze Abstandsspalte der Kopfzeile, damit er auch
+             bei kleiner Schrift zu treffen ist; sichtbar ist davon nur
+             eine haarfeine Linie in der Mitte, die beim Ueberfahren
+             kraeftiger wird. Der durchsichtige Hintergrund ist nicht
+             Zierde, sondern noetig: ohne ihn nimmt die Flaeche keine
+             Zeigereingaben an. -->
+        <Style Selector="anzeige|Spaltengriff">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="SizeWestEast" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}">
+                        <Border Name="Linie" Width="1" Background="#D0D0D0"
+                                HorizontalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="anzeige|Spaltengriff:pointerover /template/ Border#Linie">
+            <Setter Property="Background" Value="#808080" />
         </Style>
 
         <!-- Der Farbpunkt vor einem Kategorienamen. Er ERGAENZT den

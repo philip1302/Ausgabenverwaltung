@@ -19,6 +19,7 @@ public class AppSettingsStoreTests : IDisposable
         Assert.Null(einstellungen.ExternalFolderPath);
         Assert.Null(einstellungen.LastExternalBackupUtc);
         Assert.Equal(FontScales.DefaultFactor, einstellungen.FontScale);
+        Assert.Equal(ColumnWidths.CategoryDefault, einstellungen.CategoryColumnWidth);
     }
 
     [Fact]
@@ -32,6 +33,7 @@ public class AppSettingsStoreTests : IDisposable
             ExternalFolderPath = @"D:\Sicherungen",
             LastExternalBackupUtc = zuletzt,
             FontScale = FontScales.Factor(FontScaleStep.ExtraLarge),
+            CategoryColumnWidth = 340,
         });
 
         var gelesen = speicher.Load();
@@ -39,6 +41,30 @@ public class AppSettingsStoreTests : IDisposable
         Assert.Equal(@"D:\Sicherungen", gelesen.ExternalFolderPath);
         Assert.Equal(zuletzt, gelesen.LastExternalBackupUtc);
         Assert.Equal(2.0, gelesen.FontScale);
+        Assert.Equal(340, gelesen.CategoryColumnWidth);
+    }
+
+    // Dieselbe Vorsicht wie bei der Schriftgroesse: eine Datei aus der
+    // Zeit vor der ziehbaren Spalte hat den Wert nicht, und "0" waere
+    // hier eine unsichtbare Kategoriespalte.
+    [Fact]
+    public void Eine_Datei_ohne_Spaltenbreite_bleibt_bei_der_Vorgabe()
+    {
+        File.WriteAllText(SettingsPath, """{ "FontScale": 1.4 }""");
+
+        Assert.Equal(
+            ColumnWidths.CategoryDefault,
+            new AppSettingsStore(SettingsPath).Load().CategoryColumnWidth);
+    }
+
+    [Fact]
+    public void Eine_unsinnige_Spaltenbreite_wird_beim_Laden_zurechtgerueckt()
+    {
+        File.WriteAllText(SettingsPath, """{ "CategoryColumnWidth": 9000 }""");
+
+        Assert.Equal(
+            ColumnWidths.CategoryMax,
+            new AppSettingsStore(SettingsPath).Load().CategoryColumnWidth);
     }
 
     [Fact]
@@ -101,7 +127,7 @@ public class AppSettingsStoreTests : IDisposable
     public void Die_Schriftgroesse_bleibt_beim_Speichern_des_Sicherungsziels_erhalten()
     {
         var speicher = new AppSettingsStore(SettingsPath);
-        speicher.Save(new AppSettings { FontScale = 1.4 });
+        speicher.Save(new AppSettings { FontScale = 1.4, CategoryColumnWidth = 300 });
 
         // So aendert die Oberflaeche einzelne Werte: laden, mit "with"
         // weiterschreiben. Genau dafuer gibt es nur diesen einen Speicher.
@@ -110,5 +136,6 @@ public class AppSettingsStoreTests : IDisposable
         var gelesen = speicher.Load();
         Assert.Equal(@"E:\Stick", gelesen.ExternalFolderPath);
         Assert.Equal(1.4, gelesen.FontScale);
+        Assert.Equal(300, gelesen.CategoryColumnWidth);
     }
 }

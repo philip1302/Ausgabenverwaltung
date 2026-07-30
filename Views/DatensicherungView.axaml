@@ -167,8 +167,11 @@
                                 <DataTemplate x:DataType="vm:SicherungZeile">
                                     <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="0,6">
                                         <Grid anzeige:Raster.Spalten="*,16,150,16,100">
-                                            <TextBlock Grid.Column="0" Text="{Binding Dateiname}"
-                                                       Classes="tabellenzelle" />
+                                            <!-- Einzeilig und notfalls gekuerzt, damit ein
+                                                 langer Dateiname weder umbricht noch die
+                                                 beiden Spalten dahinter verschiebt. -->
+                                            <anzeige:Textzelle Grid.Column="0" Inhalt="{Binding Dateiname}"
+                                                               Classes="tabellenzelle" />
                                             <TextBlock Grid.Column="2" Text="{Binding DatumText}"
                                                        Classes="tabellenzelle" />
                                             <TextBlock Grid.Column="4" Text="{Binding GroesseText}"

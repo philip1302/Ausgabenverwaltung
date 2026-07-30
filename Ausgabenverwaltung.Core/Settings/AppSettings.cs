@@ -33,4 +33,12 @@ public sealed record AppSettings
     /// Stufe gerundet.
     /// </summary>
     public double FontScale { get; init; } = FontScales.DefaultFactor;
+
+    /// <summary>
+    /// Breite der Kategoriespalte in den Tabellen, wie der Benutzer sie
+    /// zuletzt gezogen hat - in Pixeln fuer die Schriftstufe "Normal"
+    /// (siehe <see cref="ColumnWidths"/>). Beim Laden in den erlaubten
+    /// Bereich gebracht.
+    /// </summary>
+    public double CategoryColumnWidth { get; init; } = ColumnWidths.CategoryDefault;
 }

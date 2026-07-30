@@ -303,11 +303,13 @@
                                                             IsVisible="{Binding ZeigtFarbe}"
                                                             Margin="0,0,6,0" />
 
-                                                    <TextBlock Text="{Binding Name}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               ToolTip.Tip="{Binding Name}"
-                                                               Classes.archiviert="{Binding IstArchiviert}" />
+                                                    <!-- Hier steht nur der Name der Kategorie
+                                                         und nicht ihr Pfad - gekuerzt wird
+                                                         also hinten. Der Hilfetext erscheint
+                                                         nur, wenn wirklich etwas fehlt. -->
+                                                    <anzeige:Textzelle Inhalt="{Binding Name}"
+                                                                       VerticalAlignment="Center"
+                                                                       Classes.archiviert="{Binding IstArchiviert}" />
                                                 </DockPanel>
 
                                                 <ItemsControl ItemsSource="{Binding Zellen}">
@@ -459,18 +461,26 @@
                             <DataTemplate x:DataType="vm:AusgabeZeile">
                                 <Border BorderBrush="#E8E8E8" BorderThickness="0,0,0,1"
                                         Padding="0,5">
+                                    <!-- Dieselbe Behandlung wie in der Ausgabenliste:
+                                         einzeilig, gekuerzt, Hilfetext nur wo noetig -
+                                         die Kategorie vorne, alles uebrige hinten. Die
+                                         Kategoriespalte bleibt hier anteilig und ist
+                                         nicht zu ziehen: der Dialog hat eine feste
+                                         Hoechstbreite, aus der sich alles ergibt. -->
                                     <Grid anzeige:Raster.Spalten="90,16,2*,16,110,16,110,16,2*">
                                         <TextBlock Grid.Column="0" Text="{Binding DatumText}"
                                                    Classes="tabellenzelle" />
-                                        <TextBlock Grid.Column="2" Text="{Binding CategoryFullPath}"
-                                                   Classes="tabellenzelle" TextWrapping="Wrap" />
+                                        <anzeige:Textzelle Grid.Column="2"
+                                                           Inhalt="{Binding CategoryFullPath}"
+                                                           Kuerzung="Vorne"
+                                                           Classes="tabellenzelle" />
                                         <TextBlock Grid.Column="4" Text="{Binding BetragText}"
                                                    Classes="tabellenzelle zahl"
                                                    Classes.erstattung="{Binding IstErstattung}" />
-                                        <TextBlock Grid.Column="6" Text="{Binding PayerName}"
-                                                   Classes="tabellenzelle" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="8" Text="{Binding Note}"
-                                                   Classes="tabellenzelle" TextWrapping="Wrap" />
+                                        <anzeige:Textzelle Grid.Column="6" Inhalt="{Binding PayerName}"
+                                                           Classes="tabellenzelle" />
+                                        <anzeige:Textzelle Grid.Column="8" Inhalt="{Binding Note}"
+                                                           Classes="tabellenzelle" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>

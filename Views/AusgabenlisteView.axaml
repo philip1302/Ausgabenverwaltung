@@ -11,7 +11,7 @@
              x:Name="Wurzel"
              x:DataType="vm:AusgabenlisteViewModel">
 
-    <!-- Spaltenraster "4,8,32,24,90,16,3*,16,110,24,110,16,175,16,2*,16,200"
+    <!-- Spaltenraster "4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200"
          gilt fuer Kopfzeile UND Zeilen gleichermassen: Farbbalken,
          Auswahl, Vorlagen-Marker, Datum, Kategorie, Betrag, Zahler,
          Status, Bemerkung, Aktionen - dazwischen feste Gutter-Spalten als
@@ -25,14 +25,26 @@
          mit demselben Faktor und stehen dadurch weiterhin exakt
          uebereinander.
 
+         JEDE Spalte hat eine feste oder anteilige Breite - keine einzige
+         richtet sich nach ihrem Inhalt. Nur so bleibt die Gesamtbreite
+         konstant und kann ein langer Kategoriepfad die Spalten dahinter
+         nicht nach rechts schieben. Die Zellen mit unbegrenzt langem
+         Inhalt (Kategorie, Zahler, Bemerkung) sind deshalb
+         anzeige:Textzelle: sie verlangen nie mehr Breite, als die Spalte
+         ihnen gibt, bleiben einzeilig und kuerzen mit
+         Auslassungspunkten - die Kategorie vorne, damit der Name der
+         Kategorie selbst vollstaendig lesbar bleibt, alles uebrige hinten.
+
+         "Kategorie" im Muster ist die einzige Breite, die der Benutzer
+         selbst bestimmt: am Spaltengriff in der Kopfzeile zu ziehen
+         (siehe anzeige:Spaltengriff), gemerkt ueber dieselbe
+         Einstellungsdatei wie Schriftgroesse und Sicherungspfad. Was
+         sie an Platz bekommt, geht der Bemerkung ab - die ist die
+         einzige Sternspalte und faengt jede Aenderung auf.
+
          Die Statusspalte ist 175 statt der urspruenglichen 120 Pixel
          breit: der laengste Wert ist "beglichen am 29.09.2025" und wurde
-         vorher abgeschnitten. Die Spalte umbricht bewusst NICHT - ein
-         zweizeiliger Status wuerde die ganze Zeile hoeher machen.
-         Der Zuwachs geht zu Lasten der Bemerkung, nicht der Kategorie:
-         deshalb steht Kategorie jetzt auf 3* und Bemerkung auf 2*, was
-         der Kategorie bei den ueblichen Fensterbreiten genau ihre
-         bisherige Breite laesst. Die Bemerkung umbricht ohnehin.
+         vorher abgeschnitten.
 
          Die Betragsspalte ist 110 statt der urspruenglichen 90 Pixel
          breit: seit die Betraege das €-Zeichen tragen, braucht
@@ -269,14 +281,29 @@
                  Spalten summieren sich bei der Stufe "Sehr groß" auf mehr
                  als das Fenster breit ist, und ohne ihn waeren die
                  Schaltflaechen der letzten Spalte nicht mehr erreichbar.
-                 Die MinWidth ist die Summe der festen Spalten plus ein
-                 Rest fuer Kategorie und Bemerkung - darunter beginnt der
-                 Bildlauf, darueber verteilt sich der Platz wie bisher.
                  Aeusserer Bildlauf waagerecht, innerer (die ListBox)
-                 senkrecht - dasselbe Muster wie in ReportView. -->
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                 senkrecht - dasselbe Muster wie in ReportView.
+
+                 Die Breite kommt aus dem Bildlauffeld selbst, die
+                 MinWidth setzt die Untergrenze. Ohne die feste Breite
+                 misst der waagerechte Bildlauf seinen Inhalt mit
+                 UNBEGRENZTER Breite; eine Sternspalte verhaelt sich dann
+                 wie "Auto" und wird so breit wie ihr laengster Inhalt -
+                 genau dadurch konnte ein langer Kategoriepfad die Spalten
+                 dahinter nach rechts schieben und die Zeilen gegeneinander
+                 versetzen.
+
+                 Die MinWidth ist die Summe aller uebrigen Spalten (857)
+                 plus rund 140 Pixel Rest fuer die Bemerkung; die
+                 einstellbare Kategoriebreite kommt hinzu. Sie waechst also
+                 mit, wenn die Kategoriespalte breiter gezogen wird -
+                 sonst holte die sich ihren Platz aus der Bemerkung, bis
+                 von der nichts mehr uebrig ist. -->
+            <ScrollViewer x:Name="Waagerecht"
+                          HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
-            <DockPanel MinWidth="{anzeige:Breite 1060}">
+            <DockPanel Width="{Binding #Waagerecht.Viewport.Width}"
+                       MinWidth="{anzeige:BreitePlusKategorie 1000}">
             <!-- Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste
                  (siehe PersonenView). Hier aber ueber Scroll.Viewport und
                  nicht ueber Bounds: die ListBox scrollt selbst, ihre
@@ -286,11 +313,18 @@
                     Width="{Binding #Zeilenliste.Scroll.Viewport.Width}"
                     HorizontalAlignment="Left"
                     Padding="4,0,4,4">
-                <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,3*,16,110,24,110,16,175,16,2*,16,200">
+                <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200">
                     <Button Grid.Column="4" Classes="kopf" Content="{Binding DatumHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
                     <Button Grid.Column="6" Classes="kopf" Content="{Binding KategorieHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
+
+                    <!-- Der Griff steht in der Abstandsspalte hinter der
+                         Kategorie: dort ist die Trennlinie, und er nimmt
+                         keiner Spalte Platz weg. -->
+                    <anzeige:Spaltengriff Grid.Column="7"
+                                          ToolTip.Tip="Breite der Kategoriespalte ziehen" />
+
                     <Button Grid.Column="8" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
                     <Button Grid.Column="10" Classes="kopf" Content="{Binding ZahlerHeaderText}"
@@ -325,7 +359,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:AusgabeZeile">
                         <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
-                            <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,3*,16,110,24,110,16,175,16,2*,16,200">
+                            <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200">
                                 <!-- Farbe der Kategorie. Bewusst ein schmaler
                                      Balken am Rand und keine eingefaerbte
                                      Zeile: der Text muss lesbar bleiben, und
@@ -348,17 +382,26 @@
 
                                 <TextBlock Grid.Column="4" Text="{Binding DatumText}"
                                            Classes="tabellenzelle" />
-                                <TextBlock Grid.Column="6" Text="{Binding CategoryFullPath}"
-                                           Classes="tabellenzelle" TextWrapping="Wrap" />
+
+                                <!-- Kuerzung vorne: aus "Pferde › Gesundheit ›
+                                     Medizin › Impfungen" wird "… › Medizin ›
+                                     Impfungen". Den vollen Pfad zeigt der
+                                     Hilfetext - aber nur, wenn wirklich etwas
+                                     weggefallen ist. -->
+                                <anzeige:Textzelle Grid.Column="6"
+                                                   Inhalt="{Binding CategoryFullPath}"
+                                                   Kuerzung="Vorne"
+                                                   Classes="tabellenzelle" />
+
                                 <TextBlock Grid.Column="8" Text="{Binding BetragText}"
                                            Classes="tabellenzelle zahl"
                                            Classes.erstattung="{Binding IstErstattung}" />
-                                <TextBlock Grid.Column="10" Text="{Binding PayerName}"
-                                           Classes="tabellenzelle" TextWrapping="Wrap" />
+                                <anzeige:Textzelle Grid.Column="10" Inhalt="{Binding PayerName}"
+                                                   Classes="tabellenzelle" />
                                 <TextBlock Grid.Column="12" Text="{Binding StatusText}"
                                            Classes="tabellenzelle" />
-                                <TextBlock Grid.Column="14" Text="{Binding Note}"
-                                           Classes="tabellenzelle" TextWrapping="Wrap" />
+                                <anzeige:Textzelle Grid.Column="14" Inhalt="{Binding Note}"
+                                                   Classes="tabellenzelle" />
 
                                 <StackPanel Grid.Column="16" Orientation="Horizontal" Spacing="6">
                                     <Button Content="Bearbeiten"

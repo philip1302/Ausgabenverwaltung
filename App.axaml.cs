@@ -40,7 +40,17 @@ public partial class App : Application
 
             // Die gespeicherte Schriftgroesse gilt ab dem ersten Fenster -
             // auch fuer das Fehlerfenster, falls der Start scheitert.
-            Skalierung.Aktuell.Setze(settingsStore.Load().FontScale);
+            var settings = settingsStore.Load();
+            Skalierung.Aktuell.Setze(settings.FontScale);
+
+            // Dieselbe Datei traegt die zuletzt gezogene Breite der
+            // Kategoriespalte. Geschrieben wird sie erst beim Loslassen des
+            // Spaltengriffs, und immer mit "with" auf dem gerade gelesenen
+            // Stand - sonst faenden Sicherungsziel und Schriftgroesse sich
+            // auf ihren Vorgabewerten wieder.
+            Spaltenbreiten.Aktuell.SetzeKategorie(settings.CategoryColumnWidth);
+            Spaltenbreiten.Aktuell.Sichern = breite =>
+                settingsStore.Save(settingsStore.Load() with { CategoryColumnWidth = breite });
 
             StartupResult startupResult;
             try
