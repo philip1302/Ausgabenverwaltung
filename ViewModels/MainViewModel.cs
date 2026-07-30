@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Ausgabenverwaltung.Core.RecurringExpenses;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -68,6 +69,21 @@ public sealed partial class MainViewModel : ViewModelBase
         };
     }
 
+    /// <summary>
+    /// Menuepunkt "Sicherung jetzt": sichert unabhaengig von der
+    /// Tagesbegrenzung. Wechselt zuvor in den Bereich Datensicherung -
+    /// eine Sicherung, deren Ergebnis niemand zu sehen bekommt, waere eine
+    /// Schaltflaeche, der man vertrauen muss statt sie zu pruefen.
+    /// </summary>
+    [RelayCommand]
+    private void SicherungJetzt()
+    {
+        SelectedNavigationItem = NavigationItems
+            .First(item => ReferenceEquals(item.ViewModel, _verwaltung));
+        _verwaltung.ZeigeDatensicherung();
+        _verwaltung.Datensicherung.SicherungJetzt();
+    }
+
     // Bereichs-ViewModels sind DI-Singletons und laden Daten wie die
     // Kategorienliste nur einmal. Beim Wechsel deshalb neu laden, damit
     // Aenderungen aus anderen Bereichen ohne Neustart sichtbar sind.
@@ -109,6 +125,11 @@ public sealed partial class MainViewModel : ViewModelBase
             // Die Spalten "erzeugt" und "naechste Faelligkeit" veralten,
             // sobald anderswo etwas erzeugt oder geloescht wurde.
             _verwaltung.Vorlagen.AktualisiereListe();
+
+            // Das Alter der letzten externen Sicherung waechst waehrend
+            // der Sitzung weiter, und im Sicherungsordner kann von aussen
+            // aufgeraeumt worden sein.
+            _verwaltung.Datensicherung.Aktualisiere();
         }
     }
 }

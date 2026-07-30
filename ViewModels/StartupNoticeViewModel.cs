@@ -32,10 +32,35 @@ public sealed partial class StartupNoticeViewModel : ViewModelBase
     [ObservableProperty]
     private IReadOnlyList<string> _generatedExpenseDescriptions = [];
 
+    /// <summary>
+    /// Meldung ueber eine beim Start gescheiterte Sicherung. Sie darf den
+    /// Start nicht verhindern, aber auch nicht unbemerkt bleiben - ein
+    /// Band statt eines Dialogs. Ein nicht erreichbares ZWEITES Ziel
+    /// erscheint hier bewusst nicht: das steht still in den Einstellungen
+    /// (siehe Core.Backups.BackupResult.NeedsAttention).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BackupErrorVisible))]
+    private string? _backupErrorText;
+
+    public bool BackupErrorVisible => BackupErrorText is not null;
+
     public StartupNoticeViewModel(StartupResult startupResult)
     {
         Zeige(startupResult.GeneratedExpenses);
+
+        if (startupResult.Backup is { NeedsAttention: true } backup)
+        {
+            BackupErrorText =
+                "Die automatische Datensicherung beim Programmstart ist fehlgeschlagen: "
+                + backup.PrimaryError
+                + "\nDie Anwendung läuft weiter. Unter „Verwaltung › Datensicherung“ "
+                + "lässt sich ein neuer Versuch starten.";
+        }
     }
+
+    [RelayCommand]
+    private void DismissBackupError() => BackupErrorText = null;
 
     /// <summary>
     /// Zeigt einen Erzeugungslauf an. Bei null Buchungen bleibt das Banner

@@ -17,6 +17,15 @@ public class StartupServiceTests : IDisposable
 {
     private readonly DirectoryInfo _tempDir = Directory.CreateTempSubdirectory("ausgabenverwaltung-tests-");
 
+    // Sicherungsordner und Einstellungsdatei bewusst mit ins Temp-
+    // Verzeichnis: die parameterlose Ueberladung von Run() wuerde in das
+    // echte %APPDATA% des Ausfuehrenden sichern.
+    private string BackupFolder => Path.Combine(_tempDir.FullName, "Backups");
+    private string SettingsPath => Path.Combine(_tempDir.FullName, "settings.json");
+
+    private StartupResult Starte(string databaseFilePath)
+        => StartupService.Run(databaseFilePath, BackupFolder, SettingsPath);
+
     public void Dispose()
     {
         // Microsoft.Data.Sqlite haelt Dateihandles ueber ein natives
@@ -32,7 +41,7 @@ public class StartupServiceTests : IDisposable
     {
         var dbPath = Path.Combine(_tempDir.FullName, "ausgaben.db");
 
-        var result = StartupService.Run(dbPath);
+        var result = Starte(dbPath);
 
         Assert.True(File.Exists(dbPath));
         Assert.True(result.IsFirstStart);
@@ -57,8 +66,8 @@ public class StartupServiceTests : IDisposable
     {
         var dbPath = Path.Combine(_tempDir.FullName, "ausgaben.db");
 
-        var ersterStart = StartupService.Run(dbPath);
-        var zweiterStart = StartupService.Run(dbPath);
+        var ersterStart = Starte(dbPath);
+        var zweiterStart = Starte(dbPath);
 
         Assert.True(ersterStart.IsFirstStart);
         Assert.False(zweiterStart.IsFirstStart);
@@ -80,13 +89,13 @@ public class StartupServiceTests : IDisposable
         // Datenbank einmal regulaer anlegen, dann die SchemaVersion
         // manuell auf einen Stand setzen, den diese Programmversion
         // (noch) nicht kennt.
-        StartupService.Run(dbPath);
+        Starte(dbPath);
         using (var connection = SqliteConnectionFactory.OpenConnection($"Data Source={dbPath}"))
         {
             connection.Execute("UPDATE SchemaVersion SET Version = 9999");
         }
 
-        var exception = Assert.Throws<SchemaVersionTooNewException>(() => StartupService.Run(dbPath));
+        var exception = Assert.Throws<SchemaVersionTooNewException>(() => Starte(dbPath));
 
         Assert.Equal(9999, exception.ActualVersion);
         Assert.Equal(DatabaseInitializer.ExpectedSchemaVersion, exception.ExpectedVersion);
@@ -97,7 +106,7 @@ public class StartupServiceTests : IDisposable
     {
         var dbPath = Path.Combine(_tempDir.FullName, "ausgaben.db");
 
-        StartupService.Run(dbPath); // erster Start: legt Ich + Sonstiges an
+        Starte(dbPath); // erster Start: legt Ich + Sonstiges an
 
         using (var connection = SqliteConnectionFactory.OpenConnection($"Data Source={dbPath}"))
         {
@@ -109,7 +118,7 @@ public class StartupServiceTests : IDisposable
                 new DateOnly(2026, 1, 1), null);
         }
 
-        var zweiterStart = StartupService.Run(dbPath);
+        var zweiterStart = Starte(dbPath);
 
         Assert.NotEmpty(zweiterStart.GeneratedExpenses);
         Assert.Equal(zweiterStart.GeneratedExpenses.Count, zweiterStart.GeneratedExpenseCount);

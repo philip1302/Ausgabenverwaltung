@@ -3,6 +3,7 @@ using System.Data;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Expenses;
@@ -75,6 +76,15 @@ public partial class App : Application
         services.AddSingleton<RecurringExpenseRepository>();
         services.AddSingleton<ReportRepository>();
 
+        // Die Sicherung benutzt dieselbe Verbindung wie der Rest der
+        // Anwendung: VACUUM INTO schreibt daraus eine konsistente Kopie,
+        // ohne dass die Anwendung dafuer pausieren muesste.
+        services.AddSingleton(new BackupSettingsStore(AppPaths.GetSettingsFilePath()));
+        services.AddSingleton(provider => new BackupService(
+            provider.GetRequiredService<IDbConnection>(),
+            AppPaths.GetBackupFolderPath(),
+            provider.GetRequiredService<BackupSettingsStore>()));
+
         // Der Erzeugungslauf des Programmstarts ist gerade gelaufen (siehe
         // StartupService.Run) und zaehlt als der heutige - der Scheduler
         // startet deshalb mit dem heutigen Datum und laesst den naechsten
@@ -93,6 +103,7 @@ public partial class App : Application
         services.AddSingleton<KategorienViewModel>();
         services.AddSingleton<PersonenViewModel>();
         services.AddSingleton<VorlagenViewModel>();
+        services.AddSingleton<DatensicherungViewModel>();
         services.AddSingleton<VerwaltungViewModel>();
         services.AddSingleton<MainViewModel>();
 

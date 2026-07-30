@@ -7,7 +7,11 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.VerwaltungView"
              x:DataType="vm:VerwaltungViewModel">
-    <TabControl Margin="16">
+    <!-- SelectedIndex gebunden, damit der Menuepunkt "Sicherung jetzt"
+         auch den passenden Reiter oeffnen kann. Die Reihenfolge der
+         Reiter ist deshalb nicht mehr beliebig, siehe
+         VerwaltungViewModel.DatensicherungTabIndex. -->
+    <TabControl Margin="16" SelectedIndex="{Binding AusgewaehlterTabIndex}">
         <TabItem Header="Kategorien">
             <views:KategorienView DataContext="{Binding Kategorien}" />
         </TabItem>
@@ -16,6 +20,9 @@
         </TabItem>
         <TabItem Header="Wiederkehrende Ausgaben">
             <views:VorlagenView DataContext="{Binding Vorlagen}" />
+        </TabItem>
+        <TabItem Header="Datensicherung">
+            <views:DatensicherungView DataContext="{Binding Datensicherung}" />
         </TabItem>
     </TabControl>
 </UserControl>

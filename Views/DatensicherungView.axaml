@@ -1,0 +1,185 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="Ausgabenverwaltung.Views.DatensicherungView"
+             x:Name="Wurzel"
+             x:DataType="vm:DatensicherungViewModel">
+
+    <!-- Spaltenraster "*,16,150,16,100" gilt fuer Kopfzeile UND Zeilen:
+         Dateiname, Datum, Groesse. Dazwischen feste Gutter-Spalten
+         (ungerade Indizes), damit die Spaltengrenzen exakt aufeinander
+         fallen - dasselbe Muster wie in VorlagenView und PersonenView.
+         Sicherungen sind hoechstens ein paar Dutzend, deshalb bewusst
+         ScrollViewer + ItemsControl statt einer virtualisierenden ListBox. -->
+    <UserControl.Styles>
+        <Style Selector="TextBlock.abschnitt">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <Style Selector="TextBlock.pfad">
+            <Setter Property="FontFamily" Value="Consolas, Courier New, monospace" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Border.kasten">
+            <Setter Property="BorderBrush" Value="#E0E0E0" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Padding" Value="12" />
+        </Style>
+
+        <!-- Farben bewusst hier und nicht als Attribut am Element: ein
+             direkt gesetzter Wert schlaegt jeden Style, die Umschaltung
+             auf .fehler bzw. .veraltet griffe dann nie. -->
+        <Style Selector="Border.meldung">
+            <Setter Property="Background" Value="#DFF5DF" />
+            <Setter Property="BorderBrush" Value="#8FCB8F" />
+        </Style>
+        <Style Selector="Border.meldung.fehler">
+            <Setter Property="Background" Value="#FFF6DF" />
+            <Setter Property="BorderBrush" Value="#E0C070" />
+        </Style>
+
+        <!-- "Dezent hervorheben" bei laenger zurueckliegender externer
+             Sicherung: derselbe Text, nur nicht mehr in Grau. -->
+        <Style Selector="TextBlock.zielstatus">
+            <Setter Property="Foreground" Value="Gray" />
+        </Style>
+        <Style Selector="TextBlock.zielstatus.veraltet">
+            <Setter Property="Foreground" Value="#B06000" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+        <!-- ============ Werkzeugleiste ============ -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+                    Margin="0,0,0,8">
+            <Button Content="Sicherung jetzt"
+                    Command="{Binding SicherungJetztCommand}"
+                    ToolTip.Tip="Sichert sofort, unabhängig davon, ob heute schon gesichert wurde." />
+            <Button Content="Sicherungsordner öffnen"
+                    Click="SicherungsordnerOeffnen_Click" />
+        </StackPanel>
+
+        <!-- ============ Band: Meldung ============ -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding MeldungSichtbar}"
+                Classes="meldung"
+                Classes.fehler="{Binding MeldungIstFehler}"
+                BorderThickness="1"
+                CornerRadius="2" Padding="10" Margin="0,0,0,8">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding MeldungText}"
+                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Schliessen"
+                        Command="{Binding MeldungSchliessenCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="16">
+
+                <!-- ============ Ziel 1 ============ -->
+                <Border Classes="kasten">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Ziel 1 — dieser Rechner" Classes="abschnitt" />
+                        <TextBlock Text="{Binding SicherungsordnerPfad}" Classes="pfad" />
+                        <TextBlock Text="{Binding Ziel1StatusText}" Foreground="Gray"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBlock Foreground="Gray" TextWrapping="Wrap" FontStyle="Italic"
+                                   Text="Läuft immer und braucht keine Einrichtung. Beim Programmstart wird höchstens einmal pro Tag gesichert." />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Ziel 2 ============ -->
+                <Border Classes="kasten">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Ziel 2 — zusätzlicher Ordner (optional)" Classes="abschnitt" />
+
+                        <TextBlock Text="{Binding Ziel2Pfad}" Classes="pfad"
+                                   IsVisible="{Binding Ziel2Eingerichtet}" />
+
+                        <!-- Der Alterungshinweis ist der einzige Ort, an dem
+                             ein dauerhaft nicht erreichbares zweites Ziel
+                             auffaellt - beim Start wird es still uebergangen. -->
+                        <TextBlock Text="{Binding Ziel2StatusText}"
+                                   Classes="zielstatus"
+                                   Classes.veraltet="{Binding Ziel2Veraltet}"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                            <Button Content="Ordner wählen..." Click="ZweitesZielWaehlen_Click" />
+                            <Button Content="Ziel entfernen"
+                                    IsVisible="{Binding Ziel2Eingerichtet}"
+                                    Command="{Binding ZweitesZielEntfernenCommand}" />
+                        </StackPanel>
+
+                        <TextBlock Foreground="Gray" TextWrapping="Wrap" FontStyle="Italic"
+                                   Margin="0,4,0,0"
+                                   Text="Ein beliebiger Ordner — ob dahinter ein Cloud-Ordner, ein USB-Stick oder ein Netzlaufwerk steckt, spielt keine Rolle. Beim Auswählen wird einmal testweise geschrieben, damit fehlende Berechtigungen sofort auffallen. Ist das Ziel beim Start nicht erreichbar, läuft die Anwendung ohne Meldung weiter." />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Wiederherstellen ============ -->
+                <Border Classes="kasten">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Wiederherstellen" Classes="abschnitt" />
+                        <TextBlock Text="{Binding WiederherstellungHinweis}" TextWrapping="Wrap" />
+
+                        <TextBlock Text="Aktive Datenbank:" Margin="0,8,0,0" />
+                        <Grid ColumnDefinitions="*,8,Auto">
+                            <TextBlock Grid.Column="0" Text="{Binding DatenbankPfad}"
+                                       Classes="pfad" VerticalAlignment="Center" />
+                            <Button Grid.Column="2" Content="Pfad kopieren"
+                                    Click="DatenbankPfadKopieren_Click" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Vorhandene Sicherungen ============ -->
+                <Border Classes="kasten">
+                    <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="Vorhandene Sicherungen" Classes="abschnitt" />
+                            <TextBlock Grid.Column="1" Text="{Binding AnzahlText}"
+                                       Foreground="Gray" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <TextBlock Foreground="Gray" TextWrapping="Wrap" FontStyle="Italic"
+                                   Text="Behalten werden die letzten zehn Sicherungen und zusätzlich, dauerhaft, die jeweils letzte Sicherung jedes Monats. Alles andere wird beim nächsten Lauf gelöscht." />
+
+                        <TextBlock Text="Noch keine Sicherung vorhanden. „Sicherung jetzt“ erstellt die erste."
+                                   IsVisible="{Binding KeineSicherungen}"
+                                   Foreground="Gray" FontStyle="Italic" Margin="0,8" />
+
+                        <Grid ColumnDefinitions="*,16,150,16,100" Margin="0,8,0,0">
+                            <TextBlock Grid.Column="0" Text="Datei"   Classes="tabellenkopf" />
+                            <TextBlock Grid.Column="2" Text="Datum"   Classes="tabellenkopf" />
+                            <TextBlock Grid.Column="4" Text="Größe"   Classes="tabellenkopf zahl" />
+                        </Grid>
+
+                        <ItemsControl ItemsSource="{Binding Sicherungen}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SicherungZeile">
+                                    <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="0,6">
+                                        <Grid ColumnDefinitions="*,16,150,16,100">
+                                            <TextBlock Grid.Column="0" Text="{Binding Dateiname}"
+                                                       Classes="tabellenzelle" />
+                                            <TextBlock Grid.Column="2" Text="{Binding DatumText}"
+                                                       Classes="tabellenzelle" />
+                                            <TextBlock Grid.Column="4" Text="{Binding GroesseText}"
+                                                       Classes="tabellenzelle zahl" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

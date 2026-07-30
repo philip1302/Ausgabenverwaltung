@@ -264,6 +264,9 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# Ausnahme: der Quelltext der Datensicherung liegt in einem Ordner, den
+# das Muster darueber sonst verschlucken wuerde - und zwar lautlos.
+!Ausgabenverwaltung.Core/Backups/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

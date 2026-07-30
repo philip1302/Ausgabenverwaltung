@@ -10,6 +10,33 @@
         Title="Ausgabenverwaltung">
 
     <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_Datensicherung">
+                <MenuItem Header="Sicherung _jetzt"
+                          Command="{Binding SicherungJetztCommand}"
+                          ToolTip.Tip="Sichert sofort, unabhängig davon, ob heute schon gesichert wurde." />
+            </MenuItem>
+        </Menu>
+
+        <!-- Gescheiterte Sicherung beim Start: melden, aber nicht
+             aufhalten. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding StartupNotice.BackupErrorVisible}"
+                Background="#FFE0E0"
+                BorderBrush="#D08080"
+                BorderThickness="0,0,0,1"
+                Padding="12">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StartupNotice.BackupErrorText}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Content="Schliessen"
+                        Command="{Binding StartupNotice.DismissBackupErrorCommand}" />
+            </Grid>
+        </Border>
+
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding StartupNotice.IsVisible}"
                 Background="#FFF4CE"
