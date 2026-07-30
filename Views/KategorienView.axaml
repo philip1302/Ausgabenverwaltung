@@ -24,6 +24,18 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
         </Style>
+
+        <!-- Knoten der Zielauswahl beim Zusammenfuehren: sieht wie eine
+             Beschriftung aus, ist aber die Schaltflaeche, ueber die
+             gewaehlt wird - dasselbe Muster wie die Kategorie-Auswahl in
+             AusgabenlisteView. -->
+        <Style Selector="Button.kategoriewahl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
     </UserControl.Styles>
 
     <DockPanel>
@@ -96,6 +108,16 @@
                     Command="{Binding WiederherstellenCommand}"
                     CommandParameter="{Binding AusgewaehlterKnoten}"
                     IsVisible="{Binding AusgewaehlterKnotenIstArchiviert}" />
+
+            <!-- Loeschen steht NEBEN dem Archivieren, nicht an seiner
+                 Stelle: archiviert wird der Normalfall, geloescht nur,
+                 was nirgends verwendet wird (Regel 8). Was im Weg steht,
+                 erklaert das Band darunter. -->
+            <Button Content="Löschen"
+                    Command="{Binding LoeschenCommand}"
+                    CommandParameter="{Binding AusgewaehlterKnoten}"
+                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}"
+                    ToolTip.Tip="Endgültig löschen. Möglich nur, wenn die Kategorie weder Ausgaben noch Unterkategorien noch Vorlagen hat." />
             <Button Content="▲" ToolTip.Tip="Nach oben verschieben"
                     Command="{Binding NachObenVerschiebenCommand}"
                     CommandParameter="{Binding AusgewaehlterKnoten}"
@@ -118,6 +140,111 @@
                     <Button Content="Nur diese Kategorie" Command="{Binding ArchivierungNurDieseBestaetigenCommand}" />
                     <Button Content="Mit Unterkategorien" Command="{Binding ArchivierungMitUnterkategorienBestaetigenCommand}" />
                     <Button Content="Abbrechen" Command="{Binding ArchivierungAbbrechenCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Sicherheitsabfrage vor dem Loeschen einer unbenutzten
+             Kategorie. Der Name steht darin, damit nicht die falsche
+             verschwindet. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding LoeschAnfrageAktiv}"
+                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                Padding="8" Margin="0,0,0,8">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
+                    <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Erklaerung statt blossem "geht nicht": was genau haengt, und
+             die beiden Wege daran vorbei. Archivieren steht zuerst und
+             ist der empfohlene. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding LoeschHindernisAktiv}"
+                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                Padding="8" Margin="0,0,0,8">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding LoeschHindernisText}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Archivieren (empfohlen)"
+                            Command="{Binding HindernisArchivierenCommand}" />
+                    <Button Content="Zusammenführen…"
+                            Command="{Binding ZusammenfuehrenStartenCommand}"
+                            IsEnabled="{Binding ZusammenfuehrenMoeglich}"
+                            ToolTip.Tip="Alle Ausgaben und Vorlagen in eine andere Kategorie umhängen und diese hier löschen." />
+                    <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                </StackPanel>
+                <TextBlock Classes="klein" Foreground="Gray" TextWrapping="Wrap"
+                           IsVisible="{Binding !ZusammenfuehrenMoeglich}"
+                           Text="Zusammenführen geht nur ohne Unterkategorien — die müssen zuerst einzeln behandelt werden." />
+            </StackPanel>
+        </Border>
+
+        <!-- Zusammenfuehren: Zielwahl, Vorschau, Bestaetigung. Die
+             Zielwahl benutzt denselben Baum im Aufklappfenster wie die
+             Kategorie-Auswahl der Ausgabenliste; waehlbar sind hier aber
+             nur Blattknoten. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding ZusammenfuehrenAktiv}"
+                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                Padding="8" Margin="0,0,0,8">
+            <StackPanel Spacing="8">
+                <TextBlock Text="{Binding ZusammenfuehrenTitel}" Classes="ueberschrift" />
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Ziel:" VerticalAlignment="Center" />
+                    <Button x:Name="ZielAuswahl"
+                            Content="{Binding ZielText}"
+                            Width="{anzeige:Breite 300}"
+                            HorizontalContentAlignment="Left">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                <ScrollViewer MaxHeight="{anzeige:Breite 360}">
+                                    <TreeView Width="{anzeige:Breite 320}"
+                                              ItemsSource="{Binding ZielWurzeln}">
+                                        <TreeView.ItemTemplate>
+                                            <TreeDataTemplate x:DataType="vm:KategorieZielKnoten"
+                                                              ItemsSource="{Binding Children}">
+                                                <!-- Gewaehlt wird ueber den Knoten-Button und
+                                                     NICHT ueber TreeView.SelectedItem: beim
+                                                     Schliessen des Aufklappfensters gibt der
+                                                     TreeView seine Auswahl her und wuerde das
+                                                     Ziel sofort wieder leeren (dieselbe
+                                                     Eigenheit wie in AusgabenlisteView). -->
+                                                <Button Classes="kategoriewahl"
+                                                        IsEnabled="{Binding IstWaehlbar}"
+                                                        Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).ZielWaehlenCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Click="ZielFlyout_Schliessen">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               Classes.archiviert="{Binding IstArchiviert}" />
+                                                </Button>
+                                            </TreeDataTemplate>
+                                        </TreeView.ItemTemplate>
+                                    </TreeView>
+                                </ScrollViewer>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock Text="{Binding ZusammenfuehrenVorschauText}"
+                           IsVisible="{Binding ZusammenfuehrenBereit}"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Text="{Binding ZusammenfuehrenFehler}"
+                           IsVisible="{Binding ZusammenfuehrenFehlerSichtbar}"
+                           Classes="fehler" TextWrapping="Wrap" />
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Zusammenführen"
+                            Command="{Binding ZusammenfuehrenBestaetigenCommand}"
+                            IsEnabled="{Binding ZusammenfuehrenBereit}" />
+                    <Button Content="Abbrechen" Command="{Binding ZusammenfuehrenAbbrechenCommand}" />
                 </StackPanel>
             </StackPanel>
         </Border>

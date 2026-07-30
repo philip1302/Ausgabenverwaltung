@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Startup;
@@ -73,7 +71,7 @@ public sealed partial class StartupNoticeViewModel : ViewModelBase
         GeneratedExpenseDescriptions = erzeugte
             .Select(expense =>
                 $"{IsoDate.ToDateText(expense.ExpenseDate)} - " +
-                $"{Money.ToDecimal(expense.AmountCents).ToString("N2", CultureInfo.InvariantCulture)} EUR" +
+                $"{EuroText.Format(expense.AmountCents)}" +
                 (string.IsNullOrEmpty(expense.Note) ? string.Empty : $" ({expense.Note})"))
             .ToList();
 

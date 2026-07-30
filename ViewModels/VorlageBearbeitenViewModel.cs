@@ -23,8 +23,6 @@ namespace Ausgabenverwaltung.ViewModels;
 /// </summary>
 public sealed partial class VorlageBearbeitenViewModel : ObservableObject
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
-
     /// <summary>Wie viele Termine die Vorschau zeigt.</summary>
     private const int VorschauAnzahl = 6;
 
@@ -242,10 +240,11 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
         {
             _titel = vorlage.Title;
 
-            // "0.00" statt "N2": Money.TryParseEuroText lehnt
-            // Tausendertrennzeichen bewusst ab, ein vorbelegtes "1.234,56"
-            // liesse sich also nicht wieder speichern.
-            _betragText = Money.ToDecimal(vorlage.AmountCents).ToString("0.00", DeDe);
+            // EuroText.Plain und nicht EuroText.Format: in ein Eingabefeld
+            // gehoert die blanke Zahl (das €-Zeichen steht als Beschriftung
+            // daneben), und der Tausenderpunkt wuerde beim Speichern
+            // abgelehnt (siehe Money.TryParseEuroText).
+            _betragText = EuroText.Plain(vorlage.AmountCents);
             _bemerkung = vorlage.Note;
 
             _ausgewaehlteKategorie = KategorieVorschlaege

@@ -23,6 +23,13 @@
         <x:Double x:Key="SchriftKlein">11</x:Double>
         <x:Double x:Key="SchriftNormal">14</x:Double>
         <x:Double x:Key="SchriftUeberschrift">16</x:Double>
+
+        <!-- Die Farbe negativer Betraege (Erstattungen). Gedaempft und
+             nicht signalrot: sie unterscheidet eine Erstattung von einer
+             Ausgabe, sie warnt nicht. Und sie ist ein ZUSATZ - das
+             Minuszeichen steht ohnehin davor und traegt die Angabe auch
+             ohne Farbwahrnehmung. -->
+        <SolidColorBrush x:Key="ErstattungFarbe">#A03A30</SolidColorBrush>
     </Application.Resources>
 
     <!-- Wiederverwendbare Tabellen-Styles fuer alle Listen-/Tabellenansichten
@@ -111,6 +118,19 @@
         </Style>
         <Style Selector="TextBlock.tabellenzelle.mitte">
             <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <!-- Negative Betraege (Erstattungen). Zwei Regeln, weil Betraege
+             an beiden Stellen stehen: als Text in den Tabellenzellen und
+             als Inhalt der anklickbaren Zellen der Kreuztabelle. Bei den
+             Schaltflaechen greift die Regel im Vorlagenbaum, weil das
+             Thema die Vordergrundfarbe im Zustand "pointerover" sonst am
+             ContentPresenter selbst ueberschreibt. -->
+        <Style Selector="TextBlock.erstattung">
+            <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
+        </Style>
+        <Style Selector="Button.erstattung /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
         </Style>
 
         <Style Selector="TextBlock.archiviert">

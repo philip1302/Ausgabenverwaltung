@@ -136,6 +136,10 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     [ObservableProperty]
     private string _summeText = string.Empty;
 
+    /// <summary>Die Summe der Treffer ist negativ - Erstattungen ueberwiegen.</summary>
+    [ObservableProperty]
+    private bool _summeIstErstattung;
+
     [ObservableProperty]
     private bool _keineTreffer;
 
@@ -485,7 +489,8 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         TrefferText = summary.Count == 1
             ? "1 Treffer"
             : $"{summary.Count.ToString("N0", DeDe)} Treffer";
-        SummeText = Money.ToDecimal(summary.SumCents).ToString("N2", DeDe);
+        SummeText = EuroText.Format(summary.SumCents);
+        SummeIstErstattung = EuroText.IsNegative(summary.SumCents);
 
         AnzahlAusgewaehlt = 0;
         KeineTreffer = summary.Count == 0;

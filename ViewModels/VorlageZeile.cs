@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.RecurringExpenses;
@@ -31,8 +30,8 @@ public sealed class VorlageZeile
         PayerName = payerName;
         ErzeugteAnzahl = erzeugteAnzahl;
 
-        BetragText = Money.ToDecimal(vorlage.AmountCents)
-            .ToString("N2", CultureInfo.GetCultureInfo("de-DE"));
+        BetragText = EuroText.Format(vorlage.AmountCents);
+        IstErstattung = EuroText.IsNegative(vorlage.AmountCents);
 
         RhythmusText = RecurrenceText.Describe(
             vorlage.IntervalUnit, vorlage.IntervalCount, vorlage.AnchorDay, vorlage.StartDate);
@@ -69,6 +68,10 @@ public sealed class VorlageZeile
     public string CategoryFullPath { get; }
     public string PayerName { get; }
     public string BetragText { get; }
+
+    /// <summary>Erstattung (negativer Betrag) - wird gedaempft rot hervorgehoben.</summary>
+    public bool IstErstattung { get; }
+
     public string RhythmusText { get; }
     public string NaechsteFaelligkeitText { get; }
     public string StatusText { get; }
@@ -85,5 +88,5 @@ public sealed class VorlageZeile
     /// Betrag und Rhythmus, damit erkennbar bleibt, was verschwindet.
     /// </summary>
     public string LoeschBeschreibung =>
-        $"{Titel} · {CategoryFullPath} · {BetragText} EUR · {RhythmusText}";
+        $"{Titel} · {CategoryFullPath} · {BetragText} · {RhythmusText}";
 }

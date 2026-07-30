@@ -79,7 +79,7 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     [ObservableProperty]
     private bool _bestaetigungSichtbar;
 
-    public ObservableCollection<string> LetzteAusgaben { get; } = new();
+    public ObservableCollection<LetzteAusgabeZeile> LetzteAusgaben { get; } = new();
 
     public ErfassenViewModel(
         ExpenseRepository expenseRepository,
@@ -189,14 +189,7 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
         foreach (var expense in _expenseRepository.GetRecent(10))
         {
-            var betrag = Money.ToDecimal(expense.AmountCents).ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
-            var zeile = $"{GermanDateInput.ToText(expense.ExpenseDate)}  ·  {betrag} EUR  ·  {expense.CategoryName}  ·  {expense.PayerName}";
-            if (!string.IsNullOrWhiteSpace(expense.Note))
-            {
-                zeile += $"  ·  {expense.Note}";
-            }
-
-            LetzteAusgaben.Add(zeile);
+            LetzteAusgaben.Add(new LetzteAusgabeZeile(expense));
         }
     }
 }

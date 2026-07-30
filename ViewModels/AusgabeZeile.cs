@@ -1,7 +1,5 @@
 using System;
-using System.Globalization;
 using Ausgabenverwaltung.Anzeige;
-using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
 using Avalonia.Media;
@@ -24,6 +22,13 @@ public sealed partial class AusgabeZeile : ObservableObject
     public string CategoryFullPath { get; }
     public long AmountCents { get; }
     public string BetragText { get; }
+
+    /// <summary>
+    /// Erstattung (negativer Betrag). Die Zeile hebt den Betrag dann
+    /// gedaempft rot hervor - zusaetzlich zum Minuszeichen, das die
+    /// Angabe auch ohne Farbwahrnehmung traegt.
+    /// </summary>
+    public bool IstErstattung { get; }
     public int PayerId { get; }
     public string PayerName { get; }
     public bool PayerIsSelf { get; }
@@ -78,8 +83,8 @@ public sealed partial class AusgabeZeile : ObservableObject
         CategoryId = item.CategoryId;
         CategoryFullPath = item.CategoryFullPath;
         AmountCents = item.AmountCents;
-        BetragText = Money.ToDecimal(item.AmountCents)
-            .ToString("N2", CultureInfo.GetCultureInfo("de-DE"));
+        BetragText = EuroText.Format(item.AmountCents);
+        IstErstattung = EuroText.IsNegative(item.AmountCents);
         PayerId = item.PayerId;
         PayerName = item.PayerName;
         PayerIsSelf = item.PayerIsSelf;
@@ -107,5 +112,5 @@ public sealed partial class AusgabeZeile : ObservableObject
     /// Kategorie und Betrag, damit erkennbar bleibt, was verschwindet.
     /// </summary>
     public string LoeschBeschreibung =>
-        $"{DatumText} · {CategoryFullPath} · {BetragText} EUR";
+        $"{DatumText} · {CategoryFullPath} · {BetragText}";
 }

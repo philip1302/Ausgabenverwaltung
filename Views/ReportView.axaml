@@ -10,7 +10,10 @@
              x:DataType="vm:ReportViewModel">
 
     <!-- Spaltenbreiten der Kreuztabelle: Kategorie 300, jeder
-         Zeitabschnitt 110, Summe 130. Feste Breiten statt eines Grids,
+         Zeitabschnitt 125, Summe 145. Die beiden Wertspalten sind je
+         15 Pixel breiter als frueher (110/130): seit die Betraege das
+         €-Zeichen tragen, braucht "-1.234,56 €" mehr Platz.
+         Feste Breiten statt eines Grids,
          weil die Anzahl der Spalten erst zur Laufzeit feststeht - Kopf-
          und Wertzeilen bauen sich aus denselben Breiten auf und stehen
          dadurch exakt uebereinander. Die Tabellen-Styles
@@ -255,11 +258,11 @@
                                     <DataTemplate x:DataType="vm:ReportSpalte">
                                         <TextBlock Text="{Binding Beschriftung}"
                                                    Classes="tabellenkopf zahl"
-                                                   Width="{anzeige:Breite 110}" />
+                                                   Width="{anzeige:Breite 125}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <TextBlock Text="Summe" Classes="tabellenkopf zahl" Width="{anzeige:Breite 130}" />
+                            <TextBlock Text="Summe" Classes="tabellenkopf zahl" Width="{anzeige:Breite 145}" />
                         </StackPanel>
                     </Border>
 
@@ -315,7 +318,8 @@
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:ReportZelle">
-                                                            <Button Classes="zelle" Width="{anzeige:Breite 110}"
+                                                            <Button Classes="zelle" Width="{anzeige:Breite 125}"
+                                                                    Classes.erstattung="{Binding IstErstattung}"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
                                                                     ToolTip.Tip="{Binding Beschreibung}"
@@ -325,8 +329,9 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
 
-                                                <Button Classes="zelle" Width="{anzeige:Breite 130}"
+                                                <Button Classes="zelle" Width="{anzeige:Breite 145}"
                                                         FontWeight="SemiBold"
+                                                        Classes.erstattung="{Binding Summe.IstErstattung}"
                                                         Content="{Binding Summe.Text}"
                                                         IsEnabled="{Binding Summe.HatWerte}"
                                                         ToolTip.Tip="{Binding Summe.Beschreibung}"
@@ -361,8 +366,9 @@
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:ReportZelle">
-                                                            <Button Classes="zelle" Width="{anzeige:Breite 110}"
+                                                            <Button Classes="zelle" Width="{anzeige:Breite 125}"
                                                                     FontWeight="Bold"
+                                                                    Classes.erstattung="{Binding IstErstattung}"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
                                                                     ToolTip.Tip="{Binding Beschreibung}"
@@ -371,8 +377,9 @@
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
-                                                <Button Classes="zelle" Width="{anzeige:Breite 130}"
+                                                <Button Classes="zelle" Width="{anzeige:Breite 145}"
                                                         FontWeight="Bold"
+                                                        Classes.erstattung="{Binding Summe.IstErstattung}"
                                                         Content="{Binding Summe.Text}"
                                                         IsEnabled="{Binding Summe.HatWerte}"
                                                         ToolTip.Tip="{Binding Summe.Beschreibung}"
@@ -421,13 +428,14 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
                             <TextBlock FontWeight="Bold"
                                        VerticalAlignment="Center"
-                                       Text="{Binding DetailSummeText, StringFormat='Summe: {0} EUR'}" />
+                                       Classes.erstattung="{Binding DetailSummeIstErstattung}"
+                                       Text="{Binding DetailSummeText, StringFormat='Summe: {0}'}" />
                             <Button Content="Schließen"
                                     Command="{Binding DetailsSchliessenCommand}" />
                         </StackPanel>
                     </Grid>
 
-                    <Grid DockPanel.Dock="Top" anzeige:Raster.Spalten="90,16,2*,16,90,16,110,16,2*"
+                    <Grid DockPanel.Dock="Top" anzeige:Raster.Spalten="90,16,2*,16,110,16,110,16,2*"
                           Margin="0,0,0,4">
                         <TextBlock Grid.Column="0" Text="Datum" Classes="tabellenkopf" />
                         <TextBlock Grid.Column="2" Text="Kategorie" Classes="tabellenkopf" />
@@ -451,13 +459,14 @@
                             <DataTemplate x:DataType="vm:AusgabeZeile">
                                 <Border BorderBrush="#E8E8E8" BorderThickness="0,0,0,1"
                                         Padding="0,5">
-                                    <Grid anzeige:Raster.Spalten="90,16,2*,16,90,16,110,16,2*">
+                                    <Grid anzeige:Raster.Spalten="90,16,2*,16,110,16,110,16,2*">
                                         <TextBlock Grid.Column="0" Text="{Binding DatumText}"
                                                    Classes="tabellenzelle" />
                                         <TextBlock Grid.Column="2" Text="{Binding CategoryFullPath}"
                                                    Classes="tabellenzelle" TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="4" Text="{Binding BetragText}"
-                                                   Classes="tabellenzelle zahl" />
+                                                   Classes="tabellenzelle zahl"
+                                                   Classes.erstattung="{Binding IstErstattung}" />
                                         <TextBlock Grid.Column="6" Text="{Binding PayerName}"
                                                    Classes="tabellenzelle" TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="8" Text="{Binding Note}"

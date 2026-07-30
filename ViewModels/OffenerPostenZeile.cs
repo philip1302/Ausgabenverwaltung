@@ -1,6 +1,4 @@
 using System;
-using System.Globalization;
-using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.OpenItems;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,6 +18,9 @@ public sealed partial class OffenerPostenZeile : ObservableObject
     public string DatumText { get; }
     public long AmountCents { get; }
     public string BetragText { get; }
+
+    /// <summary>Erstattung (negativer Betrag) - wird gedaempft rot hervorgehoben.</summary>
+    public bool IstErstattung { get; }
     public string CategoryFullPath { get; }
     public string? Note { get; }
     public int TageOffen { get; }
@@ -54,7 +55,8 @@ public sealed partial class OffenerPostenZeile : ObservableObject
         ExpenseDate = item.ExpenseDate;
         DatumText = GermanDateInput.ToText(item.ExpenseDate);
         AmountCents = item.AmountCents;
-        BetragText = Money.ToDecimal(item.AmountCents).ToString("N2", CultureInfo.GetCultureInfo("de-DE"));
+        BetragText = EuroText.Format(item.AmountCents);
+        IstErstattung = EuroText.IsNegative(item.AmountCents);
         CategoryFullPath = item.CategoryFullPath;
         Note = item.Note;
         TageOffen = item.TageOffen;

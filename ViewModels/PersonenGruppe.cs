@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
-using Ausgabenverwaltung.Core;
+using Ausgabenverwaltung.Core.Formatting;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Ausgabenverwaltung.ViewModels;
@@ -22,6 +21,9 @@ public sealed partial class PersonenGruppe : ObservableObject
     [ObservableProperty]
     private string _zwischensummeText = string.Empty;
 
+    [ObservableProperty]
+    private bool _zwischensummeIstErstattung;
+
     public PersonenGruppe(string personName)
     {
         PersonName = personName;
@@ -30,6 +32,7 @@ public sealed partial class PersonenGruppe : ObservableObject
     public void AktualisiereZwischensumme()
     {
         var summeCents = Zeilen.Where(z => !z.IstBeglichen).Sum(z => z.AmountCents);
-        ZwischensummeText = Money.ToDecimal(summeCents).ToString("N2", CultureInfo.GetCultureInfo("de-DE"));
+        ZwischensummeText = EuroText.Format(summeCents);
+        ZwischensummeIstErstattung = EuroText.IsNegative(summeCents);
     }
 }

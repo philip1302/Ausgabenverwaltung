@@ -123,11 +123,11 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
             ZahlerOptionen = zahler.Prepend(_ausgewaehlterZahler).ToList();
         }
 
-        // "0.00" statt "N2": Money.TryParseEuroText lehnt
-        // Tausendertrennzeichen bewusst ab, ein vorbelegtes "1.234,56"
-        // liesse sich also nicht wieder speichern.
-        _betragText = Money.ToDecimal(zeile.AmountCents)
-            .ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
+        // EuroText.Plain und nicht EuroText.Format: in ein Eingabefeld
+        // gehoert die blanke Zahl (das €-Zeichen steht als Beschriftung
+        // daneben), und der Tausenderpunkt wuerde beim Speichern
+        // abgelehnt (siehe Money.TryParseEuroText).
+        _betragText = EuroText.Plain(zeile.AmountCents);
         _datumText = GermanDateInput.ToText(zeile.ExpenseDate);
         _bemerkung = zeile.Note;
     }

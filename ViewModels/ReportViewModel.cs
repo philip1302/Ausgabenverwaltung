@@ -146,6 +146,10 @@ public sealed partial class ReportViewModel : ViewModelBase
     [ObservableProperty]
     private string _detailSummeText = string.Empty;
 
+    /// <summary>Die Summe des Dialogs ist negativ - Erstattungen ueberwiegen.</summary>
+    [ObservableProperty]
+    private bool _detailSummeIstErstattung;
+
     public ReportViewModel(
         ReportRepository reportRepository,
         ExpenseRepository expenseRepository,
@@ -318,7 +322,8 @@ public sealed partial class ReportViewModel : ViewModelBase
         DetailTrefferText = summary.Count == 1
             ? "1 Buchung"
             : $"{summary.Count.ToString("N0", DeDe)} Buchungen";
-        DetailSummeText = Money.ToDecimal(summary.SumCents).ToString("N2", DeDe);
+        DetailSummeText = EuroText.Format(summary.SumCents);
+        DetailSummeIstErstattung = EuroText.IsNegative(summary.SumCents);
 
         DetailTitel = zelle.Beschreibung;
     }

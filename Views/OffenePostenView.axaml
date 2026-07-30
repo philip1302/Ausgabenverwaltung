@@ -9,10 +9,14 @@
              x:Name="Wurzel"
              x:DataType="vm:OffenePostenViewModel">
 
-    <!-- Spaltenraster "32,90,16,2*,16,90,24,2*,16,100,24,190" gilt fuer
+    <!-- Spaltenraster "32,90,16,2*,16,110,24,2*,16,100,24,190" gilt fuer
          Kopfzeile UND Zeilen-Grid gleichermassen: Checkbox, Datum,
          Kategorie, Betrag, Bemerkung, TageOffen, Aktionen, dazwischen feste
-         Gutter-Spalten als Abstandhalter (Indizes 2,4,6,8,10). -->
+         Gutter-Spalten als Abstandhalter (Indizes 2,4,6,8,10).
+
+         Die Betragsspalte ist 110 statt der urspruenglichen 90 Pixel
+         breit: seit die Betraege das €-Zeichen tragen, braucht
+         "-1.234,56 €" mehr Platz als vorher "1.234,56". -->
     <UserControl.Styles>
         <Style Selector="TextBlock.beglichen">
             <Setter Property="Foreground" Value="Gray" />
@@ -46,7 +50,8 @@
             <TextBlock Grid.Column="2"
                        VerticalAlignment="Center"
                        FontWeight="Bold"
-                       Text="{Binding GesamtsummeText, StringFormat='Gesamt offen: {0} EUR'}" />
+                       Classes.erstattung="{Binding GesamtsummeIstErstattung}"
+                       Text="{Binding GesamtsummeText, StringFormat='Gesamt offen: {0}'}" />
         </Grid>
 
         <TextBlock DockPanel.Dock="Top"
@@ -64,7 +69,7 @@
                 HorizontalAlignment="Left"
                 IsVisible="{Binding !KeineEintraege}"
                 Padding="4,0,4,4">
-            <Grid anzeige:Raster.Spalten="32,90,16,2*,16,90,24,2*,16,100,24,190">
+            <Grid anzeige:Raster.Spalten="32,90,16,2*,16,110,24,2*,16,100,24,190">
                 <TextBlock Grid.Column="0" />
                 <Button Grid.Column="1" Classes="kopf" Content="{Binding DatumHeaderText}"
                         Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
@@ -92,7 +97,7 @@
                                     <DataTemplate x:DataType="vm:OffenerPostenZeile">
                                         <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
                                             <StackPanel>
-                                                <Grid anzeige:Raster.Spalten="32,90,16,2*,16,90,24,2*,16,100,24,190">
+                                                <Grid anzeige:Raster.Spalten="32,90,16,2*,16,110,24,2*,16,100,24,190">
                                                     <CheckBox Grid.Column="0"
                                                               IsChecked="{Binding IstAusgewaehlt}"
                                                               IsVisible="{Binding !IstBeglichen}"
@@ -106,6 +111,7 @@
                                                                TextWrapping="Wrap" />
                                                     <TextBlock Grid.Column="5" Text="{Binding BetragText}"
                                                                Classes="tabellenzelle zahl"
+                                                               Classes.erstattung="{Binding IstErstattung}"
                                                                Classes.beglichen="{Binding IstBeglichen}" />
                                                     <TextBlock Grid.Column="7" Text="{Binding Note}"
                                                                Classes="tabellenzelle"
@@ -163,7 +169,8 @@
                             </ItemsControl>
 
                             <TextBlock HorizontalAlignment="Right" FontWeight="Bold" Margin="0,4,20,0"
-                                       Text="{Binding ZwischensummeText, StringFormat='Zwischensumme: {0} EUR'}" />
+                                       Classes.erstattung="{Binding ZwischensummeIstErstattung}"
+                                       Text="{Binding ZwischensummeText, StringFormat='Zwischensumme: {0}'}" />
                         </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

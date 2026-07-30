@@ -73,6 +73,14 @@ public partial class KategorienView : UserControl
         FarbAuswahl.Flyout?.Hide();
     }
 
+    // Nach der Wahl der Zielkategorie schliesst sich das Aufklappfenster,
+    // damit die Vorschau darunter sichtbar wird. Die Auswahl selbst laeuft
+    // ueber das Command am Knoten-Button, nicht ueber dieses Ereignis.
+    private void ZielFlyout_Schliessen(object? sender, RoutedEventArgs e)
+    {
+        ZielAuswahl.Flyout?.Hide();
+    }
+
     private void BearbeitungsTextBox_LostFocus(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control control || control.DataContext is not KategorieKnoten knoten) return;

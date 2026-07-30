@@ -27,7 +27,9 @@
 
         <StackPanel DockPanel.Dock="Top" Width="{anzeige:Breite 420}"
                     HorizontalAlignment="Left" Spacing="2">
-            <TextBlock Text="Betrag (EUR)" />
+            <!-- Das €-Zeichen steht in der Beschriftung, nicht im Feld:
+                 eingegeben wird die blanke Zahl. -->
+            <TextBlock Text="Betrag (€)" />
             <TextBox x:Name="BetragBox"
                      Text="{Binding BetragText}"
                      PlaceholderText="0,00"
@@ -92,7 +94,22 @@
 
         <StackPanel DockPanel.Dock="Top" Margin="0,24,0,0" Spacing="4">
             <TextBlock Text="Letzte Ausgaben" FontWeight="Bold" />
-            <ItemsControl ItemsSource="{Binding LetzteAusgaben}" />
+
+            <!-- Drei Textbloecke statt eines: nur so laesst sich der
+                 Betrag als Erstattung einfaerben, waehrend der Rest der
+                 Zeile in der gewoehnlichen Schriftfarbe stehen bleibt. -->
+            <ItemsControl ItemsSource="{Binding LetzteAusgaben}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LetzteAusgabeZeile">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding VorText}" />
+                            <TextBlock Text="{Binding BetragText}"
+                                       Classes.erstattung="{Binding IstErstattung}" />
+                            <TextBlock Text="{Binding NachText}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
     </DockPanel>
 </UserControl>

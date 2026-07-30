@@ -1,7 +1,9 @@
 using System.Data;
 using Ausgabenverwaltung.Anzeige;
+using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
+using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.ViewModels;
 using Avalonia.Media;
 
@@ -15,6 +17,8 @@ public class KategorienFarbenTests : IDisposable
 {
     private readonly IDbConnection _connection;
     private readonly CategoryRepository _repository;
+    private readonly DirectoryInfo _tempDir =
+        Directory.CreateTempSubdirectory("ausgabenverwaltung-farben-");
 
     public KategorienFarbenTests()
     {
@@ -23,7 +27,20 @@ public class KategorienFarbenTests : IDisposable
         _repository = new CategoryRepository(_connection);
     }
 
-    public void Dispose() => _connection.Dispose();
+    public void Dispose()
+    {
+        _connection.Dispose();
+        _tempDir.Delete(recursive: true);
+    }
+
+    // Das ViewModel braucht die Sicherung nur fuer das Zusammenfuehren.
+    // Die Farbtests loesen sie nie aus, deshalb genuegt hier ein Dienst
+    // auf ein leeres Temp-Verzeichnis.
+    private KategorienViewModel NeuesViewModel() =>
+        new(_repository, new BackupService(
+            _connection,
+            Path.Combine(_tempDir.FullName, "Backups"),
+            new AppSettingsStore(Path.Combine(_tempDir.FullName, "settings.json"))));
 
     private static Color FarbeVon(IBrush pinsel) => ((ISolidColorBrush)pinsel).Color;
 
@@ -41,7 +58,7 @@ public class KategorienFarbenTests : IDisposable
     [Fact]
     public void Jede_Farbe_der_Auswahl_traegt_ihren_eigenen_Pinsel()
     {
-        var optionen = new KategorienViewModel(_repository).Farboptionen;
+        var optionen = NeuesViewModel().Farboptionen;
 
         Assert.Equal(15, optionen.Count);
         Assert.True(optionen[0].IstKeineFarbe);
@@ -57,7 +74,7 @@ public class KategorienFarbenTests : IDisposable
         var pferde = _repository.Create("Pferde", null);
         var hufschmied = _repository.Create("Hufschmied", pferde.Id);
 
-        var viewModel = new KategorienViewModel(_repository);
+        var viewModel = NeuesViewModel();
         viewModel.AusgewaehlterKnoten = viewModel.Wurzelknoten.Single();
         viewModel.OeffneFarbwahl();
 
@@ -90,7 +107,7 @@ public class KategorienFarbenTests : IDisposable
         var pferde = _repository.Create("Pferde", null);
         _repository.SetColor(pferde.Id, "#2980B9");
 
-        var viewModel = new KategorienViewModel(_repository);
+        var viewModel = NeuesViewModel();
         viewModel.AusgewaehlterKnoten = viewModel.Wurzelknoten.Single();
         viewModel.OeffneFarbwahl();
         viewModel.FarbeSetzenCommand.Execute(viewModel.Farboptionen.Single(o => o.IstKeineFarbe));
@@ -109,7 +126,7 @@ public class KategorienFarbenTests : IDisposable
     {
         _repository.Create("Pferde", null);
 
-        var viewModel = new KategorienViewModel(_repository);
+        var viewModel = NeuesViewModel();
         Assert.Null(viewModel.AusgewaehlterKnoten);
 
         viewModel.FarbeSetzenCommand.Execute(viewModel.Farboptionen[1]);
@@ -122,7 +139,7 @@ public class KategorienFarbenTests : IDisposable
     {
         _repository.Create("Pferde", null);
 
-        var viewModel = new KategorienViewModel(_repository);
+        var viewModel = NeuesViewModel();
         viewModel.AusgewaehlterKnoten = viewModel.Wurzelknoten.Single();
         viewModel.OeffneFarbwahl();
 

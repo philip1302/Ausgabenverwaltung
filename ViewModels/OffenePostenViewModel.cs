@@ -2,11 +2,9 @@ using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.OpenItems;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -35,6 +33,10 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _gesamtsummeText = string.Empty;
+
+    /// <summary>Die offene Gesamtsumme ist negativ - Erstattungen ueberwiegen.</summary>
+    [ObservableProperty]
+    private bool _gesamtsummeIstErstattung;
 
     [ObservableProperty]
     private bool _keineEintraege;
@@ -345,7 +347,8 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     private void AktualisiereGesamtsumme()
     {
         var summeCents = Gruppen.SelectMany(g => g.Zeilen).Where(z => !z.IstBeglichen).Sum(z => z.AmountCents);
-        GesamtsummeText = Money.ToDecimal(summeCents).ToString("N2", CultureInfo.GetCultureInfo("de-DE"));
+        GesamtsummeText = EuroText.Format(summeCents);
+        GesamtsummeIstErstattung = EuroText.IsNegative(summeCents);
     }
 
     private string KopfText(string bezeichnung, OffenePostenSortSpalte spalte) =>

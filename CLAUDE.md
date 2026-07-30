@@ -22,7 +22,12 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
 
 1. **Geld ist IMMER `long` in Cent.** Niemals `double`, `float`
    oder `decimal` in der Datenbank. In C# an der Rechengrenze
-   `decimal`, Umwandlung nur in einer zentralen Helper-Klasse.
+   `decimal`, Umwandlung nur in einer zentralen Helper-Klasse
+   (`Money`). Angezeigt wird ausschliesslich ueber `EuroText`, fest
+   auf `de-DE`: `EuroText.Format` mit €-Zeichen ueberall, wo ein
+   Betrag gelesen wird, `EuroText.Plain` ohne Zeichen in
+   Eingabefeldern und im CSV-Export. Keine Formatierung in einzelnen
+   Views oder ViewModels.
 
 2. **`PRAGMA foreign_keys = ON`** bei JEDER neuen Verbindung.
    SQLite prueft sonst keine Fremdschluessel.
@@ -48,8 +53,19 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
 7. **Keine Geschaeftslogik in Code-Behind oder ViewModels.**
    Alles Pruefbare gehoert nach Core.
 
-8. **Kategorien und Personen werden archiviert, nie geloescht.**
-   Fremdschluessel stehen auf `ON DELETE RESTRICT`.
+8. **Archivieren ist der Normalfall.** Fremdschluessel stehen auf
+   `ON DELETE RESTRICT`.
+   - **Personen** werden ausschliesslich archiviert, nie geloescht.
+   - **Kategorien** duerfen geloescht werden, aber nur wenn sie
+     vollstaendig unbenutzt sind: keine Ausgaben, keine
+     Unterkategorien, keine verweisende Vorlage.
+   - Eine benutzte Kategorie wird archiviert oder **zusammengefuehrt**:
+     alle Ausgaben und Vorlagen wandern in EINER Transaktion zu einer
+     Zielkategorie (nur Blattknoten), `ModifiedUtc` wird mitgezogen,
+     danach faellt die leere Quelle weg. Eine Quelle mit
+     Unterkategorien wird abgelehnt — kein rekursives Verschieben
+     ganzer Aeste. Nicht rueckgaengig zu machen, deshalb vorher
+     automatisch eine Sicherung.
 
 9. **Keine festen Schriftgroessen und keine festen Pixelbreiten
    in den Ansichten.** Schriftgroessen kommen als

@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
-using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
@@ -26,8 +24,6 @@ namespace Ausgabenverwaltung.ViewModels;
 /// </summary>
 public sealed partial class VorlagenViewModel : ViewModelBase
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
-
     private readonly RecurringExpenseRepository _recurringExpenseRepository;
     private readonly CategoryRepository _categoryRepository;
     private readonly PersonRepository _personRepository;
@@ -50,6 +46,10 @@ public sealed partial class VorlagenViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _monatlicheBelastungText = string.Empty;
+
+    /// <summary>Die monatliche Belastung ist negativ - Erstattungen ueberwiegen.</summary>
+    [ObservableProperty]
+    private bool _monatlicheBelastungIstErstattung;
 
     [ObservableProperty]
     private bool _keineVorlagen;
@@ -442,7 +442,7 @@ public sealed partial class VorlagenViewModel : ViewModelBase
         {
             ErgebnisZeilen.Add(
                 $"{GermanDateInput.ToText(expense.ExpenseDate)} · " +
-                $"{Money.ToDecimal(expense.AmountCents).ToString("N2", DeDe)} EUR" +
+                $"{EuroText.Format(expense.AmountCents)}" +
                 (string.IsNullOrEmpty(expense.Note) ? string.Empty : $" · {expense.Note}"));
         }
 
@@ -483,8 +483,8 @@ public sealed partial class VorlagenViewModel : ViewModelBase
         KeineVorlagen = Zeilen.Count == 0;
         AnzahlText = Zeilen.Count == 1 ? "1 Vorlage" : $"{Zeilen.Count} Vorlagen";
 
-        MonatlicheBelastungText = Money
-            .ToDecimal(MonthlyBurden.TotalPerMonthCents(vorlagen, heute))
-            .ToString("N2", DeDe);
+        var belastungCents = MonthlyBurden.TotalPerMonthCents(vorlagen, heute);
+        MonatlicheBelastungText = EuroText.Format(belastungCents);
+        MonatlicheBelastungIstErstattung = EuroText.IsNegative(belastungCents);
     }
 }

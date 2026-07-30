@@ -11,12 +11,16 @@
              x:Name="Wurzel"
              x:DataType="vm:VorlagenViewModel">
 
-    <!-- Spaltenraster "2*,16,2*,16,85,16,135,16,95,16,90,16,70,16,80,24,300"
+    <!-- Spaltenraster "2*,16,2*,16,105,16,135,16,95,16,90,16,70,16,80,24,300"
          gilt fuer Kopfzeile UND Zeilen gleichermassen: Titel, Kategorie,
          Betrag, Rhythmus, Zahler, naechste Faelligkeit, erzeugte Buchungen,
          Status, Aktionen - dazwischen feste Gutter-Spalten als Abstandhalter
          (ungerade Indizes). Die Tabellen-Styles (TextBlock.tabellenkopf,
          .tabellenzelle, .archiviert, ...) kommen aus App.axaml.
+
+         Die Betragsspalte ist 105 statt der urspruenglichen 85 Pixel
+         breit: seit die Betraege das €-Zeichen tragen, braucht
+         "-1.234,56 €" mehr Platz als vorher "1.234,56".
 
          Bewusst ScrollViewer + ItemsControl statt der virtualisierenden
          ListBox der Ausgabenliste: Vorlagen sind eine Handvoll, nicht
@@ -88,7 +92,8 @@
                            Foreground="Gray" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" FontWeight="Bold"
                            ToolTip.Tip="Alle aktiven, nicht abgelaufenen Vorlagen auf Monatsbasis umgerechnet (jährlich durch zwölf, wöchentlich mit der mittleren Monatslänge)."
-                           Text="{Binding MonatlicheBelastungText, StringFormat='Monatliche Belastung: {0} EUR'}" />
+                           Classes.erstattung="{Binding MonatlicheBelastungIstErstattung}"
+                           Text="{Binding MonatlicheBelastungText, StringFormat='Monatliche Belastung: {0}'}" />
             </Grid>
 
             <!-- ============ Kopfzeile und Tabelle ============
@@ -99,7 +104,7 @@
                  innerer senkrecht - dasselbe Muster wie in ReportView. -->
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
-            <DockPanel MinWidth="{anzeige:Breite 1290}">
+            <DockPanel MinWidth="{anzeige:Breite 1310}">
             <!-- Die Breite kommt aus der Zeilenliste, statt ueber einen
                  rechten Rand die Bildlaufleiste zu schaetzen. Der Grund:
                  die Differenz zwischen geschaetzter und tatsaechlicher
@@ -113,7 +118,7 @@
                     Width="{Binding #Zeilenliste.Bounds.Width}"
                     HorizontalAlignment="Left"
                     Padding="4,0,4,4">
-                <Grid anzeige:Raster.Spalten="2*,16,2*,16,85,16,135,16,95,16,90,16,70,16,80,24,300">
+                <Grid anzeige:Raster.Spalten="2*,16,2*,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
                     <TextBlock Grid.Column="0"  Text="Titel"       Classes="tabellenkopf" />
                     <TextBlock Grid.Column="2"  Text="Kategorie"   Classes="tabellenkopf" />
                     <TextBlock Grid.Column="4"  Text="Betrag"      Classes="tabellenkopf zahl" />
@@ -138,7 +143,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:VorlageZeile">
                             <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
-                                <Grid anzeige:Raster.Spalten="2*,16,2*,16,85,16,135,16,95,16,90,16,70,16,80,24,300">
+                                <Grid anzeige:Raster.Spalten="2*,16,2*,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
                                     <TextBlock Grid.Column="0" Text="{Binding Titel}"
                                                Classes="tabellenzelle"
                                                Classes.archiviert="{Binding !IstAktiv}"
@@ -149,6 +154,7 @@
                                                TextWrapping="Wrap" />
                                     <TextBlock Grid.Column="4" Text="{Binding BetragText}"
                                                Classes="tabellenzelle zahl"
+                                               Classes.erstattung="{Binding IstErstattung}"
                                                Classes.archiviert="{Binding !IstAktiv}" />
                                     <TextBlock Grid.Column="6" Text="{Binding RhythmusText}"
                                                Classes="tabellenzelle"
@@ -288,7 +294,9 @@
                             <TextBlock Text="{Binding TitelFehler}"
                                        IsVisible="{Binding TitelFehlerSichtbar}" Foreground="Red" />
 
-                            <TextBlock Text="Betrag (EUR)" Classes="formularbeschriftung" />
+                            <!-- Das €-Zeichen steht in der Beschriftung, nicht
+                                 im Feld: eingegeben wird die blanke Zahl. -->
+                            <TextBlock Text="Betrag (€)" Classes="formularbeschriftung" />
                             <TextBox Text="{Binding BetragText}" PlaceholderText="0,00" />
                             <TextBlock Text="{Binding BetragFehler}"
                                        IsVisible="{Binding BetragFehlerSichtbar}" Foreground="Red" />

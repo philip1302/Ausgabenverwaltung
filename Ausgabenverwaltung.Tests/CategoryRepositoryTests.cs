@@ -2,6 +2,8 @@ using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.People;
+using Ausgabenverwaltung.Core.RecurringExpenses;
+using Dapper;
 
 namespace Ausgabenverwaltung.Tests;
 
@@ -288,6 +290,211 @@ public class CategoryRepositoryTests : IDisposable
 
         Assert.Equal("Erste", _repository.GetTree()[0].Category.Name);
     }
+
+    // ---------------- Loeschen ----------------
+    //
+    // Regel 8: archiviert wird der Normalfall, geloescht nur, was
+    // vollstaendig unbenutzt ist.
+
+    [Fact]
+    public void Delete_entfernt_eine_unbenutzte_Kategorie()
+    {
+        var wohnen = _repository.Create("Wohnen", null);
+
+        _repository.Delete(wohnen.Id);
+
+        Assert.Empty(_repository.GetTree());
+    }
+
+    [Fact]
+    public void Delete_lehnt_bei_zugeordneten_Ausgaben_ab()
+    {
+        var wohnen = _repository.Create("Wohnen", null);
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+        new ExpenseRepository(_connection)
+            .Create(wohnen.Id, 1000, new DateOnly(2026, 1, 1), person.Id);
+
+        var ex = Assert.Throws<CategoryInUseException>(() => _repository.Delete(wohnen.Id));
+
+        Assert.Equal(1, ex.Usage.ExpenseCount);
+        Assert.Equal(0, ex.Usage.ChildCount);
+        Assert.Equal(0, ex.Usage.RecurringExpenseCount);
+        Assert.Single(_repository.GetTree());
+    }
+
+    [Fact]
+    public void Delete_lehnt_bei_Unterkategorien_ab()
+    {
+        var wohnen = _repository.Create("Wohnen", null);
+        var heizkosten = _repository.Create("Heizkosten", wohnen.Id);
+        _repository.Create("Strom", heizkosten.Id);
+
+        var ex = Assert.Throws<CategoryInUseException>(() => _repository.Delete(wohnen.Id));
+
+        // Alle Nachfahren, nicht nur die direkten Kinder - der ganze Ast
+        // haengt daran.
+        Assert.Equal(2, ex.Usage.ChildCount);
+        Assert.Equal(0, ex.Usage.ExpenseCount);
+        Assert.Equal(0, ex.Usage.RecurringExpenseCount);
+        Assert.Single(_repository.GetTree());
+    }
+
+    [Fact]
+    public void Delete_lehnt_bei_verweisender_Vorlage_ab()
+    {
+        var wohnen = _repository.Create("Wohnen", null);
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+        LegeVorlageAn(wohnen.Id, person.Id, 5000);
+
+        var ex = Assert.Throws<CategoryInUseException>(() => _repository.Delete(wohnen.Id));
+
+        Assert.Equal(1, ex.Usage.RecurringExpenseCount);
+        Assert.Equal(0, ex.Usage.ExpenseCount);
+        Assert.Equal(0, ex.Usage.ChildCount);
+        Assert.Single(_repository.GetTree());
+    }
+
+    [Fact]
+    public void Delete_einer_archivierten_unbenutzten_Kategorie_ist_moeglich()
+    {
+        var wohnen = _repository.Create("Wohnen", null);
+        _repository.Archive(wohnen.Id, includeDescendants: false);
+
+        _repository.Delete(wohnen.Id);
+
+        Assert.Empty(_repository.GetTree());
+    }
+
+    // ---------------- Zusammenfuehren ----------------
+
+    [Fact]
+    public void Merge_haengt_alle_Buchungen_um_und_laesst_die_Summe_unveraendert()
+    {
+        var (quelle, ziel, personId) = LegeZweiKategorienAn();
+        var expenses = new ExpenseRepository(_connection);
+
+        expenses.Create(quelle, 1000, new DateOnly(2026, 1, 1), personId);
+        expenses.Create(quelle, -250, new DateOnly(2026, 1, 2), personId); // Erstattung
+        expenses.Create(ziel, 4000, new DateOnly(2026, 1, 3), personId);
+        LegeVorlageAn(quelle, personId, 5000);
+
+        var summeVorher = SummeAllerAusgaben();
+
+        _repository.Merge(quelle, ziel);
+
+        // Alle Ausgaben und die Vorlage stehen jetzt beim Ziel ...
+        Assert.Equal(3, ZaehleAusgaben(ziel));
+        Assert.Equal(1, ZaehleVorlagen(ziel));
+
+        // ... die Quelle ist weg ...
+        Assert.Null(_repository.GetTree().SingleOrDefault(n => n.Category.Id == quelle));
+
+        // ... und keine einzige Buchung hat ihren Betrag geaendert.
+        Assert.Equal(summeVorher, SummeAllerAusgaben());
+        Assert.Equal(4750, SummeAllerAusgaben());
+    }
+
+    [Fact]
+    public void Merge_aktualisiert_ModifiedUtc_der_umgehaengten_Ausgaben()
+    {
+        var (quelle, ziel, personId) = LegeZweiKategorienAn();
+        var expenses = new ExpenseRepository(_connection);
+        var ausgabe = expenses.Create(quelle, 1000, new DateOnly(2026, 1, 1), personId);
+
+        // Auf einen alten Stand zurueckdatieren, damit die Aenderung
+        // sichtbar wird - sonst laegen beide Zeitstempel in derselben
+        // Sekunde.
+        _connection.Execute(
+            "UPDATE Expense SET ModifiedUtc = @Alt WHERE Id = @Id",
+            new { Alt = "2020-01-01T00:00:00Z", Id = ausgabe.Id });
+
+        // Gespeicherte Zeitstempel sind auf Sekunden genau (Regel 3) -
+        // deshalb der Vergleich gegen den gelesenen und nicht gegen den
+        // von Create() zurueckgegebenen Wert.
+        var vorher = expenses.GetById(ausgabe.Id)!;
+
+        _repository.Merge(quelle, ziel);
+
+        var danach = expenses.GetById(ausgabe.Id)!;
+        Assert.Equal(ziel, danach.CategoryId);
+        Assert.True(danach.ModifiedUtc > new DateTime(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc));
+
+        // CreatedUtc bleibt: erfasst wurde die Buchung damals.
+        Assert.Equal(vorher.CreatedUtc, danach.CreatedUtc);
+    }
+
+    [Fact]
+    public void Merge_lehnt_ab_wenn_die_Quelle_Unterkategorien_hat()
+    {
+        var (quelle, ziel, personId) = LegeZweiKategorienAn();
+        _repository.Create("Unterkategorie", quelle);
+        new ExpenseRepository(_connection).Create(quelle, 1000, new DateOnly(2026, 1, 1), personId);
+
+        var ex = Assert.Throws<CategoryHasChildrenException>(() => _repository.Merge(quelle, ziel));
+
+        Assert.Equal(1, ex.ChildCount);
+
+        // Nichts bewegt: die Ausgabe steht weiterhin bei der Quelle.
+        Assert.Equal(1, ZaehleAusgaben(quelle));
+        Assert.Equal(0, ZaehleAusgaben(ziel));
+    }
+
+    [Fact]
+    public void PreviewMerge_nennt_Anzahl_und_betroffene_Summe_ohne_etwas_zu_veraendern()
+    {
+        var (quelle, ziel, personId) = LegeZweiKategorienAn();
+        var expenses = new ExpenseRepository(_connection);
+        expenses.Create(quelle, 1000, new DateOnly(2026, 1, 1), personId);
+        expenses.Create(quelle, 2500, new DateOnly(2026, 1, 2), personId);
+        LegeVorlageAn(quelle, personId, 5000);
+
+        var vorschau = _repository.PreviewMerge(quelle, ziel);
+
+        Assert.Equal(2, vorschau.ExpenseCount);
+        Assert.Equal(1, vorschau.RecurringExpenseCount);
+        Assert.Equal(3500, vorschau.SumCents);
+
+        // Eine Vorschau veraendert nichts.
+        Assert.Equal(2, ZaehleAusgaben(quelle));
+        Assert.NotNull(_repository.GetTree().SingleOrDefault(n => n.Category.Id == quelle));
+    }
+
+    [Fact]
+    public void PreviewMerge_lehnt_dieselben_Faelle_ab_wie_Merge()
+    {
+        var (quelle, ziel, _) = LegeZweiKategorienAn();
+        _repository.Create("Unterkategorie", quelle);
+
+        Assert.Throws<CategoryHasChildrenException>(() => _repository.PreviewMerge(quelle, ziel));
+    }
+
+    // ---------------- Hilfen ----------------
+
+    // Zwei Kategorien nebeneinander (beide Blattknoten) und die
+    // IsSelf-Person, die jede Buchung braucht.
+    private (int Quelle, int Ziel, int PersonId) LegeZweiKategorienAn()
+    {
+        var quelle = _repository.Create("Hufschmied", null);
+        var ziel = _repository.Create("Tierarzt", null);
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+
+        return (quelle.Id, ziel.Id, person.Id);
+    }
+
+    private void LegeVorlageAn(int categoryId, int payerId, long amountCents) =>
+        new RecurringExpenseRepository(_connection).Create(
+            categoryId, payerId, amountCents, "Vorlage",
+            intervalUnit: "month", intervalCount: 1, anchorDay: 1,
+            startDate: new DateOnly(2026, 1, 1), endDate: null);
+
+    private int ZaehleAusgaben(int categoryId) => _connection.ExecuteScalar<int>(
+        "SELECT COUNT(*) FROM Expense WHERE CategoryId = @Id", new { Id = categoryId });
+
+    private int ZaehleVorlagen(int categoryId) => _connection.ExecuteScalar<int>(
+        "SELECT COUNT(*) FROM RecurringExpense WHERE CategoryId = @Id", new { Id = categoryId });
+
+    private long SummeAllerAusgaben() => _connection.ExecuteScalar<long>(
+        "SELECT COALESCE(SUM(AmountCents), 0) FROM Expense");
 
     [Fact]
     public void GetExpenseCounts_zaehlt_nur_direkt_zugeordnete_Ausgaben()

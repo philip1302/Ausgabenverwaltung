@@ -6,13 +6,22 @@ using Dapper;
 namespace Ausgabenverwaltung.Core.Categories;
 
 /// <summary>
-/// Anlegen, Umbenennen, Archivieren und Baum-Laden fuer Kategorien.
-/// Kategorien werden nie geloescht (Regel 8) - es gibt daher bewusst
-/// keine Delete-Methode. Eindeutigkeit von Namen wird zusaetzlich zu den
-/// DB-Constraints (UNIQUE(ParentId, Name) und UX_Category_RootName) hier
-/// vorab geprueft, damit Verstoesse als verstaendliche
+/// Anlegen, Umbenennen, Archivieren, Loeschen, Zusammenfuehren und
+/// Baum-Laden fuer Kategorien.
+///
+/// Archivieren bleibt der Normalfall (Regel 8). Geloescht wird nur, was
+/// vollstaendig unbenutzt ist (<see cref="Delete"/>); eine benutzte
+/// Kategorie kann stattdessen in eine andere ueberfuehrt werden
+/// (<see cref="Merge"/>).
+///
+/// Eindeutigkeit von Namen wird zusaetzlich zu den DB-Constraints
+/// (UNIQUE(ParentId, Name) und UX_Category_RootName) hier vorab
+/// geprueft, damit Verstoesse als verstaendliche
 /// DuplicateCategoryNameException statt als rohe SqliteException
-/// durchschlagen.
+/// durchschlagen. Dasselbe gilt fuer die Fremdschluessel
+/// (ON DELETE RESTRICT) und <see cref="CategoryInUseException"/>: die
+/// Datenbank bleibt die Absicherung, die verstaendliche Meldung entsteht
+/// hier.
 /// </summary>
 public sealed class CategoryRepository
 {
@@ -94,6 +103,182 @@ public sealed class CategoryRepository
     {
         const string sql = "UPDATE Category SET IsArchived = 0 WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id });
+    }
+
+    /// <summary>
+    /// Was der Kategorie im Weg steht: zugeordnete Ausgaben,
+    /// Unterkategorien, verweisende Vorlagen. Grundlage fuer die
+    /// Entscheidung zwischen Loeschen, Archivieren und Zusammenfuehren -
+    /// und fuer die Erklaerung, warum das eine gerade nicht geht.
+    /// </summary>
+    public CategoryUsage GetUsage(int id)
+    {
+        // Zwei Unterabfragen in einem Durchgang statt zweier Rundreisen.
+        // Die Unterkategorien kommen aus dem ohnehin geladenen Baum
+        // (siehe GetDescendantIds) und nicht aus rekursivem SQL.
+        const string sql = """
+            SELECT
+                (SELECT COUNT(*) FROM Expense
+                 WHERE CategoryId = @Id)                     AS ExpenseCount,
+                (SELECT COUNT(*) FROM RecurringExpense
+                 WHERE CategoryId = @Id)                     AS RecurringExpenseCount
+            """;
+
+        var row = _connection.QueryFirst<UsageRow>(sql, new { Id = id });
+
+        return new CategoryUsage
+        {
+            ExpenseCount = row.ExpenseCount,
+            ChildCount = GetDescendantIds(id).Count,
+            RecurringExpenseCount = row.RecurringExpenseCount,
+        };
+    }
+
+    /// <summary>
+    /// Loescht die Kategorie endgueltig - nur, wenn sie vollstaendig
+    /// unbenutzt ist. Andernfalls fliegt eine
+    /// <see cref="CategoryInUseException"/> MIT der Zaehlung, damit die
+    /// Oberflaeche benennen kann, was haengt.
+    ///
+    /// Eine bereits verschwundene Kategorie ist kein Fehler: dann gibt es
+    /// schlicht nichts mehr zu tun.
+    /// </summary>
+    public void Delete(int id)
+    {
+        var name = _connection.ExecuteScalar<string?>(
+            "SELECT Name FROM Category WHERE Id = @Id", new { Id = id });
+        if (name is null)
+        {
+            return;
+        }
+
+        var usage = GetUsage(id);
+        if (!usage.IsUnused)
+        {
+            throw new CategoryInUseException(name, usage);
+        }
+
+        _connection.Execute("DELETE FROM Category WHERE Id = @Id", new { Id = id });
+    }
+
+    /// <summary>
+    /// Was <see cref="Merge"/> bewegen wuerde, ohne es zu tun. Prueft
+    /// dieselben Bedingungen wie der Vorgang selbst - eine Vorschau, die
+    /// gleich darauf am Zusammenfuehren scheitern wuerde, waere
+    /// irrefuehrend.
+    /// </summary>
+    public CategoryMergePreview PreviewMerge(int sourceId, int targetId)
+    {
+        EnsureMergeAllowed(sourceId, targetId);
+
+        const string sql = """
+            SELECT
+                (SELECT COUNT(*) FROM Expense
+                 WHERE CategoryId = @SourceId)               AS ExpenseCount,
+                (SELECT COALESCE(SUM(AmountCents), 0) FROM Expense
+                 WHERE CategoryId = @SourceId)               AS SumCents,
+                (SELECT COUNT(*) FROM RecurringExpense
+                 WHERE CategoryId = @SourceId)               AS RecurringExpenseCount
+            """;
+
+        var row = _connection.QueryFirst<MergePreviewRow>(sql, new { SourceId = sourceId });
+
+        return new CategoryMergePreview
+        {
+            ExpenseCount = row.ExpenseCount,
+            RecurringExpenseCount = row.RecurringExpenseCount,
+            SumCents = row.SumCents,
+        };
+    }
+
+    /// <summary>
+    /// Haengt alle Ausgaben und Vorlagen der Quelle an das Ziel um und
+    /// loescht die dann leere Quelle. Nicht rueckgaengig zu machen.
+    ///
+    /// Alles in EINER Transaktion: bliebe der Vorgang auf halbem Weg
+    /// stehen, laegen Buchungen bei der einen und Vorlagen bei der
+    /// anderen Kategorie, und die Quelle liesse sich nicht mehr loeschen.
+    ///
+    /// ModifiedUtc der bewegten Zeilen wird mitgezogen - die Buchungen
+    /// haben sich geaendert, auch wenn Betrag und Datum gleich bleiben.
+    /// CreatedUtc bleibt unberuehrt: erfasst wurden sie damals.
+    /// </summary>
+    public void Merge(int sourceId, int targetId)
+    {
+        EnsureMergeAllowed(sourceId, targetId);
+
+        var nowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow);
+        var parameters = new
+        {
+            SourceId = sourceId,
+            TargetId = targetId,
+            NowUtcText = nowUtcText,
+        };
+
+        using var transaction = _connection.BeginTransaction();
+
+        const string moveExpensesSql = """
+            UPDATE Expense
+            SET CategoryId  = @TargetId,
+                ModifiedUtc = @NowUtcText
+            WHERE CategoryId = @SourceId
+            """;
+        _connection.Execute(moveExpensesSql, parameters, transaction);
+
+        const string moveRecurringSql = """
+            UPDATE RecurringExpense
+            SET CategoryId  = @TargetId,
+                ModifiedUtc = @NowUtcText
+            WHERE CategoryId = @SourceId
+            """;
+        _connection.Execute(moveRecurringSql, parameters, transaction);
+
+        const string deleteSql = "DELETE FROM Category WHERE Id = @SourceId";
+        _connection.Execute(deleteSql, parameters, transaction);
+
+        transaction.Commit();
+    }
+
+    /// <summary>
+    /// Die Bedingungen des Zusammenfuehrens. Die beiden Faelle, die die
+    /// Oberflaeche erklaeren muss, bekommen eine eigene Ausnahme; der
+    /// Rest kann ueber die Oberflaeche gar nicht erst entstehen und
+    /// bleibt eine schlichte Zusicherung.
+    /// </summary>
+    private void EnsureMergeAllowed(int sourceId, int targetId)
+    {
+        if (sourceId == targetId)
+        {
+            throw new InvalidOperationException(
+                "Quelle und Ziel des Zusammenfuehrens sind dieselbe Kategorie.");
+        }
+
+        var tree = GetTree();
+
+        var source = FindNode(tree, sourceId)
+            ?? throw new InvalidOperationException(
+                $"Die zusammenzufuehrende Kategorie (Id {sourceId}) gibt es nicht.");
+        var target = FindNode(tree, targetId)
+            ?? throw new InvalidOperationException(
+                $"Die Zielkategorie (Id {targetId}) gibt es nicht.");
+
+        if (source.Children.Count > 0)
+        {
+            var alleNachfahren = new List<int>();
+            CollectIds(source.Children, alleNachfahren);
+            throw new CategoryHasChildrenException(source.Category.Name, alleNachfahren.Count);
+        }
+
+        // Nur Blattknoten koennen Ziel sein - Ausgaben lassen sich auch
+        // sonst nirgends anders zuordnen (siehe GetSelectableLeaves).
+        // Ueber die Oberflaeche ist das nicht auswaehlbar; die Zusicherung
+        // steht hier, damit kein anderer Weg daran vorbeikommt.
+        if (target.Children.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Die Zielkategorie \"{target.Category.Name}\" hat Unterkategorien " +
+                "und kann deshalb keine Ausgaben aufnehmen.");
+        }
     }
 
     /// <summary>
@@ -369,5 +554,18 @@ public sealed class CategoryRepository
     {
         public int CategoryId { get; set; }
         public int Anzahl { get; set; }
+    }
+
+    private sealed class UsageRow
+    {
+        public int ExpenseCount { get; set; }
+        public int RecurringExpenseCount { get; set; }
+    }
+
+    private sealed class MergePreviewRow
+    {
+        public int ExpenseCount { get; set; }
+        public int RecurringExpenseCount { get; set; }
+        public long SumCents { get; set; }
     }
 }

@@ -1,5 +1,5 @@
-using System.Globalization;
 using System.Text;
+using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core.Reports;
 
@@ -16,8 +16,6 @@ public static class ReportCsv
 {
     private const string Separator = ";";
     private const string LineBreak = "\r\n";
-
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     /// <param name="visibleRows">
     /// Die Zeilen in genau der Reihenfolge, in der sie gerade auf dem
@@ -76,11 +74,13 @@ public static class ReportCsv
     // Zeitabschnitte ohne Buchung bleiben LEER, statt wie in der Anzeige
     // einen Bindestrich zu bekommen: Excel liest "-" als Text und bricht
     // damit jede Formel, die ueber die Spalte rechnet.
-    // Ohne Tausenderpunkt, weil der je nach Excel-Einstellung als
-    // Trennzeichen missverstanden werden kann.
+    //
+    // EuroText.Plain und nicht EuroText.Format: ein €-Zeichen machte die
+    // Spalte zu Text, und der Tausenderpunkt kann je nach
+    // Excel-Einstellung als Trennzeichen missverstanden werden.
     private static string Amount(ReportAmount amount) =>
         amount.HasValues
-            ? Money.ToDecimal(amount.SumCents).ToString("0.00", DeDe)
+            ? EuroText.Plain(amount.SumCents)
             : string.Empty;
 
     // Textfelder stehen immer in Anfuehrungszeichen - sonst wirft Excel

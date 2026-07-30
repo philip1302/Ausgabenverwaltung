@@ -1,5 +1,4 @@
-using System.Globalization;
-using Ausgabenverwaltung.Core;
+using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Reports;
 
 namespace Ausgabenverwaltung.ViewModels;
@@ -13,8 +12,6 @@ namespace Ausgabenverwaltung.ViewModels;
 /// </summary>
 public sealed class ReportZelle
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
-
     public ReportZelle(
         ReportAmount betrag, int? kategorieId, string? periodenKey, string beschreibung)
     {
@@ -24,8 +21,10 @@ public sealed class ReportZelle
         // "0,00" - sonst waere nicht unterscheidbar, ob nichts gebucht
         // wurde oder sich Ausgabe und Erstattung aufgehoben haben.
         Text = betrag.HasValues
-            ? Money.ToDecimal(betrag.SumCents).ToString("N2", DeDe)
+            ? EuroText.Format(betrag.SumCents)
             : "–";
+
+        IstErstattung = betrag.HasValues && EuroText.IsNegative(betrag.SumCents);
 
         KategorieId = kategorieId;
         PeriodenKey = periodenKey;
@@ -36,6 +35,13 @@ public sealed class ReportZelle
 
     /// <summary>Ob in der Zelle Buchungen liegen - nur dann ist sie anklickbar.</summary>
     public bool HatWerte { get; }
+
+    /// <summary>
+    /// Erstattungsueberhang: die Zelle summiert sich auf einen negativen
+    /// Betrag. Wird gedaempft rot hervorgehoben, zusaetzlich zum
+    /// Minuszeichen.
+    /// </summary>
+    public bool IstErstattung { get; }
 
     /// <summary>NULL = alle Kategorien (Summenzeile).</summary>
     public int? KategorieId { get; }

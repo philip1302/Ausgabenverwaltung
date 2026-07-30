@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Ausgabenverwaltung.Anzeige;
+using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Categories;
+using Ausgabenverwaltung.Core.Formatting;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -10,15 +13,18 @@ namespace Ausgabenverwaltung.ViewModels;
 
 /// <summary>
 /// Bereich "Verwaltung -> Kategorien": Baumansicht mit Anlegen,
-/// Umbenennen, Archivieren/Wiederherstellen und Verschieben. Die
-/// eigentliche Fachlogik (Duplikat-Pruefung, Kaskade, Sortierung) steckt
-/// komplett in <see cref="CategoryRepository"/> (Regel 7) - hier wird nur
-/// der DB-Baum in UI-Knoten (<see cref="KategorieKnoten"/>) uebersetzt
-/// und auf Anwenderaktionen reagiert.
+/// Umbenennen, Archivieren/Wiederherstellen, Verschieben, Loeschen und
+/// Zusammenfuehren. Die eigentliche Fachlogik (Duplikat-Pruefung,
+/// Kaskade, Sortierung, Verwendungspruefung, Umhaengen in einer
+/// Transaktion) steckt komplett in <see cref="CategoryRepository"/>
+/// (Regel 7) - hier wird nur der DB-Baum in UI-Knoten
+/// (<see cref="KategorieKnoten"/>) uebersetzt, auf Anwenderaktionen
+/// reagiert und der Text der Nachfragen gebaut.
 /// </summary>
 public sealed partial class KategorienViewModel : ViewModelBase
 {
     private readonly CategoryRepository _categoryRepository;
+    private readonly BackupService _backupService;
 
     public ObservableCollection<KategorieKnoten> Wurzelknoten { get; } = new();
 
@@ -65,9 +71,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
           (ArchivierungAnfrageAnzahlUnterkategorien == 1 ? "Unterkategorie" : "Unterkategorien") +
           ". Sollen diese mit archiviert werden?";
 
-    public KategorienViewModel(CategoryRepository categoryRepository)
+    public KategorienViewModel(CategoryRepository categoryRepository, BackupService backupService)
     {
         _categoryRepository = categoryRepository;
+        _backupService = backupService;
         LadeBaum();
     }
 
@@ -221,6 +228,339 @@ public sealed partial class KategorienViewModel : ViewModelBase
     private void ArchivierungAbbrechen()
     {
         ArchivierungAnfrageKnoten = null;
+    }
+
+    // ================= Loeschen =================
+    //
+    // Regel 8: Archivieren bleibt der Normalfall. Geloescht wird nur, was
+    // vollstaendig unbenutzt ist; alles andere fuehrt in eine Erklaerung
+    // mit den beiden moeglichen Wegen (archivieren oder zusammenfuehren).
+
+    /// <summary>Die Sicherheitsabfrage vor dem Loeschen einer unbenutzten
+    /// Kategorie.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LoeschAnfrageAktiv))]
+    [NotifyPropertyChangedFor(nameof(LoeschAnfrageText))]
+    private KategorieKnoten? _loeschAnfrageKnoten;
+
+    public bool LoeschAnfrageAktiv => LoeschAnfrageKnoten is not null;
+
+    public string LoeschAnfrageText => LoeschAnfrageKnoten is null
+        ? string.Empty
+        : $"Die Kategorie \"{LoeschAnfrageKnoten.Name}\" wird nirgends verwendet und kann " +
+          "endgültig gelöscht werden. Das lässt sich nicht rückgängig machen.";
+
+    /// <summary>Die Erklaerung, warum eine benutzte Kategorie nicht
+    /// geloescht werden kann.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LoeschHindernisAktiv))]
+    private KategorieKnoten? _loeschHindernisKnoten;
+
+    [ObservableProperty]
+    private string _loeschHindernisText = string.Empty;
+
+    /// <summary>
+    /// Ob von hier aus zusammengefuehrt werden kann. Eine Quelle MIT
+    /// Unterkategorien scheidet aus - was mit denen geschehen soll, ist
+    /// bei jeder einzelnen eine eigene Entscheidung (siehe
+    /// <see cref="CategoryHasChildrenException"/>).
+    /// </summary>
+    [ObservableProperty]
+    private bool _zusammenfuehrenMoeglich;
+
+    public bool LoeschHindernisAktiv => LoeschHindernisKnoten is not null;
+
+    [RelayCommand]
+    private void Loeschen(KategorieKnoten? knoten)
+    {
+        if (knoten?.Id is not int id)
+        {
+            return;
+        }
+
+        SchliesseNachfragen();
+
+        var verwendung = _categoryRepository.GetUsage(id);
+        if (verwendung.IsUnused)
+        {
+            LoeschAnfrageKnoten = knoten;
+            return;
+        }
+
+        LoeschHindernisKnoten = knoten;
+        LoeschHindernisText =
+            $"\"{knoten.Name}\" wird verwendet: {BeschreibeVerwendung(verwendung)}. " +
+            "Löschen ist deshalb nicht möglich.";
+        ZusammenfuehrenMoeglich = verwendung.ChildCount == 0;
+    }
+
+    [RelayCommand]
+    private void LoeschenBestaetigen()
+    {
+        if (LoeschAnfrageKnoten?.Id is not int id)
+        {
+            return;
+        }
+
+        // Zwischen Nachfrage und Bestaetigung kann die Kategorie benutzt
+        // worden sein. Das Repository prueft erneut - hier faellt die
+        // Antwort darauf nur wieder in die Erklaerung zurueck, statt die
+        // Ausnahme durchschlagen zu lassen.
+        try
+        {
+            _categoryRepository.Delete(id);
+        }
+        catch (CategoryInUseException ex)
+        {
+            var knoten = LoeschAnfrageKnoten;
+            LoeschAnfrageKnoten = null;
+            LoeschHindernisKnoten = knoten;
+            LoeschHindernisText =
+                $"\"{ex.Name}\" wird inzwischen verwendet: {BeschreibeVerwendung(ex.Usage)}. " +
+                "Löschen ist deshalb nicht möglich.";
+            ZusammenfuehrenMoeglich = ex.Usage.ChildCount == 0;
+            return;
+        }
+
+        LoeschAnfrageKnoten = null;
+        AusgewaehlterKnoten = null;
+        LadeBaum();
+    }
+
+    /// <summary>
+    /// Der empfohlene Weg aus der Erklaerung heraus. Fuehrt in den
+    /// gewoehnlichen Archivierungs-Ablauf - inklusive der Nachfrage nach
+    /// den Unterkategorien, falls es welche gibt.
+    /// </summary>
+    [RelayCommand]
+    private void HindernisArchivieren()
+    {
+        var knoten = LoeschHindernisKnoten;
+        SchliesseNachfragen();
+
+        if (knoten is not null)
+        {
+            Archivieren(knoten);
+        }
+    }
+
+    [RelayCommand]
+    private void LoeschenAbbrechen() => SchliesseNachfragen();
+
+    // ================= Zusammenfuehren =================
+
+    /// <summary>Die Kategorie, die aufgeloest werden soll.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZusammenfuehrenAktiv))]
+    [NotifyPropertyChangedFor(nameof(ZusammenfuehrenTitel))]
+    private KategorieKnoten? _zusammenfuehrenQuelle;
+
+    public bool ZusammenfuehrenAktiv => ZusammenfuehrenQuelle is not null;
+
+    public string ZusammenfuehrenTitel => ZusammenfuehrenQuelle is null
+        ? string.Empty
+        : $"\"{ZusammenfuehrenQuelle.Name}\" zusammenführen";
+
+    /// <summary>Derselbe Baum wie sonst, nur sind hier ausschliesslich
+    /// Blattknoten waehlbar (siehe <see cref="KategorieZielKnoten"/>).</summary>
+    public ObservableCollection<KategorieZielKnoten> ZielWurzeln { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZielText))]
+    [NotifyPropertyChangedFor(nameof(ZusammenfuehrenBereit))]
+    private KategorieZielKnoten? _zusammenfuehrenZiel;
+
+    public string ZielText => ZusammenfuehrenZiel?.FullPath ?? "Zielkategorie wählen…";
+
+    public bool ZusammenfuehrenBereit => ZusammenfuehrenZiel is not null;
+
+    /// <summary>Was der Vorgang bewegen wuerde - die einzige Gelegenheit,
+    /// einen Irrtum vor einem nicht umkehrbaren Schritt zu bemerken.</summary>
+    [ObservableProperty]
+    private string _zusammenfuehrenVorschauText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZusammenfuehrenFehlerSichtbar))]
+    private string? _zusammenfuehrenFehler;
+
+    public bool ZusammenfuehrenFehlerSichtbar => !string.IsNullOrEmpty(ZusammenfuehrenFehler);
+
+    [RelayCommand]
+    private void ZusammenfuehrenStarten()
+    {
+        var quelle = LoeschHindernisKnoten;
+        if (quelle?.Id is not int quelleId || !ZusammenfuehrenMoeglich)
+        {
+            return;
+        }
+
+        SchliesseNachfragen();
+
+        ZusammenfuehrenQuelle = quelle;
+        BaueZielbaum(quelleId);
+    }
+
+    /// <summary>
+    /// Uebernimmt die gewaehlte Zielkategorie und holt die Vorschau. Nur
+    /// waehlbare Knoten kommen hier an - die uebrigen sind in der Ansicht
+    /// nicht anklickbar.
+    /// </summary>
+    [RelayCommand]
+    private void ZielWaehlen(KategorieZielKnoten? ziel)
+    {
+        if (ziel is null || !ziel.IstWaehlbar || ZusammenfuehrenQuelle?.Id is not int quelleId)
+        {
+            return;
+        }
+
+        ZusammenfuehrenZiel = ziel;
+        ZusammenfuehrenFehler = null;
+
+        var vorschau = _categoryRepository.PreviewMerge(quelleId, ziel.Id);
+
+        ZusammenfuehrenVorschauText =
+            $"{Zaehle(vorschau.ExpenseCount, "Ausgabe", "Ausgaben")} und " +
+            $"{Zaehle(vorschau.RecurringExpenseCount, "Vorlage", "Vorlagen")} " +
+            $"werden nach \"{ziel.FullPath}\" umgehängt. " +
+            $"Betroffene Summe: {EuroText.Format(vorschau.SumCents)}. " +
+            $"Danach wird \"{ZusammenfuehrenQuelle.Name}\" gelöscht. " +
+            "Das lässt sich nicht rückgängig machen. " +
+            "Vorher wird automatisch eine Sicherung angelegt.";
+    }
+
+    [RelayCommand]
+    private void ZusammenfuehrenBestaetigen()
+    {
+        if (ZusammenfuehrenQuelle?.Id is not int quelleId || ZusammenfuehrenZiel is not { } ziel)
+        {
+            return;
+        }
+
+        // Erst sichern, dann bewegen. Scheitert die Sicherung, wird auch
+        // nicht zusammengefuehrt: ein nicht umkehrbarer Schritt ohne Netz
+        // ist genau das, was die Sicherung verhindern soll.
+        // Lokale Zeit wie bei jeder Sicherung - der Dateiname soll zum
+        // Kalendertag des Anwenders passen.
+        var sicherung = _backupService.RunNow(DateTime.Now);
+        if (sicherung.NeedsAttention)
+        {
+            ZusammenfuehrenFehler =
+                "Vor dem Zusammenführen wird automatisch gesichert. Das ist fehlgeschlagen: "
+                + sicherung.PrimaryError
+                + " Es wurde nichts verändert.";
+            return;
+        }
+
+        try
+        {
+            _categoryRepository.Merge(quelleId, ziel.Id);
+        }
+        catch (CategoryHasChildrenException ex)
+        {
+            // Zwischen Vorschau und Bestaetigung kann eine Unterkategorie
+            // entstanden sein.
+            ZusammenfuehrenFehler = ex.Message;
+            return;
+        }
+
+        SchliesseNachfragen();
+        AusgewaehlterKnoten = null;
+        LadeBaum();
+    }
+
+    [RelayCommand]
+    private void ZusammenfuehrenAbbrechen() => SchliesseNachfragen();
+
+    /// <summary>
+    /// Raeumt alle Nachfragen und Baender weg. Sie schliessen einander
+    /// aus: es geht immer um dieselbe Kategorie, und zwei gleichzeitig
+    /// offene Nachfragen dazu waeren nicht zu beantworten.
+    /// </summary>
+    private void SchliesseNachfragen()
+    {
+        LoeschAnfrageKnoten = null;
+        LoeschHindernisKnoten = null;
+        LoeschHindernisText = string.Empty;
+        ZusammenfuehrenMoeglich = false;
+
+        ZusammenfuehrenQuelle = null;
+        ZusammenfuehrenZiel = null;
+        ZusammenfuehrenVorschauText = string.Empty;
+        ZusammenfuehrenFehler = null;
+        ZielWurzeln.Clear();
+    }
+
+    /// <summary>
+    /// Zaehlt auf, was der Kategorie im Weg steht - ohne die Posten mit
+    /// der Zahl Null, die nur Rauschen waeren.
+    /// </summary>
+    private static string BeschreibeVerwendung(CategoryUsage verwendung)
+    {
+        var teile = new List<string>();
+
+        if (verwendung.ExpenseCount > 0)
+        {
+            teile.Add(Zaehle(verwendung.ExpenseCount, "Ausgabe", "Ausgaben"));
+        }
+
+        if (verwendung.ChildCount > 0)
+        {
+            teile.Add(Zaehle(verwendung.ChildCount, "Unterkategorie", "Unterkategorien"));
+        }
+
+        if (verwendung.RecurringExpenseCount > 0)
+        {
+            teile.Add(Zaehle(verwendung.RecurringExpenseCount, "Vorlage", "Vorlagen"));
+        }
+
+        return string.Join(", ", teile);
+    }
+
+    private static string Zaehle(int anzahl, string einzahl, string mehrzahl) =>
+        $"{anzahl} {(anzahl == 1 ? einzahl : mehrzahl)}";
+
+    /// <summary>
+    /// Baut den Baum der Zielauswahl. Alle Kategorien bleiben sichtbar,
+    /// waehlbar sind aber nur nicht-archivierte Blattknoten ausser der
+    /// Quelle selbst - genau die Kategorien, denen sich eine Ausgabe auch
+    /// sonst zuordnen laesst.
+    /// </summary>
+    private void BaueZielbaum(int quelleId)
+    {
+        ZielWurzeln.Clear();
+
+        foreach (var knoten in BaueZielknoten(_categoryRepository.GetTree(), parentPath: null, quelleId))
+        {
+            ZielWurzeln.Add(knoten);
+        }
+    }
+
+    private static List<KategorieZielKnoten> BaueZielknoten(
+        IReadOnlyList<CategoryNode> nodes, string? parentPath, int quelleId)
+    {
+        var ergebnis = new List<KategorieZielKnoten>();
+
+        foreach (var node in nodes)
+        {
+            var pfad = CategoryPaths.Append(parentPath, node.Category.Name);
+
+            var waehlbar =
+                node.Children.Count == 0 &&
+                !node.Category.IsArchived &&
+                node.Category.Id != quelleId;
+
+            var knoten = new KategorieZielKnoten(
+                node.Category.Id, node.Category.Name, pfad, node.Category.IsArchived, waehlbar);
+
+            foreach (var kind in BaueZielknoten(node.Children, pfad, quelleId))
+            {
+                knoten.Children.Add(kind);
+            }
+
+            ergebnis.Add(knoten);
+        }
+
+        return ergebnis;
     }
 
     /// <summary>
