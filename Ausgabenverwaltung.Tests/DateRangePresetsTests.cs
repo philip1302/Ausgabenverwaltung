@@ -32,6 +32,26 @@ public class DateRangePresetsTests
     }
 
     [Fact]
+    public void LastYear_umfasst_genau_das_Vorjahr()
+    {
+        var range = DateRangePresets.LastYear(new DateOnly(2026, 7, 29));
+
+        Assert.Equal(new DateOnly(2025, 1, 1), range.From);
+        Assert.Equal(new DateOnly(2026, 1, 1), range.ToExclusive);
+    }
+
+    // Bewusst Kalenderjahre und nicht rollierend: die Jahresspalten der
+    // Auswertung sollen vollstaendig sein.
+    [Fact]
+    public void LastThreeYears_umfasst_drei_volle_Kalenderjahre_inklusive_des_laufenden()
+    {
+        var range = DateRangePresets.LastThreeYears(new DateOnly(2026, 7, 29));
+
+        Assert.Equal(new DateOnly(2024, 1, 1), range.From);
+        Assert.Equal(new DateOnly(2027, 1, 1), range.ToExclusive);
+    }
+
+    [Fact]
     public void LastTwelveMonths_schliesst_den_heutigen_Tag_ein()
     {
         var range = DateRangePresets.LastTwelveMonths(new DateOnly(2026, 7, 29));

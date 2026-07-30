@@ -16,6 +16,7 @@ public sealed partial class MainViewModel : ViewModelBase
 {
     private readonly ErfassenViewModel _erfassen;
     private readonly OffenePostenViewModel _offenePosten;
+    private readonly ReportViewModel _report;
     private readonly AusgabenlisteViewModel _ausgabenliste;
     private readonly VerwaltungViewModel _verwaltung;
     private readonly RecurringExpenseScheduler _scheduler;
@@ -39,6 +40,7 @@ public sealed partial class MainViewModel : ViewModelBase
         StartupNotice = startupNotice;
         _erfassen = erfassen;
         _offenePosten = offenePosten;
+        _report = report;
         _ausgabenliste = ausgabenliste;
         _verwaltung = verwaltung;
         _scheduler = scheduler;
@@ -90,6 +92,11 @@ public sealed partial class MainViewModel : ViewModelBase
         if (ReferenceEquals(value.ViewModel, _offenePosten))
         {
             _offenePosten.AktualisiereListe();
+        }
+
+        if (ReferenceEquals(value.ViewModel, _report))
+        {
+            _report.AktualisiereAuswertung();
         }
 
         if (ReferenceEquals(value.ViewModel, _ausgabenliste))

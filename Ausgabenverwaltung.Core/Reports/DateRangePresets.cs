@@ -23,6 +23,22 @@ public static class DateRangePresets
         return new DateRange(from, from.AddYears(1));
     }
 
+    /// <summary>Das komplette Vorjahr, vom 1. Januar bis zum 1. Januar.</summary>
+    public static DateRange LastYear(DateOnly today)
+    {
+        var from = new DateOnly(today.Year - 1, 1, 1);
+        return new DateRange(from, from.AddYears(1));
+    }
+
+    /// <summary>
+    /// Die letzten drei KALENDERjahre einschliesslich des laufenden.
+    /// Bewusst nicht rollierend wie <see cref="LastTwelveMonths"/>: in der
+    /// nach Jahren gruppierten Auswertung sollen die Jahresspalten
+    /// vollstaendig sein und nicht mit einem angebrochenen Monat beginnen.
+    /// </summary>
+    public static DateRange LastThreeYears(DateOnly today) =>
+        new(new DateOnly(today.Year - 2, 1, 1), new DateOnly(today.Year + 1, 1, 1));
+
     /// <summary>
     /// Die letzten zwoelf Monate, heute eingeschlossen. AddMonths kuerzt
     /// selbst auf den letzten Tag des Zielmonats, wenn es den Ankertag
