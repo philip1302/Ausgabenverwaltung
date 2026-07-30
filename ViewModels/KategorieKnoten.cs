@@ -1,4 +1,7 @@
 using System.Collections.ObjectModel;
+using Ausgabenverwaltung.Anzeige;
+using Ausgabenverwaltung.Core.Categories;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Ausgabenverwaltung.ViewModels;
@@ -27,6 +30,36 @@ public sealed partial class KategorieKnoten : ObservableObject
 
     [ObservableProperty]
     private bool _isArchived;
+
+    /// <summary>
+    /// Die EIGENE Farbe der Kategorie ('#RRGGBB') oder NULL, wenn sie
+    /// erbt. Getrennt von <see cref="Farbe"/> gehalten, weil die Auswahl
+    /// wissen muss, ob hier tatsaechlich etwas gesetzt ist - "keine
+    /// Farbe" ist eine eigene Auswahlmoeglichkeit.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HatEigeneFarbe))]
+    [NotifyPropertyChangedFor(nameof(FarbHinweis))]
+    private string? _eigeneFarbe;
+
+    /// <summary>
+    /// Die tatsaechlich angezeigte Farbe - eigene oder geerbte (siehe
+    /// <see cref="Ausgabenverwaltung.Core.Categories.CategoryColors"/>).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FarbHinweis))]
+    private IBrush _farbe = Farbpinsel.Fuer(null);
+
+    public bool HatEigeneFarbe => EigeneFarbe is not null;
+
+    /// <summary>
+    /// Beschreibt die Farbe in Worten. Ohne diesen Text waere der Punkt
+    /// die einzige Auskunft ueber die Farbe - und damit fuer jeden
+    /// wertlos, der Farben nicht unterscheiden kann.
+    /// </summary>
+    public string FarbHinweis => EigeneFarbe is { } eigene
+        ? $"Farbe: {CategoryColorPalette.NameOf(eigene) ?? eigene}"
+        : "Farbe: geerbt";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Anzeigename))]

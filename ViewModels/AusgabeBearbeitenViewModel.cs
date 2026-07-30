@@ -93,6 +93,11 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
             {
                 Id = zeile.CategoryId,
                 FullPath = zeile.CategoryFullPath,
+
+                // Die Zeile kennt ihre aufgeloeste Farbe bereits - die
+                // nachgetragene Kategorie sieht damit genauso aus wie in
+                // der Liste dahinter.
+                Color = zeile.FarbeHex,
             });
         }
 

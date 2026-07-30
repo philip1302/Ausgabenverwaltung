@@ -138,6 +138,53 @@ public class CategoryRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Neue_Kategorien_haben_keine_eigene_Farbe()
+    {
+        var pferde = _repository.Create("Pferde", null);
+
+        Assert.Null(_repository.GetTree().Single(n => n.Category.Id == pferde.Id).Category.Color);
+        Assert.Equal(CategoryColorPalette.DefaultHex, _repository.GetResolvedColors()[pferde.Id]);
+    }
+
+    [Fact]
+    public void SetColor_setzt_die_Farbe_und_vererbt_sie_an_den_Ast()
+    {
+        var blau = CategoryColorPalette.Colors.Single(f => f.Name == "Blau").Hex;
+        var pferde = _repository.Create("Pferde", null);
+        var hufschmied = _repository.Create("Hufschmied", pferde.Id);
+
+        _repository.SetColor(pferde.Id, blau);
+
+        var farben = _repository.GetResolvedColors();
+        Assert.Equal(blau, farben[pferde.Id]);
+        Assert.Equal(blau, farben[hufschmied.Id]);
+        Assert.Equal(blau, _repository.GetSelectableLeaves().Single().Color);
+    }
+
+    [Fact]
+    public void SetColor_mit_NULL_nimmt_die_eigene_Farbe_zurueck()
+    {
+        var blau = CategoryColorPalette.Colors.Single(f => f.Name == "Blau").Hex;
+        var pferde = _repository.Create("Pferde", null);
+        _repository.SetColor(pferde.Id, blau);
+
+        _repository.SetColor(pferde.Id, null);
+
+        Assert.Null(_repository.GetTree().Single().Category.Color);
+        Assert.Equal(CategoryColorPalette.DefaultHex, _repository.GetResolvedColors()[pferde.Id]);
+    }
+
+    [Fact]
+    public void SetColor_speichert_nur_Werte_aus_der_Palette()
+    {
+        var pferde = _repository.Create("Pferde", null);
+
+        _repository.SetColor(pferde.Id, "#ABCDEF");
+
+        Assert.Null(_repository.GetTree().Single().Category.Color);
+    }
+
+    [Fact]
     public void Rename_mit_doppeltem_Namen_unter_gleichem_Elternteil_wirft_verstaendliche_Exception()
     {
         var parent = _repository.Create("Wohnen", null);

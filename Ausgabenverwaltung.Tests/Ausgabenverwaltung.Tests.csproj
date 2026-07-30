@@ -20,6 +20,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ausgabenverwaltung.Core\Ausgabenverwaltung.Core.csproj" />
+
+    <!-- Auch die Oberflaechen-Baugruppe: einzelne ViewModels sind ohne
+         laufendes Fenster pruefbar, und genau dort haengt die Kette
+         zwischen Repository und Anzeige (siehe KategorienFarbenTests).
+         Es wird KEIN Avalonia-Fenster gestartet. -->
+    <ProjectReference Include="..\Ausgabenverwaltung.csproj" />
   </ItemGroup>
 
 </Project>

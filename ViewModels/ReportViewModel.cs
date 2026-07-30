@@ -44,6 +44,11 @@ public sealed partial class ReportViewModel : ViewModelBase
 
     private ReportMatrix? _matrix;
 
+    // Die aufgeloesten Kategoriefarben zur angezeigten Tabelle. Sie
+    // ueberdauern das Auf- und Zuklappen, weil dabei nur die Zeilen neu
+    // gebaut werden und der Kategoriebaum nicht erneut geladen wird.
+    private IReadOnlyDictionary<int, string> _farben = new Dictionary<int, string>();
+
     // Der Filter, aus dem die angezeigte Tabelle entstanden ist. Der
     // Sprung in die Einzelbuchungen setzt genau darauf auf - nur so kann
     // der Dialog nie etwas anderes zeigen, als die angeklickte Zelle
@@ -297,11 +302,13 @@ public sealed partial class ReportViewModel : ViewModelBase
 
         var filter = DetailFilter(zelle, _angezeigterFilter);
 
+        var farben = _categoryRepository.GetResolvedColors();
+
         DetailZeilen.Clear();
         foreach (var item in _expenseRepository.Query(
                      filter, ExpenseSortColumn.Datum, ascending: true))
         {
-            DetailZeilen.Add(new AusgabeZeile(item));
+            DetailZeilen.Add(new AusgabeZeile(item, CategoryColors.Of(farben, item.CategoryId)));
         }
 
         // Eigene Aggregatabfrage statt einer Summe ueber die geladenen
@@ -404,6 +411,11 @@ public sealed partial class ReportViewModel : ViewModelBase
         var baum = _categoryRepository.GetTree();
         var pfade = CategoryPaths.BuildFullPaths(baum);
 
+        // Ueber den GANZEN Baum aufloesen, nicht erst ueber den gefilterten
+        // Ast: sonst ginge die geerbte Farbe eines Vorfahren verloren, der
+        // ausserhalb des gewaehlten Astes liegt.
+        _farben = CategoryColors.Resolve(baum);
+
         // Ist ein Kategorie-Ast gewaehlt, beginnt die Tabelle bei diesem
         // Knoten. Sonst waere die oberste Zeile immer die Oberkategorie mit
         // exakt derselben Summe - eine Zeile ohne Aussage.
@@ -463,7 +475,8 @@ public sealed partial class ReportViewModel : ViewModelBase
             var hatKinder = row.Children.Any(IstSichtbar);
             var aufgeklappt = hatKinder && _aufgeklappteKategorien.Contains(row.CategoryId);
 
-            Zeilen.Add(ReportZeile.FuerKategorie(row, Spalten, hatKinder, aufgeklappt));
+            Zeilen.Add(ReportZeile.FuerKategorie(
+                row, Spalten, hatKinder, aufgeklappt, CategoryColors.Of(_farben, row.CategoryId)));
 
             if (aufgeklappt)
             {

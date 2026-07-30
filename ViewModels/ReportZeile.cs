@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
+using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core.Reports;
+using Avalonia.Media;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -21,10 +23,12 @@ public sealed class ReportZeile
         bool istAufgeklappt,
         bool istSummenZeile,
         IReadOnlyList<ReportZelle> zellen,
-        ReportZelle summe)
+        ReportZelle summe,
+        IBrush farbe)
     {
         Quelle = quelle;
         Name = name;
+        Farbe = farbe;
         EinzugBreite = tiefe * 16;
         IstArchiviert = istArchiviert;
         HatKinder = hatKinder;
@@ -42,6 +46,17 @@ public sealed class ReportZeile
     public ReportMatrixRow? Quelle { get; }
 
     public string Name { get; }
+
+    /// <summary>
+    /// Die aufgeloeste Farbe der Kategorie als Punkt vor der
+    /// Zeilenbeschriftung. Sie ergaenzt den Namen; die Zeile bleibt ohne
+    /// Farbwahrnehmung vollstaendig lesbar. Die Summenzeile hat keine
+    /// Kategorie und deshalb auch keinen Punkt
+    /// (<see cref="ZeigtFarbe"/>).
+    /// </summary>
+    public IBrush Farbe { get; }
+
+    public bool ZeigtFarbe => !IstSummenZeile;
 
     /// <summary>Einrueckung nach Baumtiefe, als Breite eines Platzhalters.</summary>
     public double EinzugBreite { get; }
@@ -71,7 +86,8 @@ public sealed class ReportZeile
         ReportMatrixRow row,
         IReadOnlyList<ReportSpalte> spalten,
         bool hatKinder,
-        bool istAufgeklappt)
+        bool istAufgeklappt,
+        string farbe)
     {
         var zellen = spalten
             .Select(spalte => new ReportZelle(
@@ -86,7 +102,8 @@ public sealed class ReportZeile
 
         return new ReportZeile(
             row, row.Name, row.Depth, row.IsArchived,
-            hatKinder, istAufgeklappt, istSummenZeile: false, zellen, summe);
+            hatKinder, istAufgeklappt, istSummenZeile: false, zellen, summe,
+            Farbpinsel.Fuer(farbe));
     }
 
     /// <summary>
@@ -111,6 +128,7 @@ public sealed class ReportZeile
 
         return new ReportZeile(
             quelle: null, "Summe", tiefe: 0, istArchiviert: false,
-            hatKinder: false, istAufgeklappt: false, istSummenZeile: true, zellen, summe);
+            hatKinder: false, istAufgeklappt: false, istSummenZeile: true, zellen, summe,
+            Brushes.Transparent);
     }
 }

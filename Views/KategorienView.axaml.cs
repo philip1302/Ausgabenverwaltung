@@ -52,6 +52,27 @@ public partial class KategorienView : UserControl
         }
     }
 
+    // Beim Oeffnen der Farbwahl haelt das ViewModel fest, um welche
+    // Kategorie es geht - danach darf der Baum seine Auswahl verlieren,
+    // ohne dass die Farbwahl ins Leere greift.
+    private void Farbwahl_Oeffnen(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not KategorienViewModel viewModel) return;
+
+        viewModel.OeffneFarbwahl();
+    }
+
+    // Wahl einer Farbe: Command des ViewModels ausfuehren und die Auswahl
+    // schliessen, damit der umgefaerbte Baum dahinter sichtbar wird.
+    private void Farbe_Gewaehlt(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control control || control.DataContext is not FarbOption option) return;
+        if (DataContext is not KategorienViewModel viewModel) return;
+
+        viewModel.FarbeSetzenCommand.Execute(option);
+        FarbAuswahl.Flyout?.Hide();
+    }
+
     private void BearbeitungsTextBox_LostFocus(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control control || control.DataContext is not KategorieKnoten knoten) return;

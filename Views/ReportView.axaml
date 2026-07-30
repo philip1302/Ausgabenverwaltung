@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="650"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -14,7 +15,12 @@
          und Wertzeilen bauen sich aus denselben Breiten auf und stehen
          dadurch exakt uebereinander. Die Tabellen-Styles
          (TextBlock.tabellenkopf, .zahl, .archiviert) kommen aus
-         App.axaml. -->
+         App.axaml.
+
+         Alle festen Breiten stehen als {anzeige:Breite ...} da: die
+         Werte gelten fuer die Stufe "Normal" und wachsen mit der
+         eingestellten Schriftgroesse mit. Kopf- und Wertzeilen benutzen
+         dieselben Werte und bleiben deshalb auf jeder Stufe buendig. -->
     <UserControl.Styles>
         <!-- Eine Zelle sieht wie ein Text aus, ist aber die Schaltflaeche,
              die die Einzelbuchungen oeffnet. Padding 0 wie bei den
@@ -41,14 +47,14 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Width" Value="20" />
+            <Setter Property="Width" Value="{anzeige:Breite 20}" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Foreground" Value="#606060" />
         </Style>
 
         <Style Selector="TextBlock.filterbeschriftung">
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
             <Setter Property="Foreground" Value="Gray" />
             <Setter Property="Margin" Value="0,0,0,2" />
         </Style>
@@ -76,13 +82,13 @@
                         <StackPanel>
                             <TextBlock Text="Von" Classes="filterbeschriftung" />
                             <TextBox Text="{Binding VonText}"
-                                     Width="110"
+                                     Width="{anzeige:Breite 110}"
                                      PlaceholderText="TT.MM.JJJJ" />
                         </StackPanel>
                         <StackPanel>
                             <TextBlock Text="Bis" Classes="filterbeschriftung" />
                             <TextBox Text="{Binding BisText}"
-                                     Width="110"
+                                     Width="{anzeige:Breite 110}"
                                      PlaceholderText="TT.MM.JJJJ" />
                         </StackPanel>
 
@@ -123,19 +129,19 @@
                                        Classes="filterbeschriftung" />
                             <Button x:Name="KategorieAuswahl"
                                     Content="{Binding KategorieFilterText}"
-                                    Width="260"
+                                    Width="{anzeige:Breite 260}"
                                     HorizontalContentAlignment="Left">
                                 <Button.Flyout>
                                     <!-- Gewaehlt wird ueber den Knoten-Button, NICHT ueber
                                          TreeView.SelectedItem - siehe AusgabenlisteView. -->
                                     <Flyout Placement="BottomEdgeAlignedLeft">
-                                        <StackPanel Width="320" Spacing="6">
+                                        <StackPanel Width="{anzeige:Breite 320}" Spacing="6">
                                             <Button Content="Alle Kategorien"
                                                     HorizontalAlignment="Stretch"
                                                     HorizontalContentAlignment="Left"
                                                     Command="{Binding AlleKategorienCommand}"
                                                     Click="KategorieFlyout_Schliessen" />
-                                            <TreeView MaxHeight="320"
+                                            <TreeView MaxHeight="{anzeige:Breite 320}"
                                                       ItemsSource="{Binding KategorieWurzeln}">
                                                 <TreeView.ItemTemplate>
                                                     <TreeDataTemplate x:DataType="vm:KategorieFilterKnoten"
@@ -160,7 +166,7 @@
                             <TextBlock Text="Zeitgruppierung" Classes="filterbeschriftung" />
                             <ComboBox ItemsSource="{Binding GruppierungOptionen}"
                                       SelectedItem="{Binding AusgewaehlteGruppierung}"
-                                      Width="130">
+                                      Width="{anzeige:Breite 130}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:GruppierungOption">
                                         <TextBlock Text="{Binding Bezeichnung}" />
@@ -173,7 +179,7 @@
                             <TextBlock Text="Zahler" Classes="filterbeschriftung" />
                             <ComboBox ItemsSource="{Binding ZahlerBereichOptionen}"
                                       SelectedItem="{Binding AusgewaehlterZahlerBereich}"
-                                      Width="130">
+                                      Width="{anzeige:Breite 130}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:ZahlerBereichOption">
                                         <TextBlock Text="{Binding Bezeichnung}" />
@@ -185,7 +191,7 @@
                         <StackPanel>
                             <TextBlock Text="Suche in der Bemerkung" Classes="filterbeschriftung" />
                             <TextBox Text="{Binding Suchtext}"
-                                     Width="200"
+                                     Width="{anzeige:Breite 200}"
                                      PlaceholderText="Volltext…" />
                         </StackPanel>
 
@@ -238,7 +244,7 @@
                             BorderBrush="#C0C0C0" BorderThickness="0,0,0,1"
                             Padding="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Kategorie" Classes="tabellenkopf" Width="300" />
+                            <TextBlock Text="Kategorie" Classes="tabellenkopf" Width="{anzeige:Breite 300}" />
                             <ItemsControl ItemsSource="{Binding Spalten}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -249,11 +255,11 @@
                                     <DataTemplate x:DataType="vm:ReportSpalte">
                                         <TextBlock Text="{Binding Beschriftung}"
                                                    Classes="tabellenkopf zahl"
-                                                   Width="110" />
+                                                   Width="{anzeige:Breite 110}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <TextBlock Text="Summe" Classes="tabellenkopf zahl" Width="130" />
+                            <TextBlock Text="Summe" Classes="tabellenkopf zahl" Width="{anzeige:Breite 130}" />
                         </StackPanel>
                     </Border>
 
@@ -274,7 +280,7 @@
                                                 <!-- DockPanel statt StackPanel, damit der
                                                      Name die Restbreite bekommt und lange
                                                      Bezeichnungen gekuerzt werden. -->
-                                                <DockPanel Width="300">
+                                                <DockPanel Width="{anzeige:Breite 300}">
                                                     <Border DockPanel.Dock="Left"
                                                             Width="{Binding EinzugBreite}" />
                                                     <Button DockPanel.Dock="Left"
@@ -283,8 +289,17 @@
                                                             IsVisible="{Binding HatKinder}"
                                                             Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZeileUmschaltenCommand}"
                                                             CommandParameter="{Binding}" />
-                                                    <Border DockPanel.Dock="Left" Width="20"
+                                                    <Border DockPanel.Dock="Left" Width="{anzeige:Breite 20}"
                                                             IsVisible="{Binding !HatKinder}" />
+
+                                                    <!-- Farbe der Kategorie, vor dem Namen und
+                                                         niemals an seiner Stelle. -->
+                                                    <Border DockPanel.Dock="Left"
+                                                            Classes="farbpunkt"
+                                                            Background="{Binding Farbe}"
+                                                            IsVisible="{Binding ZeigtFarbe}"
+                                                            Margin="0,0,6,0" />
+
                                                     <TextBlock Text="{Binding Name}"
                                                                VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis"
@@ -300,7 +315,7 @@
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:ReportZelle">
-                                                            <Button Classes="zelle" Width="110"
+                                                            <Button Classes="zelle" Width="{anzeige:Breite 110}"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
                                                                     ToolTip.Tip="{Binding Beschreibung}"
@@ -310,7 +325,7 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
 
-                                                <Button Classes="zelle" Width="130"
+                                                <Button Classes="zelle" Width="{anzeige:Breite 130}"
                                                         FontWeight="SemiBold"
                                                         Content="{Binding Summe.Text}"
                                                         IsEnabled="{Binding Summe.HatWerte}"
@@ -335,7 +350,7 @@
                                         <Border BorderBrush="#C0C0C0" BorderThickness="0,1,0,0"
                                                 Padding="0,6,0,0" Margin="0,2,0,0">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" Width="300"
+                                                <TextBlock Text="{Binding Name}" Width="{anzeige:Breite 300}"
                                                            FontWeight="Bold"
                                                            VerticalAlignment="Center" />
                                                 <ItemsControl ItemsSource="{Binding Zellen}">
@@ -346,7 +361,7 @@
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:ReportZelle">
-                                                            <Button Classes="zelle" Width="110"
+                                                            <Button Classes="zelle" Width="{anzeige:Breite 110}"
                                                                     FontWeight="Bold"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
@@ -356,7 +371,7 @@
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
-                                                <Button Classes="zelle" Width="130"
+                                                <Button Classes="zelle" Width="{anzeige:Breite 130}"
                                                         FontWeight="Bold"
                                                         Content="{Binding Summe.Text}"
                                                         IsEnabled="{Binding Summe.HatWerte}"
@@ -379,14 +394,18 @@
              derselbe Filter wie in der Auswertung (siehe
              ReportViewModel.ZelleOeffnen). -->
         <Panel IsVisible="{Binding DetailsAktiv}" Background="#60000000">
+            <!-- Breite und Hoehe ergeben sich aus dem Fenster, gedeckelt
+                 auf die gewuenschte Groesse: bei "Sehr groß" waere ein
+                 fest 820 Pixel breiter Dialog breiter als der Bereich
+                 dahinter und wuerde rechts abgeschnitten. -->
             <Border Background="White" BorderBrush="#C0C0C0" BorderThickness="1"
-                    CornerRadius="2" Padding="16"
-                    Width="820" MaxHeight="560"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                    CornerRadius="2" Padding="16" Margin="24"
+                    MaxWidth="{anzeige:Breite 820}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top"
                                Text="{Binding DetailTitel}"
-                               FontWeight="Bold" FontSize="14"
+                               Classes="ueberschrift"
                                TextWrapping="Wrap"
                                Margin="0,0,0,10" />
 
@@ -408,7 +427,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="90,16,2*,16,90,16,110,16,2*"
+                    <Grid DockPanel.Dock="Top" anzeige:Raster.Spalten="90,16,2*,16,90,16,110,16,2*"
                           Margin="0,0,0,4">
                         <TextBlock Grid.Column="0" Text="Datum" Classes="tabellenkopf" />
                         <TextBlock Grid.Column="2" Text="Kategorie" Classes="tabellenkopf" />
@@ -432,7 +451,7 @@
                             <DataTemplate x:DataType="vm:AusgabeZeile">
                                 <Border BorderBrush="#E8E8E8" BorderThickness="0,0,0,1"
                                         Padding="0,5">
-                                    <Grid ColumnDefinitions="90,16,2*,16,90,16,110,16,2*">
+                                    <Grid anzeige:Raster.Spalten="90,16,2*,16,90,16,110,16,2*">
                                         <TextBlock Grid.Column="0" Text="{Binding DatumText}"
                                                    Classes="tabellenzelle" />
                                         <TextBlock Grid.Column="2" Text="{Binding CategoryFullPath}"

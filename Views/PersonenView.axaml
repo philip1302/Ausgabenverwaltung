@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignWidth="760" d:DesignHeight="500"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -39,7 +40,7 @@
                 Width="{Binding #Zeilenliste.Bounds.Width}"
                 HorizontalAlignment="Left"
                 Padding="4,0,4,4">
-            <Grid ColumnDefinitions="2*,16,90,16,140,24,280">
+            <Grid anzeige:Raster.Spalten="2*,16,90,16,140,24,280">
                 <TextBlock Grid.Column="0" Text="Name" Classes="tabellenkopf" />
                 <TextBlock Grid.Column="2" Text="Ausgaben" Classes="tabellenkopf zahl" />
                 <TextBlock Grid.Column="4" Text="Offene Posten" Classes="tabellenkopf zahl" />
@@ -52,7 +53,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:PersonZeile">
                         <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
-                            <Grid ColumnDefinitions="2*,16,90,16,140,24,280">
+                            <Grid anzeige:Raster.Spalten="2*,16,90,16,140,24,280">
                                 <Panel Grid.Column="0">
                                     <StackPanel Orientation="Horizontal" Spacing="6"
                                                 IsVisible="{Binding !WirdBearbeitet}">
@@ -61,7 +62,7 @@
                                                    Classes.archiviert="{Binding IsArchived}"
                                                    DoubleTapped="Zeile_DoubleTapped" />
                                         <Border Classes="selbst" IsVisible="{Binding IsSelf}">
-                                            <TextBlock Text="Ich" FontSize="11" />
+                                            <TextBlock Text="Ich" Classes="klein" />
                                         </Border>
                                         <TextBlock Text="(archiviert)" FontStyle="Italic" Foreground="Gray"
                                                    IsVisible="{Binding IsArchived}"
@@ -69,7 +70,7 @@
                                     </StackPanel>
                                     <StackPanel IsVisible="{Binding WirdBearbeitet}" Spacing="2">
                                         <TextBox Text="{Binding BearbeitungsText}"
-                                                 MinWidth="160"
+                                                 MinWidth="{anzeige:Breite 160}"
                                                  KeyDown="BearbeitungsTextBox_KeyDown"
                                                  LostFocus="BearbeitungsTextBox_LostFocus" />
                                         <TextBlock Text="{Binding BearbeitungsFehler}"

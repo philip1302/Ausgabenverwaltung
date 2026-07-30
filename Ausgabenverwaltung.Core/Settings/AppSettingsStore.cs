@@ -1,11 +1,18 @@
 using System.Text.Json;
+using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Formatting;
 
-namespace Ausgabenverwaltung.Core.Backups;
+namespace Ausgabenverwaltung.Core.Settings;
 
 /// <summary>
 /// Liest und schreibt die Einstellungen als JSON-Datei (siehe
-/// <see cref="Database.AppPaths.GetSettingsFilePath()"/>).
+/// <see cref="Database.AppPaths.GetSettingsFilePath()"/>). Es gibt genau
+/// diesen einen Speicherort - wer eine Einstellung ergaenzt, ergaenzt
+/// <see cref="AppSettings"/> und diese Datei, keinen zweiten Ort.
+///
+/// Gespeichert wird immer der GANZE Satz. Wer nur ein Feld aendern will,
+/// laedt vorher und schreibt mit "with" weiter, sonst faellt alles
+/// Uebrige auf die Vorgabewerte zurueck.
 ///
 /// Bewusst nachsichtig: fehlt die Datei oder ist ihr Inhalt beschaedigt,
 /// gelten die Vorgabewerte. Eine unlesbare Einstellungsdatei darf den
@@ -13,7 +20,7 @@ namespace Ausgabenverwaltung.Core.Backups;
 /// eingetragenes zweites Ziel in so einem Fall verloren geht und neu
 /// gewaehlt werden muss.
 /// </summary>
-public sealed class BackupSettingsStore
+public sealed class AppSettingsStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -22,18 +29,18 @@ public sealed class BackupSettingsStore
 
     private readonly string _filePath;
 
-    public BackupSettingsStore(string filePath)
+    public AppSettingsStore(string filePath)
     {
         _filePath = filePath;
     }
 
-    public BackupSettings Load()
+    public AppSettings Load()
     {
         try
         {
             if (!File.Exists(_filePath))
             {
-                return new BackupSettings();
+                return new AppSettings();
             }
 
             var document = JsonSerializer.Deserialize<SettingsDocument>(
@@ -41,24 +48,31 @@ public sealed class BackupSettingsStore
 
             if (document is null)
             {
-                return new BackupSettings();
+                return new AppSettings();
             }
 
-            return new BackupSettings
+            return new AppSettings
             {
                 ExternalFolderPath = string.IsNullOrWhiteSpace(document.ExternalFolderPath)
                     ? null
                     : document.ExternalFolderPath,
                 LastExternalBackupUtc = ParseOrNull(document.LastExternalBackupUtc),
+
+                // Fehlt der Wert in einer aelteren Datei, steht hier 0 -
+                // Normalize macht daraus die kleinste Stufe, deshalb wird
+                // das Fehlen vorher abgefangen.
+                FontScale = document.FontScale is double faktor
+                    ? FontScales.Normalize(faktor)
+                    : FontScales.DefaultFactor,
             };
         }
         catch (Exception)
         {
-            return new BackupSettings();
+            return new AppSettings();
         }
     }
 
-    public void Save(BackupSettings settings)
+    public void Save(AppSettings settings)
     {
         var document = new SettingsDocument
         {
@@ -66,6 +80,7 @@ public sealed class BackupSettingsStore
             LastExternalBackupUtc = settings.LastExternalBackupUtc is DateTime utc
                 ? IsoDateTime.ToUtcText(utc)
                 : null,
+            FontScale = settings.FontScale,
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -99,10 +114,13 @@ public sealed class BackupSettingsStore
 
     // Eigener Typ fuer die Datei, damit der Zeitstempel als Text im
     // vorgeschriebenen Format 'YYYY-MM-DDTHH:MM:SSZ' abgelegt wird und
-    // nicht in der Serialisierung von System.Text.Json (Regel 3).
+    // nicht in der Serialisierung von System.Text.Json (Regel 3). Alle
+    // Felder sind nullable, damit eine Datei aus einer aelteren Version
+    // erkennbar "hat den Wert nicht" von "hat ihn auf 0" unterscheidet.
     private sealed class SettingsDocument
     {
         public string? ExternalFolderPath { get; set; }
         public string? LastExternalBackupUtc { get; set; }
+        public double? FontScale { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -155,7 +156,7 @@
                                    IsVisible="{Binding KeineSicherungen}"
                                    Foreground="Gray" FontStyle="Italic" Margin="0,8" />
 
-                        <Grid ColumnDefinitions="*,16,150,16,100" Margin="0,8,0,0">
+                        <Grid anzeige:Raster.Spalten="*,16,150,16,100" Margin="0,8,0,0">
                             <TextBlock Grid.Column="0" Text="Datei"   Classes="tabellenkopf" />
                             <TextBlock Grid.Column="2" Text="Datum"   Classes="tabellenkopf" />
                             <TextBlock Grid.Column="4" Text="Größe"   Classes="tabellenkopf zahl" />
@@ -165,7 +166,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:SicherungZeile">
                                     <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="0,6">
-                                        <Grid ColumnDefinitions="*,16,150,16,100">
+                                        <Grid anzeige:Raster.Spalten="*,16,150,16,100">
                                             <TextBlock Grid.Column="0" Text="{Binding Dateiname}"
                                                        Classes="tabellenzelle" />
                                             <TextBlock Grid.Column="2" Text="{Binding DatumText}"

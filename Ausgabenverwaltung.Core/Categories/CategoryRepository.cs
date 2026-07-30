@@ -97,6 +97,29 @@ public sealed class CategoryRepository
     }
 
     /// <summary>
+    /// Setzt die eigene Farbe oder nimmt sie zurueck (NULL = keine
+    /// eigene, die Kategorie erbt dann wieder). Werte ausserhalb der
+    /// Palette werden gar nicht erst gespeichert - sonst stuende in der
+    /// Datenbank ein Wert, den die Anzeige spaeter ohnehin verwirft
+    /// (siehe <see cref="CategoryColors"/>).
+    /// </summary>
+    public void SetColor(int id, string? colorHex)
+    {
+        var value = CategoryColorPalette.IsKnown(colorHex) ? colorHex : null;
+
+        const string sql = "UPDATE Category SET Color = @Color WHERE Id = @Id";
+        _connection.Execute(sql, new { Id = id, Color = value });
+    }
+
+    /// <summary>
+    /// Die aufgeloeste Farbe je Kategorie-Id - einmal geladen fuer alle
+    /// Ansichten, die Kategorien einfaerben (Ausgabenliste, Report,
+    /// Erfassung).
+    /// </summary>
+    public IReadOnlyDictionary<int, string> GetResolvedColors()
+        => CategoryColors.Resolve(GetTree());
+
+    /// <summary>
     /// Alle Nachfahren-Ids eines Knotens (ohne den Knoten selbst), fuer
     /// die Nachfrage vor dem Archivieren und fuer die Archivierungs-
     /// Kaskade. Ueber den bereits geladenen Baum ermittelt statt per
@@ -232,7 +255,7 @@ public sealed class CategoryRepository
     public IReadOnlyList<CategoryNode> GetTree()
     {
         const string sql = """
-            SELECT Id, ParentId, Name, SortOrder, IsArchived, CreatedUtc
+            SELECT Id, ParentId, Name, SortOrder, IsArchived, Color, CreatedUtc
             FROM Category
             ORDER BY ParentId, SortOrder, Name
             """;
@@ -249,6 +272,7 @@ public sealed class CategoryRepository
                 Name = row.Name,
                 SortOrder = row.SortOrder,
                 IsArchived = row.IsArchived,
+                Color = row.Color,
                 CreatedUtc = IsoDateTime.ParseUtc(row.CreatedUtc),
             });
         }
@@ -278,12 +302,19 @@ public sealed class CategoryRepository
     /// </summary>
     public IReadOnlyList<CategoryOption> GetSelectableLeaves()
     {
+        var tree = GetTree();
+        var colors = CategoryColors.Resolve(tree);
+
         var leaves = new List<CategoryOption>();
-        CollectLeaves(GetTree(), parentPath: null, leaves);
+        CollectLeaves(tree, parentPath: null, colors, leaves);
         return leaves;
     }
 
-    private static void CollectLeaves(IReadOnlyList<CategoryNode> nodes, string? parentPath, List<CategoryOption> leaves)
+    private static void CollectLeaves(
+        IReadOnlyList<CategoryNode> nodes,
+        string? parentPath,
+        IReadOnlyDictionary<int, string> colors,
+        List<CategoryOption> leaves)
     {
         foreach (var node in nodes)
         {
@@ -293,12 +324,17 @@ public sealed class CategoryRepository
             {
                 if (!node.Category.IsArchived)
                 {
-                    leaves.Add(new CategoryOption { Id = node.Category.Id, FullPath = path });
+                    leaves.Add(new CategoryOption
+                    {
+                        Id = node.Category.Id,
+                        FullPath = path,
+                        Color = colors[node.Category.Id],
+                    });
                 }
             }
             else
             {
-                CollectLeaves(node.Children, path, leaves);
+                CollectLeaves(node.Children, path, colors, leaves);
             }
         }
     }
@@ -313,6 +349,7 @@ public sealed class CategoryRepository
         public string Name { get; set; } = string.Empty;
         public int SortOrder { get; set; }
         public bool IsArchived { get; set; }
+        public string? Color { get; set; }
         public string CreatedUtc { get; set; } = string.Empty;
     }
 

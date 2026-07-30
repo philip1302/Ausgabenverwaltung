@@ -2,6 +2,7 @@ using System.IO.Compression;
 using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.People;
+using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.Core.Startup;
 using Microsoft.Data.Sqlite;
 
@@ -30,7 +31,7 @@ public class BackupServiceTests : IDisposable
     private void LegeDatenbankAn() => StartupService.Run(DatabasePath, BackupFolder, SettingsPath);
 
     private BackupService ErzeugeDienst(System.Data.IDbConnection connection)
-        => new(connection, BackupFolder, new BackupSettingsStore(SettingsPath));
+        => new(connection, BackupFolder, new AppSettingsStore(SettingsPath));
 
     private static IReadOnlyList<string> ZipDateien(string ordner)
         => Directory.Exists(ordner)
@@ -189,8 +190,8 @@ public class BackupServiceTests : IDisposable
         LegeDatenbankAn();
 
         var externerOrdner = Path.Combine(_tempDir.FullName, "Stick");
-        var einstellungen = new BackupSettingsStore(SettingsPath);
-        einstellungen.Save(new BackupSettings { ExternalFolderPath = externerOrdner });
+        var einstellungen = new AppSettingsStore(SettingsPath);
+        einstellungen.Save(new AppSettings { ExternalFolderPath = externerOrdner });
 
         using var connection = SqliteConnectionFactory.OpenConnection($"Data Source={DatabasePath}");
         var ergebnis = ErzeugeDienst(connection).RunNow(new DateTime(2026, 7, 30, 18, 42, 0));
@@ -211,8 +212,8 @@ public class BackupServiceTests : IDisposable
         var blockierer = Path.Combine(_tempDir.FullName, "keinOrdner.txt");
         File.WriteAllText(blockierer, "Ich bin eine Datei.");
 
-        var einstellungen = new BackupSettingsStore(SettingsPath);
-        einstellungen.Save(new BackupSettings
+        var einstellungen = new AppSettingsStore(SettingsPath);
+        einstellungen.Save(new AppSettings
         {
             ExternalFolderPath = Path.Combine(blockierer, "Sicherungen"),
         });
@@ -241,7 +242,7 @@ public class BackupServiceTests : IDisposable
         var blockierer = Path.Combine(_tempDir.FullName, "keinOrdner.txt");
         File.WriteAllText(blockierer, "Ich bin eine Datei.");
 
-        new BackupSettingsStore(SettingsPath).Save(new BackupSettings
+        new AppSettingsStore(SettingsPath).Save(new AppSettings
         {
             ExternalFolderPath = Path.Combine(blockierer, "Sicherungen"),
         });

@@ -19,5 +19,11 @@ public sealed class StartupResult
     /// </summary>
     public BackupResult? Backup { get; init; }
 
+    /// <summary>
+    /// Ergebnis der Schema-Migration. NULL, wenn nichts umzustellen war -
+    /// bei jedem Start ausser dem einen nach einem Programm-Update.
+    /// </summary>
+    public MigrationResult? Migration { get; init; }
+
     public int GeneratedExpenseCount => GeneratedExpenses.Count;
 }

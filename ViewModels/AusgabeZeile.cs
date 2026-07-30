@@ -1,8 +1,10 @@
 using System;
 using System.Globalization;
+using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Ausgabenverwaltung.ViewModels;
@@ -47,11 +49,29 @@ public sealed partial class AusgabeZeile : ObservableObject
 
     public bool IstOffen { get; }
 
+    /// <summary>
+    /// Die aufgeloeste Farbe der Kategorie (siehe
+    /// <see cref="Ausgabenverwaltung.Core.Categories.CategoryColors"/>),
+    /// als Pinsel fuer den schmalen Balken am linken Zeilenrand. Der
+    /// Balken ERGAENZT die Kategoriespalte, er ersetzt sie nicht - ohne
+    /// Farbwahrnehmung bleibt die Zeile vollstaendig lesbar.
+    /// </summary>
+    public IBrush Farbe { get; }
+
+    /// <summary>
+    /// Derselbe Wert als '#RRGGBB' - fuer den Bearbeiten-Dialog, der
+    /// daraus wieder eine Kategorie-Option baut.
+    /// </summary>
+    public string FarbeHex { get; }
+
     [ObservableProperty]
     private bool _istAusgewaehlt;
 
-    public AusgabeZeile(ExpenseListItem item)
+    public AusgabeZeile(ExpenseListItem item, string kategorieFarbe)
     {
+        FarbeHex = kategorieFarbe;
+        Farbe = Farbpinsel.Fuer(kategorieFarbe);
+
         Id = item.Id;
         ExpenseDate = item.ExpenseDate;
         DatumText = GermanDateInput.ToText(item.ExpenseDate);

@@ -14,7 +14,9 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
                                Enthaelt KEINEN UI-Code.
 - `Ausgabenverwaltung.Tests` — Tests gegen Core
 - `Ausgabenverwaltung`      — Avalonia-Oberflaeche
-- `docs/schema_v1.sql`       — massgebliches DB-Schema
+- `docs/schema_v2.sql`       — massgebliches DB-Schema (neue Datenbanken)
+- `docs/migration_*.sql`     — je ein Schritt zwischen zwei Schema-Staenden;
+                               `schema_v1.sql` bleibt unveraendert liegen
 
 ## Harte Regeln
 
@@ -48,6 +50,18 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
 
 8. **Kategorien und Personen werden archiviert, nie geloescht.**
    Fremdschluessel stehen auf `ON DELETE RESTRICT`.
+
+9. **Keine festen Schriftgroessen und keine festen Pixelbreiten
+   in den Ansichten.** Schriftgroessen kommen als
+   `{DynamicResource SchriftKlein|SchriftNormal|SchriftUeberschrift}`,
+   Breiten als `{anzeige:Breite 110}`, Spaltenraster als
+   `anzeige:Raster.Spalten="..."`. Sonst waechst das Layout bei
+   der eingestellten Schriftgroesse nicht mit und schneidet Text ab.
+
+10. **Kategoriefarben nur aus `CategoryColorPalette`.** Eine
+    Kategorie ohne eigene Farbe erbt die des naechsten Vorfahren
+    (`CategoryColors`). Farbe ist immer ein Zusatz zum Text, nie
+    sein Ersatz.
 
 ## Stil
 - Kommentare auf Deutsch, Bezeichner auf Englisch

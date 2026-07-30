@@ -10,7 +10,9 @@ using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.OpenItems;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.RecurringExpenses;
+using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core.Reports;
+using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.Core.Startup;
 using Ausgabenverwaltung.ViewModels;
 using Ausgabenverwaltung.Views;
@@ -34,20 +36,26 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var databaseFilePath = AppPaths.GetDatabaseFilePath();
+            var settingsStore = new AppSettingsStore(AppPaths.GetSettingsFilePath());
+
+            // Die gespeicherte Schriftgroesse gilt ab dem ersten Fenster -
+            // auch fuer das Fehlerfenster, falls der Start scheitert.
+            Skalierung.Aktuell.Setze(settingsStore.Load().FontScale);
 
             StartupResult startupResult;
             try
             {
                 startupResult = StartupService.Run(databaseFilePath);
             }
-            catch (SchemaVersionTooNewException ex)
+            catch (Exception ex) when (
+                ex is SchemaVersionTooNewException or MigrationBackupFailedException)
             {
                 desktop.MainWindow = new StartupErrorWindow(ex.Message);
                 base.OnFrameworkInitializationCompleted();
                 return;
             }
 
-            _services = BuildServiceProvider(databaseFilePath, startupResult);
+            _services = BuildServiceProvider(databaseFilePath, startupResult, settingsStore);
             desktop.Exit += (_, _) => _services.Dispose();
 
             desktop.MainWindow = new MainWindow
@@ -62,7 +70,8 @@ public partial class App : Application
     // Reine DI-Verdrahtung: Core-Repositories und -Dienste werden hier
     // registriert, damit ViewModels sie im Konstruktor bekommen statt sie
     // selbst zu erzeugen (siehe CLAUDE.md).
-    private static ServiceProvider BuildServiceProvider(string databaseFilePath, StartupResult startupResult)
+    private static ServiceProvider BuildServiceProvider(
+        string databaseFilePath, StartupResult startupResult, AppSettingsStore settingsStore)
     {
         var services = new ServiceCollection();
 
@@ -79,11 +88,14 @@ public partial class App : Application
         // Die Sicherung benutzt dieselbe Verbindung wie der Rest der
         // Anwendung: VACUUM INTO schreibt daraus eine konsistente Kopie,
         // ohne dass die Anwendung dafuer pausieren muesste.
-        services.AddSingleton(new BackupSettingsStore(AppPaths.GetSettingsFilePath()));
+        // Ein Einstellungsspeicher fuer die ganze Anwendung: Sicherungsziel
+        // und Schriftgroesse liegen in derselben Datei, und wer eines
+        // aendert, darf das andere nicht ueberschreiben.
+        services.AddSingleton(settingsStore);
         services.AddSingleton(provider => new BackupService(
             provider.GetRequiredService<IDbConnection>(),
             AppPaths.GetBackupFolderPath(),
-            provider.GetRequiredService<BackupSettingsStore>()));
+            provider.GetRequiredService<AppSettingsStore>()));
 
         // Der Erzeugungslauf des Programmstarts ist gerade gelaufen (siehe
         // StartupService.Run) und zaehlt als der heutige - der Scheduler
@@ -104,6 +116,7 @@ public partial class App : Application
         services.AddSingleton<PersonenViewModel>();
         services.AddSingleton<VorlagenViewModel>();
         services.AddSingleton<DatensicherungViewModel>();
+        services.AddSingleton<DarstellungViewModel>();
         services.AddSingleton<VerwaltungViewModel>();
         services.AddSingleton<MainViewModel>();
 

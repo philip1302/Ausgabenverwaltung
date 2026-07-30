@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              xmlns:categories="using:Ausgabenverwaltung.Core.Categories"
              xmlns:entities="using:Ausgabenverwaltung.Core.Entities"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -10,12 +11,19 @@
              x:Name="Wurzel"
              x:DataType="vm:AusgabenlisteViewModel">
 
-    <!-- Spaltenraster "32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200"
-         gilt fuer Kopfzeile UND Zeilen gleichermassen: Auswahl,
-         Vorlagen-Marker, Datum, Kategorie, Betrag, Zahler, Status,
-         Bemerkung, Aktionen - dazwischen feste Gutter-Spalten als
-         Abstandhalter (Indizes 3,5,7,9,11,13). Die Tabellen-Styles
+    <!-- Spaltenraster "4,8,32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200"
+         gilt fuer Kopfzeile UND Zeilen gleichermassen: Farbbalken,
+         Auswahl, Vorlagen-Marker, Datum, Kategorie, Betrag, Zahler,
+         Status, Bemerkung, Aktionen - dazwischen feste Gutter-Spalten als
+         Abstandhalter (Indizes 1,5,7,9,11,13,15). Die Tabellen-Styles
          (Button.kopf, TextBlock.tabellenzelle, ...) kommen aus App.axaml.
+
+         Angegeben ueber anzeige:Raster.Spalten und nicht ueber
+         ColumnDefinitions: die festen Breiten sind auf Text ausgelegt und
+         muessen mit der eingestellten Schriftgroesse mitwachsen, sonst
+         wird bei "Sehr groß" abgeschnitten. Kopfzeile und Zeilen rechnen
+         mit demselben Faktor und stehen dadurch weiterhin exakt
+         uebereinander.
 
          Die Statusspalte ist 175 statt der urspruenglichen 120 Pixel
          breit: der laengste Wert ist "beglichen am 29.09.2025" und wurde
@@ -65,9 +73,17 @@
         </Style>
 
         <Style Selector="TextBlock.filterbeschriftung">
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
             <Setter Property="Foreground" Value="Gray" />
             <Setter Property="Margin" Value="0,0,0,2" />
+        </Style>
+
+        <!-- Der schmale Farbbalken am linken Zeilenrand: er zeigt die
+             Farbe der Kategorie und ergaenzt damit die Kategoriespalte,
+             die daneben unveraendert im Klartext steht. -->
+        <Style Selector="Border.farbbalken">
+            <Setter Property="CornerRadius" Value="1" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
         </Style>
     </UserControl.Styles>
 
@@ -83,13 +99,13 @@
                         <StackPanel>
                             <TextBlock Text="Von" Classes="filterbeschriftung" />
                             <TextBox Text="{Binding VonText}"
-                                     Width="110"
+                                     Width="{anzeige:Breite 110}"
                                      PlaceholderText="TT.MM.JJJJ" />
                         </StackPanel>
                         <StackPanel>
                             <TextBlock Text="Bis" Classes="filterbeschriftung" />
                             <TextBox Text="{Binding BisText}"
-                                     Width="110"
+                                     Width="{anzeige:Breite 110}"
                                      PlaceholderText="TT.MM.JJJJ" />
                         </StackPanel>
 
@@ -126,7 +142,7 @@
                                        Classes="filterbeschriftung" />
                             <Button x:Name="KategorieAuswahl"
                                     Content="{Binding KategorieFilterText}"
-                                    Width="260"
+                                    Width="{anzeige:Breite 260}"
                                     HorizontalContentAlignment="Left">
                                 <Button.Flyout>
                                     <!-- Gewaehlt wird ueber den Knoten-Button, NICHT ueber
@@ -136,13 +152,13 @@
                                          Der TreeView liefert hier nur noch die Aufklapp-
                                          Struktur. -->
                                     <Flyout Placement="BottomEdgeAlignedLeft">
-                                        <StackPanel Width="320" Spacing="6">
+                                        <StackPanel Width="{anzeige:Breite 320}" Spacing="6">
                                             <Button Content="Alle Kategorien"
                                                     HorizontalAlignment="Stretch"
                                                     HorizontalContentAlignment="Left"
                                                     Command="{Binding AlleKategorienCommand}"
                                                     Click="KategorieFlyout_Schliessen" />
-                                            <TreeView MaxHeight="320"
+                                            <TreeView MaxHeight="{anzeige:Breite 320}"
                                                       ItemsSource="{Binding KategorieWurzeln}">
                                                 <TreeView.ItemTemplate>
                                                     <TreeDataTemplate x:DataType="vm:KategorieFilterKnoten"
@@ -167,7 +183,7 @@
                             <TextBlock Text="Zahler" Classes="filterbeschriftung" />
                             <ComboBox ItemsSource="{Binding ZahlerOptionen}"
                                       SelectedItem="{Binding AusgewaehlterZahler}"
-                                      Width="160">
+                                      Width="{anzeige:Breite 160}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:ZahlerOption">
                                         <TextBlock Text="{Binding Bezeichnung}" />
@@ -180,7 +196,7 @@
                             <TextBlock Text="Status" Classes="filterbeschriftung" />
                             <ComboBox ItemsSource="{Binding StatusOptionen}"
                                       SelectedItem="{Binding AusgewaehlterStatus}"
-                                      Width="150">
+                                      Width="{anzeige:Breite 150}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:StatusOption">
                                         <TextBlock Text="{Binding Bezeichnung}" />
@@ -192,7 +208,7 @@
                         <StackPanel>
                             <TextBlock Text="Suche in der Bemerkung" Classes="filterbeschriftung" />
                             <TextBox Text="{Binding Suchtext}"
-                                     Width="220"
+                                     Width="{anzeige:Breite 220}"
                                      PlaceholderText="Volltext…" />
                         </StackPanel>
 
@@ -243,8 +259,20 @@
                            Text="{Binding SummeText, StringFormat='Summe: {0} EUR'}" />
             </Grid>
 
-            <!-- ============ Kopfzeile ============
-                 Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste
+            <!-- ============ Kopfzeile und Tabelle ============
+                 Beides steckt in einem waagerechten Bildlauf: die festen
+                 Spalten summieren sich bei der Stufe "Sehr groß" auf mehr
+                 als das Fenster breit ist, und ohne ihn waeren die
+                 Schaltflaechen der letzten Spalte nicht mehr erreichbar.
+                 Die MinWidth ist die Summe der festen Spalten plus ein
+                 Rest fuer Kategorie und Bemerkung - darunter beginnt der
+                 Bildlauf, darueber verteilt sich der Platz wie bisher.
+                 Aeusserer Bildlauf waagerecht, innerer (die ListBox)
+                 senkrecht - dasselbe Muster wie in ReportView. -->
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+            <DockPanel MinWidth="{anzeige:Breite 1040}">
+            <!-- Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste
                  (siehe PersonenView). Hier aber ueber Scroll.Viewport und
                  nicht ueber Bounds: die ListBox scrollt selbst, ihre
                  Gesamtbreite enthaelt also die Bildlaufleiste, waehrend die
@@ -253,22 +281,20 @@
                     Width="{Binding #Zeilenliste.Scroll.Viewport.Width}"
                     HorizontalAlignment="Left"
                     Padding="4,0,4,4">
-                <Grid ColumnDefinitions="32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200">
-                    <TextBlock Grid.Column="0" />
-                    <TextBlock Grid.Column="1" />
-                    <Button Grid.Column="2" Classes="kopf" Content="{Binding DatumHeaderText}"
+                <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200">
+                    <Button Grid.Column="4" Classes="kopf" Content="{Binding DatumHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
-                    <Button Grid.Column="4" Classes="kopf" Content="{Binding KategorieHeaderText}"
+                    <Button Grid.Column="6" Classes="kopf" Content="{Binding KategorieHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Kategorie" />
-                    <Button Grid.Column="6" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
+                    <Button Grid.Column="8" Classes="kopf zahl" Content="{Binding BetragHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Betrag" />
-                    <Button Grid.Column="8" Classes="kopf" Content="{Binding ZahlerHeaderText}"
+                    <Button Grid.Column="10" Classes="kopf" Content="{Binding ZahlerHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Zahler" />
-                    <Button Grid.Column="10" Classes="kopf" Content="{Binding StatusHeaderText}"
+                    <Button Grid.Column="12" Classes="kopf" Content="{Binding StatusHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Status" />
-                    <Button Grid.Column="12" Classes="kopf" Content="{Binding BemerkungHeaderText}"
+                    <Button Grid.Column="14" Classes="kopf" Content="{Binding BemerkungHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
-                    <Button Grid.Column="14" Content="Aktionen" Classes="tabellenkopf-aktion" />
+                    <Button Grid.Column="16" Content="Aktionen" Classes="tabellenkopf-aktion" />
                 </Grid>
             </Border>
 
@@ -294,31 +320,41 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:AusgabeZeile">
                         <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
-                            <Grid ColumnDefinitions="32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200">
-                                <CheckBox Grid.Column="0"
+                            <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,3*,16,90,24,110,16,175,16,2*,16,200">
+                                <!-- Farbe der Kategorie. Bewusst ein schmaler
+                                     Balken am Rand und keine eingefaerbte
+                                     Zeile: der Text muss lesbar bleiben, und
+                                     die Zeile darf nicht wie eine
+                                     Hervorhebung wirken. -->
+                                <Border Grid.Column="0"
+                                        Classes="farbbalken"
+                                        Background="{Binding Farbe}"
+                                        ToolTip.Tip="{Binding CategoryFullPath}" />
+
+                                <CheckBox Grid.Column="2"
                                           IsChecked="{Binding IstAusgewaehlt}"
                                           VerticalAlignment="Center" />
 
-                                <TextBlock Grid.Column="1"
+                                <TextBlock Grid.Column="3"
                                            Text="⟳"
                                            Classes="vorlage"
                                            IsVisible="{Binding IstAusVorlage}"
                                            ToolTip.Tip="{Binding VorlageHinweis}" />
 
-                                <TextBlock Grid.Column="2" Text="{Binding DatumText}"
+                                <TextBlock Grid.Column="4" Text="{Binding DatumText}"
                                            Classes="tabellenzelle" />
-                                <TextBlock Grid.Column="4" Text="{Binding CategoryFullPath}"
+                                <TextBlock Grid.Column="6" Text="{Binding CategoryFullPath}"
                                            Classes="tabellenzelle" TextWrapping="Wrap" />
-                                <TextBlock Grid.Column="6" Text="{Binding BetragText}"
+                                <TextBlock Grid.Column="8" Text="{Binding BetragText}"
                                            Classes="tabellenzelle zahl" />
-                                <TextBlock Grid.Column="8" Text="{Binding PayerName}"
+                                <TextBlock Grid.Column="10" Text="{Binding PayerName}"
                                            Classes="tabellenzelle" TextWrapping="Wrap" />
-                                <TextBlock Grid.Column="10" Text="{Binding StatusText}"
+                                <TextBlock Grid.Column="12" Text="{Binding StatusText}"
                                            Classes="tabellenzelle" />
-                                <TextBlock Grid.Column="12" Text="{Binding Note}"
+                                <TextBlock Grid.Column="14" Text="{Binding Note}"
                                            Classes="tabellenzelle" TextWrapping="Wrap" />
 
-                                <StackPanel Grid.Column="14" Orientation="Horizontal" Spacing="6">
+                                <StackPanel Grid.Column="16" Orientation="Horizontal" Spacing="6">
                                     <Button Content="Bearbeiten"
                                             Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenOeffnenCommand}"
                                             CommandParameter="{Binding}" />
@@ -331,13 +367,15 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+            </DockPanel>
+            </ScrollViewer>
         </DockPanel>
 
         <!-- ============ Overlay: Loesch-Sicherheitsabfrage ============ -->
         <Panel IsVisible="{Binding LoeschAnfrageAktiv}" Background="#60000000">
             <Border Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                    CornerRadius="2" Padding="16"
-                    MaxWidth="520"
+                    CornerRadius="2" Padding="16" Margin="24"
+                    MaxWidth="{anzeige:Breite 520}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel Spacing="12">
                     <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
@@ -353,14 +391,19 @@
              Dieselben Felder und dieselbe Reihenfolge wie die
              Erfassungsmaske (Views/ErfassenView.axaml). -->
         <Panel IsVisible="{Binding BearbeitenAktiv}" Background="#60000000">
+            <!-- Der Bildlauf ist bei den grossen Schriftstufen noetig: das
+                 Formular wird dann hoeher als das Fenster, und ohne ihn
+                 waeren die unteren Felder samt Schaltflaechen nicht mehr
+                 erreichbar. -->
             <Border Background="White" BorderBrush="#C0C0C0" BorderThickness="1"
-                    CornerRadius="2" Padding="16"
-                    Width="460"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                    CornerRadius="2" Padding="16" Margin="24"
+                    Width="{anzeige:Breite 460}"
+                    HorizontalAlignment="Center" VerticalAlignment="Stretch">
+                <ScrollViewer>
                 <StackPanel DataContext="{Binding Bearbeiten}"
                             x:DataType="vm:AusgabeBearbeitenViewModel"
                             Spacing="2">
-                    <TextBlock Text="Ausgabe bearbeiten" FontWeight="Bold" FontSize="14"
+                    <TextBlock Text="Ausgabe bearbeiten" Classes="ueberschrift"
                                Margin="0,0,0,10" />
 
                     <!-- Regel 6: die Vorlage bleibt unberuehrt -->
@@ -388,7 +431,11 @@
                                      PlaceholderText="Kategorie suchen...">
                         <AutoCompleteBox.ItemTemplate>
                             <DataTemplate x:DataType="categories:CategoryOption">
-                                <TextBlock Text="{Binding FullPath}" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Border Classes="farbpunkt"
+                                            Background="{Binding Color, Converter={x:Static anzeige:FarbeZuPinsel.Instanz}}" />
+                                    <TextBlock Text="{Binding FullPath}" />
+                                </StackPanel>
                             </DataTemplate>
                         </AutoCompleteBox.ItemTemplate>
                     </AutoCompleteBox>
@@ -424,6 +471,7 @@
                                 Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenAbbrechenCommand}" />
                     </StackPanel>
                 </StackPanel>
+                </ScrollViewer>
             </Border>
         </Panel>
     </Panel>

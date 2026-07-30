@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+        xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="550"
@@ -51,8 +52,14 @@
             </StackPanel>
         </Border>
 
-        <Grid ColumnDefinitions="200,*">
+        <!-- Die Bereichsleiste richtet sich nach ihrem laengsten Eintrag
+             statt nach einer festen Breite: so waechst sie mit der
+             eingestellten Schriftgroesse genau so weit mit, wie der Text
+             es braucht, und nimmt den Bereichen daneben bei "Sehr groß"
+             nicht mehrere hundert Pixel weg. -->
+        <Grid anzeige:Raster.Spalten="Auto,*">
             <ListBox Grid.Column="0"
+                     MinWidth="{anzeige:Breite 160}"
                      ItemsSource="{Binding NavigationItems}"
                      SelectedItem="{Binding SelectedNavigationItem}">
                 <ListBox.ItemTemplate>

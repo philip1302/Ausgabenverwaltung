@@ -1,3 +1,4 @@
+using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.People;
@@ -99,6 +100,60 @@ public class StartupServiceTests : IDisposable
 
         Assert.Equal(9999, exception.ActualVersion);
         Assert.Equal(DatabaseInitializer.ExpectedSchemaVersion, exception.ExpectedVersion);
+    }
+
+    [Fact]
+    public void Eine_Datenbank_der_Version_1_wird_beim_Start_hochgezogen()
+    {
+        var dbPath = Path.Combine(_tempDir.FullName, "ausgaben.db");
+
+        // Eine Datenbank im alten Stand, wie sie die Vorgaengerversion
+        // hinterlassen hat - mit Daten darin.
+        using (var alt = SqliteConnectionFactory.OpenConnection($"Data Source={dbPath}"))
+        {
+            alt.Execute(DatabaseInitializer.LoadScript("schema_v1.sql"));
+            alt.Execute("""
+                INSERT INTO Person (Id, Name, IsSelf, IsArchived, CreatedUtc)
+                VALUES (1, 'Ich', 1, 0, '2026-01-01T00:00:00Z');
+
+                INSERT INTO Category (Id, ParentId, Name, SortOrder, IsArchived, CreatedUtc)
+                VALUES (1, NULL, 'Pferde', 0, 0, '2026-01-01T00:00:00Z');
+
+                INSERT INTO Expense
+                    (Id, CategoryId, AmountCents, ExpenseDate, PayerId, CreatedUtc, ModifiedUtc)
+                VALUES (1, 1, 4711, '2026-03-05', 1,
+                        '2026-03-05T00:00:00Z', '2026-03-05T00:00:00Z');
+                """);
+        }
+
+        var result = Starte(dbPath);
+
+        Assert.NotNull(result.Migration);
+        Assert.Equal(1, result.Migration!.FromVersion);
+        Assert.Equal(DatabaseInitializer.ExpectedSchemaVersion, result.Migration.ToVersion);
+        Assert.False(result.IsFirstStart);
+
+        // Vor der Umstellung muss eine Sicherung entstanden sein - sie ist
+        // der einzige Rueckweg.
+        Assert.Equal(BackupOutcome.Succeeded, result.Migration.Backup.Primary);
+        Assert.NotEmpty(Directory.GetFiles(BackupFolder, "*.zip"));
+
+        using var connection = SqliteConnectionFactory.OpenConnection($"Data Source={dbPath}");
+        Assert.Equal(2, DatabaseInitializer.GetSchemaVersion(connection));
+        Assert.Equal(4711L, connection.ExecuteScalar<long>(
+            "SELECT AmountCents FROM Expense WHERE Id = 1"));
+        Assert.Equal(
+            CategoryColorPalette.DefaultHex,
+            new CategoryRepository(connection).GetResolvedColors()[1]);
+    }
+
+    [Fact]
+    public void Ein_zweiter_Start_migriert_nicht_noch_einmal()
+    {
+        var dbPath = Path.Combine(_tempDir.FullName, "ausgaben.db");
+
+        Assert.Null(Starte(dbPath).Migration);
+        Assert.Null(Starte(dbPath).Migration);
     }
 
     [Fact]

@@ -450,6 +450,12 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
         {
             Id = vorlage.CategoryId,
             FullPath = kategoriePfad ?? "(archivierte Kategorie)",
+
+            // Die Farbe dieser nachgetragenen Kategorie ist hier nicht
+            // bekannt - sie steht in keinem der uebergebenen Werte. Der
+            // Standardwert ist die ehrlichere Angabe als eine geratene
+            // Farbe; erkennbar bleibt die Kategorie ueber ihren Pfad.
+            Color = CategoryColorPalette.DefaultHex,
         });
 
         return vorschlaege;

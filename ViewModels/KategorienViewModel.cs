@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core.Categories;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -19,6 +21,16 @@ public sealed partial class KategorienViewModel : ViewModelBase
     private readonly CategoryRepository _categoryRepository;
 
     public ObservableCollection<KategorieKnoten> Wurzelknoten { get; } = new();
+
+    /// <summary>
+    /// Die waehlbaren Farben: die feste Palette aus Core und zusaetzlich
+    /// "keine eigene Farbe". Kein freier Farbwaehler - siehe
+    /// <see cref="CategoryColorPalette"/>.
+    /// </summary>
+    public IReadOnlyList<FarbOption> Farboptionen { get; } =
+        new[] { FarbOption.Keine() }
+            .Concat(CategoryColorPalette.Colors.Select(FarbOption.Aus))
+            .ToList();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(KnotenBestaetigtAusgewaehlt))]
@@ -211,6 +223,54 @@ public sealed partial class KategorienViewModel : ViewModelBase
         ArchivierungAnfrageKnoten = null;
     }
 
+    /// <summary>
+    /// Merkt sich, fuer welche Kategorie die Farbwahl geoeffnet wurde.
+    ///
+    /// Die laufende Baumauswahl taugt dafuer nicht: das Aufklappfenster
+    /// der Farbwahl nimmt den Fokus, und der TreeView gibt dabei seine
+    /// Auswahl her (dieselbe Eigenheit ist in AusgabenlisteView bereits
+    /// vermerkt). Haengte die Farbwahl daran, stuenden ihre Eintraege
+    /// im Moment des Oeffnens grau da und ein Klick liefe ins Leere.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FarbwahlHinweis))]
+    private KategorieKnoten? _farbwahlKnoten;
+
+    /// <summary>Ueberschrift der Farbwahl: welche Kategorie und welche
+    /// Farbe sie gerade hat.</summary>
+    public string FarbwahlHinweis => FarbwahlKnoten is { } knoten
+        ? $"{knoten.Name} — {knoten.FarbHinweis}"
+        : string.Empty;
+
+    /// <summary>
+    /// Wird beim Oeffnen der Farbwahl aufgerufen und haelt den Knoten
+    /// fest, um den es geht.
+    /// </summary>
+    public void OeffneFarbwahl() => FarbwahlKnoten = AusgewaehlterKnoten;
+
+    /// <summary>
+    /// Setzt die Farbe der Kategorie, fuer die die Farbwahl geoeffnet
+    /// wurde, oder nimmt sie zurueck. Danach wird der Baum neu geladen:
+    /// die Farbe wirkt auf den ganzen Ast darunter, und der soll sich
+    /// sofort mit umfaerben.
+    ///
+    /// Ohne CanExecute: die Eintraege der Farbwahl sind immer benutzbar,
+    /// geoeffnet wird sie ohnehin nur mit ausgewaehlter Kategorie.
+    /// </summary>
+    [RelayCommand]
+    private void FarbeSetzen(FarbOption? option)
+    {
+        var knoten = FarbwahlKnoten ?? AusgewaehlterKnoten;
+        if (option is null || knoten?.Id is not int id)
+        {
+            return;
+        }
+
+        _categoryRepository.SetColor(id, option.Hex);
+        FarbwahlKnoten = null;
+        LadeBaum();
+    }
+
     [RelayCommand]
     private void Wiederherstellen(KategorieKnoten? knoten)
     {
@@ -272,8 +332,13 @@ public sealed partial class KategorienViewModel : ViewModelBase
         var baum = _categoryRepository.GetTree();
         var anzahlen = _categoryRepository.GetExpenseCounts();
 
+        // Aufgeloeste Farben fuer den ganzen Baum: der Punkt vor einem
+        // Namen zeigt die Farbe, die tatsaechlich gilt - eigene oder
+        // geerbte.
+        var farben = CategoryColors.Resolve(baum);
+
         Wurzelknoten.Clear();
-        foreach (var knoten in BaueKnoten(baum, anzahlen, eltern: null))
+        foreach (var knoten in BaueKnoten(baum, anzahlen, farben, eltern: null))
         {
             Wurzelknoten.Add(knoten);
         }
@@ -282,7 +347,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
     }
 
     private List<KategorieKnoten> BaueKnoten(
-        IReadOnlyList<CategoryNode> nodes, IReadOnlyDictionary<int, int> anzahlen, KategorieKnoten? eltern)
+        IReadOnlyList<CategoryNode> nodes,
+        IReadOnlyDictionary<int, int> anzahlen,
+        IReadOnlyDictionary<int, string> farben,
+        KategorieKnoten? eltern)
     {
         var ergebnis = new List<KategorieKnoten>();
 
@@ -293,9 +361,11 @@ public sealed partial class KategorienViewModel : ViewModelBase
                 node.Category.Id, node.Category.ParentId, node.Category.Name, node.Category.IsArchived, anzahl)
             {
                 Eltern = eltern,
+                EigeneFarbe = node.Category.Color,
+                Farbe = Farbpinsel.Fuer(CategoryColors.Of(farben, node.Category.Id)),
             };
 
-            var kinder = BaueKnoten(node.Children, anzahlen, knoten);
+            var kinder = BaueKnoten(node.Children, anzahlen, farben, knoten);
 
             // Ein komplett archivierter Ast (Knoten selbst archiviert und
             // keine sichtbaren Kinder uebrig) wird ausgeblendet, solange

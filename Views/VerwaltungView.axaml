@@ -20,5 +20,8 @@
         <TabItem Header="Datensicherung">
             <views:DatensicherungView DataContext="{Binding Datensicherung}" />
         </TabItem>
+        <TabItem Header="Darstellung">
+            <views:DarstellungView DataContext="{Binding Darstellung}" />
+        </TabItem>
     </TabControl>
 </UserControl>

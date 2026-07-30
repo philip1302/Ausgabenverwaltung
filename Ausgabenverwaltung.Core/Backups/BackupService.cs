@@ -1,6 +1,7 @@
 using System.Data;
 using System.IO.Compression;
 using Ausgabenverwaltung.Core.Database;
+using Ausgabenverwaltung.Core.Settings;
 using Dapper;
 
 namespace Ausgabenverwaltung.Core.Backups;
@@ -29,12 +30,12 @@ public sealed class BackupService
     private const string TempExtension = ".db.tmp";
 
     private readonly IDbConnection _connection;
-    private readonly BackupSettingsStore _settingsStore;
+    private readonly AppSettingsStore _settingsStore;
 
     public BackupService(
         IDbConnection connection,
         string primaryFolderPath,
-        BackupSettingsStore settingsStore)
+        AppSettingsStore settingsStore)
     {
         _connection = connection;
         PrimaryFolderPath = primaryFolderPath;

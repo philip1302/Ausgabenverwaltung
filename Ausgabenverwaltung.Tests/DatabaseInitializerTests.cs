@@ -33,13 +33,26 @@ public class DatabaseInitializerTests
     }
 
     [Fact]
-    public void Initialize_schreibt_SchemaVersion_1()
+    public void Initialize_schreibt_die_erwartete_SchemaVersion()
     {
         using var connection = SqliteConnectionFactory.OpenConnection("Data Source=:memory:");
         DatabaseInitializer.Initialize(connection);
 
         var version = connection.ExecuteScalar<long>("SELECT Version FROM SchemaVersion");
-        Assert.Equal(1, version);
+        Assert.Equal(2, version);
+        Assert.Equal(DatabaseInitializer.ExpectedSchemaVersion, (int)version);
+    }
+
+    [Fact]
+    public void Initialize_legt_die_Farbspalte_der_Kategorien_an()
+    {
+        using var connection = SqliteConnectionFactory.OpenConnection("Data Source=:memory:");
+        DatabaseInitializer.Initialize(connection);
+
+        var spalten = connection.Query<string>(
+            "SELECT name FROM pragma_table_info('Category')").ToList();
+
+        Assert.Contains("Color", spalten);
     }
 
     [Fact]

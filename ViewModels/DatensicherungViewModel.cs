@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using Ausgabenverwaltung.Core.Backups;
+using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.Core.Startup;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -23,11 +24,11 @@ namespace Ausgabenverwaltung.ViewModels;
 public sealed partial class DatensicherungViewModel : ViewModelBase
 {
     private readonly BackupService _backupService;
-    private readonly BackupSettingsStore _settingsStore;
+    private readonly AppSettingsStore _settingsStore;
 
     public DatensicherungViewModel(
         BackupService backupService,
-        BackupSettingsStore settingsStore,
+        AppSettingsStore settingsStore,
         StartupResult startupResult)
     {
         _backupService = backupService;

@@ -469,9 +469,14 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         Zeilen.Clear();
 
+        // Die Farben einmal je Ladevorgang aufloesen statt je Zeile: die
+        // Vererbung laeuft ueber den ganzen Baum, und der aendert sich
+        // waehrend eines Ladevorgangs nicht.
+        var farben = _categoryRepository.GetResolvedColors();
+
         foreach (var item in _expenseRepository.Query(filter, SortSpalte, SortAufsteigend))
         {
-            var zeile = new AusgabeZeile(item);
+            var zeile = new AusgabeZeile(item, CategoryColors.Of(farben, item.CategoryId));
             zeile.PropertyChanged += OnZeilePropertyChanged;
             Zeilen.Add(zeile);
         }
