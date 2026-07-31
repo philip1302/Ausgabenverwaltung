@@ -15,6 +15,12 @@
          Ordners; ohne diesen Ausschluss wuerde die implizite Datei-
          Suche des SDK ihre .cs-Dateien versehentlich mit einsammeln. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);Ausgabenverwaltung.Core\**;Ausgabenverwaltung.Tests\**</DefaultItemExcludes>
+    <!-- Explizit statt sich auf den Standard zu verlassen: EuroText und
+         die Datumsformatierung stehen fest auf de-DE
+         (CultureInfo.GetCultureInfo). Invariante Globalisierung wirft dort
+         eine CultureNotFoundException - beim Selfcontained-Publish wird
+         das gerne aus Groessengruenden aktiviert, hier ausdruecklich nicht. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
