@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Ausgabenverwaltung.Core.Entities;
+using Ausgabenverwaltung.Core.Errors;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Startup;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -50,10 +51,11 @@ public sealed partial class StartupNoticeViewModel : ViewModelBase
         if (startupResult.Backup is { NeedsAttention: true } backup)
         {
             BackupErrorText =
-                "Die automatische Datensicherung beim Programmstart ist fehlgeschlagen: "
-                + backup.PrimaryError
-                + "\nDie Anwendung läuft weiter. Unter „Verwaltung › Datensicherung“ "
-                + "lässt sich ein neuer Versuch starten.";
+                FileErrorText.ForBackup(backup.PrimaryProblem)
+                + "\n\nDie Anwendung läuft normal weiter. Unter "
+                + "„Verwaltung › Datensicherung“ lässt sich ein neuer Versuch starten; "
+                + "dort steht der Hinweis auch dann noch, wenn dieses Band hier "
+                + "weggeklickt ist.";
         }
     }
 

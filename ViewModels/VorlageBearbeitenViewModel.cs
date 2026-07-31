@@ -210,6 +210,18 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
 
     public bool StartVorverlegtHinweisSichtbar => StartVorverlegtHinweis is not null;
 
+    /// <summary>
+    /// Ein Fehler beim Schreiben. Das Formular bleibt dabei offen und
+    /// vollstaendig gefuellt - eine gerade eingetippte Vorlage ist zu viel
+    /// Arbeit, um sie wegen eines vollen Datentraegers noch einmal
+    /// eingeben zu muessen.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SpeicherFehlerSichtbar))]
+    private string? _speicherFehlerText;
+
+    public bool SpeicherFehlerSichtbar => SpeicherFehlerText is not null;
+
     public VorlageBearbeitenViewModel(
         RecurringExpense? vorlage,
         string? kategoriePfad,
@@ -269,7 +281,39 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
     // Jede Aenderung am Rhythmus baut die Vorschau neu auf - das ist der
     // Kern dieses Formulars: man soll sehen, was man einstellt, bevor man
     // speichert.
-    partial void OnAusgewaehlteIntervallEinheitChanged(IntervallOption value) => AktualisiereVorschau();
+    /// <summary>
+    /// Der zuletzt eingetragene Ankertag, waehrend das Feld ausgeblendet
+    /// ist. Siehe <see cref="OnAusgewaehlteIntervallEinheitChanged"/>.
+    /// </summary>
+    private string _gemerkterAnkertag = string.Empty;
+
+    partial void OnAusgewaehlteIntervallEinheitChanged(IntervallOption value)
+    {
+        // Beim Wechsel auf Tag oder Woche wird das Ankertagfeld
+        // ausgeblendet - und geraeumt. Sonst stuende dort ein Wert, den
+        // die Pruefung beanstandet (ein fester Tag im Monat ergibt bei
+        // einem Wochenrhythmus keinen Sinn), den der Anwender aber gar
+        // nicht sehen und deshalb auch nicht loeschen kann.
+        //
+        // Gemerkt wird er trotzdem: wer zum Ausprobieren kurz auf "Woche"
+        // und wieder zurueck auf "Monat" stellt, soll seine 15 wiederhaben.
+        if (!value.HatAnkertag)
+        {
+            if (AnkertagText.Length > 0)
+            {
+                _gemerkterAnkertag = AnkertagText;
+            }
+
+            AnkertagText = string.Empty;
+            AnkertagFehler = null;
+        }
+        else if (AnkertagText.Length == 0 && _gemerkterAnkertag.Length > 0)
+        {
+            AnkertagText = _gemerkterAnkertag;
+        }
+
+        AktualisiereVorschau();
+    }
     partial void OnIntervallAnzahlTextChanged(string value) => AktualisiereVorschau();
     partial void OnAnkertagTextChanged(string value) => AktualisiereVorschau();
     partial void OnStartDatumTextChanged(string value) => AktualisiereVorschau();

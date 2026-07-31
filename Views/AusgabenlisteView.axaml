@@ -428,6 +428,16 @@
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel Spacing="12">
                     <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
+
+                    <!-- Ein Schreibfehler beim Löschen: die Nachfrage
+                         bleibt offen, damit sich der Versuch ohne neue
+                         Auswahl wiederholen lässt. -->
+                    <Border IsVisible="{Binding SchreibFehlerSichtbar}"
+                            Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                            Padding="8">
+                        <TextBlock Text="{Binding SchreibFehlerText}" TextWrapping="Wrap" />
+                    </Border>
+
                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                         <Button Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
                         <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
@@ -500,6 +510,22 @@
                                IsVisible="{Binding DatumFehlerSichtbar}"
                                Foreground="Red" />
 
+                    <!-- Rückfrage bei einem ungewöhnlichen Datum: kein
+                         Verbot, sondern eine Bestätigung. -->
+                    <Border IsVisible="{Binding DatumRueckfrageSichtbar}"
+                            Background="#FFF4CE" BorderBrush="#E0C36A" BorderThickness="1"
+                            Padding="8" Margin="0,6,0,0">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding DatumRueckfrageText}" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="Ja, so speichern"
+                                        Command="{Binding DatumBestaetigenCommand}" />
+                                <Button Content="Datum ändern"
+                                        Command="{Binding DatumRueckfrageAbbrechenCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Bemerkung" Margin="0,10,0,0" />
                     <TextBox Text="{Binding Bemerkung}" />
 
@@ -513,6 +539,14 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
+
+                    <!-- Schreibfehler: der Dialog bleibt offen und
+                         gefüllt, damit keine Änderung verloren geht. -->
+                    <Border IsVisible="{Binding SpeicherFehlerSichtbar}"
+                            Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                            Padding="8" Margin="0,12,0,0">
+                        <TextBlock Text="{Binding SpeicherFehlerText}" TextWrapping="Wrap" />
+                    </Border>
 
                     <StackPanel Orientation="Horizontal" Spacing="8"
                                 HorizontalAlignment="Right" Margin="0,16,0,0">

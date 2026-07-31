@@ -164,6 +164,20 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     public bool LoeschAnfrageAktiv => LoeschAnfrageText is not null;
 
+    /// <summary>
+    /// Ein Schreibfehler in der Liste selbst - beim Loeschen. Als Band
+    /// ueber der Tabelle, damit sichtbar bleibt, WAS nicht geklappt hat,
+    /// und die Liste unveraendert darunter stehen kann.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SchreibFehlerSichtbar))]
+    private string? _schreibFehlerText;
+
+    public bool SchreibFehlerSichtbar => SchreibFehlerText is not null;
+
+    [RelayCommand]
+    private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
+
     public AusgabenlisteViewModel(
         ExpenseRepository expenseRepository,
         CategoryRepository categoryRepository,
@@ -384,14 +398,24 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         // Update setzt ModifiedUtc; SettledDate wird unveraendert
         // durchgereicht (Regel 4 - hier wird nicht abgehakt).
-        _expenseRepository.Update(
-            dialog.ExpenseId,
-            dialog.AusgewaehlteKategorie!.Id,
-            amountCents,
-            expenseDate,
-            dialog.AusgewaehlterZahler.Id,
-            dialog.BemerkungOderNull,
-            dialog.SettledDate);
+        dialog.SpeicherFehlerText = Schreibvorgang.Versuche(
+            "Beim Speichern einer bearbeiteten Ausgabe",
+            () => _expenseRepository.Update(
+                dialog.ExpenseId,
+                dialog.AusgewaehlteKategorie!.Id,
+                amountCents,
+                expenseDate,
+                dialog.AusgewaehlterZahler.Id,
+                dialog.BemerkungOderNull,
+                dialog.SettledDate));
+
+        // Der Dialog bleibt bei einem Schreibfehler offen und gefuellt -
+        // sonst waeren die Aenderungen weg, die gerade nicht gespeichert
+        // werden konnten.
+        if (dialog.SpeicherFehlerText is not null)
+        {
+            return;
+        }
 
         Bearbeiten = null;
         LadeDaten();
@@ -435,7 +459,19 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     [RelayCommand]
     private void LoeschenBestaetigen()
     {
-        _expenseRepository.DeleteMany(_zuLoeschendeIds);
+        // DeleteMany laeuft in einer Transaktion: entweder alle
+        // ausgewaehlten Zeilen sind weg oder keine. Ein Fehler mittendrin
+        // hinterlaesst also keine halb geleerte Auswahl.
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Loeschen von Ausgaben",
+            () => _expenseRepository.DeleteMany(_zuLoeschendeIds));
+
+        if (SchreibFehlerText is not null)
+        {
+            // Die Nachfrage bleibt stehen: der Anwender kann es gleich
+            // noch einmal versuchen, ohne die Auswahl neu zu treffen.
+            return;
+        }
 
         _zuLoeschendeIds = Array.Empty<int>();
         LoeschAnfrageText = null;

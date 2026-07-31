@@ -1,6 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
 using Ausgabenverwaltung.Core.Backups;
+using Ausgabenverwaltung.Core.Errors;
+using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.Core.Startup;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -36,8 +38,19 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
 
         DatenbankPfad = startupResult.DatabaseFilePath;
         SicherungsordnerPfad = backupService.PrimaryFolderPath;
+        ProtokollordnerPfad = AppLog.Current.FolderPath;
 
         Aktualisiere();
+
+        // Eine beim Start gescheiterte Sicherung verhindert den Start
+        // nicht, darf aber auch nicht mit dem Hinweisband verschwinden,
+        // das der Anwender wegklickt. Hier bleibt sie stehen, bis eine
+        // Sicherung gelingt - das ist der Ort, an dem jemand nachsieht,
+        // wenn er wissen will, ob gesichert wird.
+        if (startupResult.Backup is { } sicherung)
+        {
+            UebernehmeSicherungsfehler(sicherung);
+        }
     }
 
     public ObservableCollection<SicherungZeile> Sicherungen { get; } = new();
@@ -47,6 +60,36 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
 
     /// <summary>Ziel 1, fest und immer aktiv.</summary>
     public string SicherungsordnerPfad { get; }
+
+    /// <summary>
+    /// Der Protokollordner - NULL, wenn gerade nicht protokolliert wird.
+    /// Steht hier, weil dies die Stelle ist, an der jemand nachsieht, wenn
+    /// eine Sicherung nicht geklappt hat.
+    /// </summary>
+    public string? ProtokollordnerPfad { get; }
+
+    public bool ProtokollordnerVerfuegbar => ProtokollordnerPfad is not null;
+
+    /// <summary>
+    /// Der letzte Fehlschlag von Ziel 1 - dauerhaft sichtbar, nicht
+    /// wegklickbar. Er verschwindet erst, wenn eine Sicherung gelingt.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Ziel1FehlerSichtbar))]
+    private string? _ziel1FehlerText;
+
+    public bool Ziel1FehlerSichtbar => Ziel1FehlerText is not null;
+
+    /// <summary>
+    /// Dasselbe fuer Ziel 2. Getrennt gehalten, weil es etwas anderes
+    /// bedeutet: hier fehlt nur die zweite Kopie, gesichert wurde
+    /// trotzdem.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Ziel2FehlerSichtbar))]
+    private string? _ziel2FehlerText;
+
+    public bool Ziel2FehlerSichtbar => Ziel2FehlerText is not null;
 
     public string WiederherstellungHinweis =>
         "Wiederherstellen geschieht bewusst von Hand und nicht aus der Anwendung heraus: "
@@ -155,12 +198,11 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
     /// </summary>
     public void SetzeZweitesZiel(string ordnerPfad)
     {
-        var fehler = BackupTarget.TestWritable(ordnerPfad);
-        if (fehler is not null)
+        var probe = BackupTarget.Check(ordnerPfad);
+        if (!probe.IsWritable)
         {
             MeldungIstFehler = true;
-            MeldungText =
-                $"In diesen Ordner lässt sich nicht schreiben, er wurde nicht übernommen:\n{fehler}";
+            MeldungText = FileErrorText.ForBackupTargetChoice(probe.Problem);
             return;
         }
 
@@ -213,10 +255,12 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
 
     private void Melde(BackupResult ergebnis)
     {
+        UebernehmeSicherungsfehler(ergebnis);
+
         if (ergebnis.Primary == BackupOutcome.Failed)
         {
             MeldungIstFehler = true;
-            MeldungText = $"Die Sicherung ist fehlgeschlagen:\n{ergebnis.PrimaryError}";
+            MeldungText = FileErrorText.ForBackup(ergebnis.PrimaryProblem);
             return;
         }
 
@@ -230,10 +274,26 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
 
             // Kein Fehlerton: Ziel 1 hat funktioniert, die Daten sind
             // gesichert. Der Hinweis sagt nur, dass die zweite Kopie fehlt.
-            BackupOutcome.Failed =>
-                text + $"\nDas zweite Ziel war nicht erreichbar: {ergebnis.ExternalError}",
+            BackupOutcome.Failed => text + "\n\n" + Ziel2FehlerText,
 
             _ => text,
         };
+    }
+
+    /// <summary>
+    /// Traegt die dauerhaft sichtbaren Fehlertexte beider Ziele nach.
+    /// Beide werden bei jedem Lauf neu gesetzt - auch auf NULL: eine
+    /// gelungene Sicherung soll den Hinweis von gestern wegnehmen, sonst
+    /// stuende dort ewig eine Warnung, die niemanden mehr betrifft.
+    /// </summary>
+    private void UebernehmeSicherungsfehler(BackupResult ergebnis)
+    {
+        Ziel1FehlerText = ergebnis.Primary == BackupOutcome.Failed
+            ? FileErrorText.ForBackup(ergebnis.PrimaryProblem)
+            : null;
+
+        Ziel2FehlerText = ergebnis.External == BackupOutcome.Failed
+            ? FileErrorText.ForExternalBackup(ergebnis.ExternalProblem, Ziel2Pfad)
+            : null;
     }
 }

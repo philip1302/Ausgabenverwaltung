@@ -25,6 +25,47 @@
             <TextBlock Text="Gespeichert." />
         </Border>
 
+        <!-- Schreibfehler: das Formular bleibt darunter unverändert
+             stehen, damit keine Eingabe verloren geht. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding SpeicherFehlerSichtbar}"
+                Background="#FFE0E0"
+                BorderBrush="#D08080"
+                BorderThickness="1"
+                Padding="12"
+                Margin="0,0,0,12">
+            <Grid anzeige:Raster.Spalten="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding SpeicherFehlerText}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Content="Schließen"
+                        VerticalAlignment="Top"
+                        Command="{Binding SpeicherFehlerSchliessenCommand}" />
+            </Grid>
+        </Border>
+
+        <!-- Rückfrage bei einem ungewöhnlichen Datum. Kein Verbot: der
+             Anwender bestätigt einmal und speichert dann. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding DatumRueckfrageSichtbar}"
+                Background="#FFF4CE"
+                BorderBrush="#E0C36A"
+                BorderThickness="1"
+                Padding="12"
+                Margin="0,0,0,12">
+            <StackPanel Spacing="8">
+                <TextBlock Text="{Binding DatumRueckfrageText}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Ja, so speichern"
+                            Command="{Binding DatumBestaetigenCommand}" />
+                    <Button Content="Datum ändern"
+                            Command="{Binding DatumRueckfrageAbbrechenCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <StackPanel DockPanel.Dock="Top" Width="{anzeige:Breite 420}"
                     HorizontalAlignment="Left" Spacing="2">
             <!-- Das €-Zeichen steht in der Beschriftung, nicht im Feld:

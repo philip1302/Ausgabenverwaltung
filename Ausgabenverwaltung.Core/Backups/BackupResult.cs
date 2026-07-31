@@ -1,3 +1,5 @@
+using Ausgabenverwaltung.Core.Errors;
+
 namespace Ausgabenverwaltung.Core.Backups;
 
 /// <summary>
@@ -12,10 +14,25 @@ public sealed record BackupResult
     public string? FileName { get; init; }
 
     public required BackupOutcome Primary { get; init; }
+
+    /// <summary>
+    /// Der Text der Ausnahme - technisch, englisch, fuer Protokoll und
+    /// aufklappbaren Bereich. NICHT fuer den Haupttext einer Meldung; der
+    /// entsteht aus <see cref="PrimaryProblem"/> ueber
+    /// <see cref="FileErrorText"/>.
+    /// </summary>
     public string? PrimaryError { get; init; }
+
+    /// <summary>
+    /// Die Art des Problems, bereits eingeordnet. Steht hier und nicht
+    /// erst in der Oberflaeche, weil die Ausnahme selbst hier zuletzt
+    /// greifbar ist - danach existiert nur noch dieses Ergebnis.
+    /// </summary>
+    public StorageProblem PrimaryProblem { get; init; }
 
     public required BackupOutcome External { get; init; }
     public string? ExternalError { get; init; }
+    public StorageProblem ExternalProblem { get; init; }
 
     /// <summary>Ob ueberhaupt eine neue Sicherungsdatei entstanden ist.</summary>
     public bool CreatedBackup => Primary == BackupOutcome.Succeeded;

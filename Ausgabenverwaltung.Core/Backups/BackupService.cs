@@ -1,6 +1,8 @@
 using System.Data;
 using System.IO.Compression;
 using Ausgabenverwaltung.Core.Database;
+using Ausgabenverwaltung.Core.Errors;
+using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.Settings;
 using Dapper;
 
@@ -82,7 +84,7 @@ public sealed class BackupService
     {
         var fileName = BackupFileName.Create(nowLocal);
 
-        var (primaryPath, primaryError) = WritePrimary(fileName);
+        var (primaryPath, primaryError, primaryProblem) = WritePrimary(fileName);
 
         // Aufraeumen erst nach einer erfolgreichen Sicherung: an einem Tag,
         // an dem nichts Neues entstanden ist, sollen auch keine alten
@@ -92,15 +94,17 @@ public sealed class BackupService
             ApplyRetention(PrimaryFolderPath);
         }
 
-        var (external, externalError) = CopyToExternal(primaryPath, fileName);
+        var (external, externalError, externalProblem) = CopyToExternal(primaryPath, fileName);
 
         return new BackupResult
         {
             FileName = primaryPath is null ? null : fileName,
             Primary = primaryPath is null ? BackupOutcome.Failed : BackupOutcome.Succeeded,
             PrimaryError = primaryError,
+            PrimaryProblem = primaryProblem,
             External = external,
             ExternalError = externalError,
+            ExternalProblem = externalProblem,
         };
     }
 
@@ -111,7 +115,7 @@ public sealed class BackupService
 
     // ---------------- Ziel 1 ----------------
 
-    private (string? Path, string? Error) WritePrimary(string fileName)
+    private (string? Path, string? Error, StorageProblem Problem) WritePrimary(string fileName)
     {
         string? zipPath = null;
 
@@ -138,14 +142,17 @@ public sealed class BackupService
                 DeleteQuietly(tempPath);
             }
 
-            return (zipPath, null);
+            return (zipPath, null, StorageProblem.Unknown);
         }
         catch (Exception ex)
         {
             // Ein halb geschriebenes ZIP waere schlimmer als gar keins: es
             // saehe in der Liste wie eine gueltige Sicherung aus.
             DeleteQuietly(zipPath);
-            return (null, ex.Message);
+
+            AppLog.Current.Exception("Beim Schreiben der Sicherung (Ziel 1)", ex);
+
+            return (null, ex.Message, StorageProblems.Classify(ex));
         }
     }
 
@@ -180,18 +187,22 @@ public sealed class BackupService
 
     // ---------------- Ziel 2 ----------------
 
-    private (BackupOutcome Outcome, string? Error) CopyToExternal(string? primaryPath, string fileName)
+    private (BackupOutcome Outcome, string? Error, StorageProblem Problem) CopyToExternal(
+        string? primaryPath, string fileName)
     {
         var settings = _settingsStore.Load();
 
         if (string.IsNullOrWhiteSpace(settings.ExternalFolderPath))
         {
-            return (BackupOutcome.NotConfigured, null);
+            return (BackupOutcome.NotConfigured, null, StorageProblem.Unknown);
         }
 
         if (primaryPath is null)
         {
-            return (BackupOutcome.Failed, "Es wurde keine Sicherung erzeugt, die kopiert werden koennte.");
+            return (
+                BackupOutcome.Failed,
+                "Es wurde keine Sicherung erzeugt, die kopiert werden koennte.",
+                StorageProblem.Unknown);
         }
 
         try
@@ -203,7 +214,7 @@ public sealed class BackupService
 
             _settingsStore.Save(settings with { LastExternalBackupUtc = DateTime.UtcNow });
 
-            return (BackupOutcome.Succeeded, null);
+            return (BackupOutcome.Succeeded, null, StorageProblem.Unknown);
         }
         catch (Exception ex)
         {
@@ -211,8 +222,10 @@ public sealed class BackupService
             // nicht verbunden, Ordner umbenannt. Kein Abbruch und kein
             // Dialog: Ziel 1 lief ja. Sichtbar wird es ueber den
             // Zeitstempel der letzten erfolgreichen externen Sicherung,
-            // der jetzt eben stehen bleibt.
-            return (BackupOutcome.Failed, ex.Message);
+            // der jetzt eben stehen bleibt - und ueber das Protokoll.
+            AppLog.Current.Exception("Beim Kopieren der Sicherung (Ziel 2)", ex);
+
+            return (BackupOutcome.Failed, ex.Message, StorageProblems.Classify(ex));
         }
     }
 

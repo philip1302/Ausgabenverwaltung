@@ -1,4 +1,5 @@
 using Ausgabenverwaltung.Core.Backups;
+using Ausgabenverwaltung.Core.Errors;
 
 namespace Ausgabenverwaltung.Tests;
 
@@ -11,7 +12,7 @@ public class BackupTargetTests : IDisposable
     [Fact]
     public void Beschreibbarer_Ordner_meldet_keinen_Fehler_und_laesst_nichts_zurueck()
     {
-        Assert.Null(BackupTarget.TestWritable(_tempDir.FullName));
+        Assert.True(BackupTarget.Check(_tempDir.FullName).IsWritable);
         Assert.Empty(Directory.GetFiles(_tempDir.FullName));
     }
 
@@ -20,7 +21,7 @@ public class BackupTargetTests : IDisposable
     {
         var neu = Path.Combine(_tempDir.FullName, "Sicherungen");
 
-        Assert.Null(BackupTarget.TestWritable(neu));
+        Assert.True(BackupTarget.Check(neu).IsWritable);
         Assert.True(Directory.Exists(neu));
     }
 
@@ -31,12 +32,32 @@ public class BackupTargetTests : IDisposable
         var blockierer = Path.Combine(_tempDir.FullName, "keinOrdner.txt");
         File.WriteAllText(blockierer, "Ich bin eine Datei.");
 
-        Assert.NotNull(BackupTarget.TestWritable(Path.Combine(blockierer, "Sicherungen")));
+        var ergebnis = BackupTarget.Check(Path.Combine(blockierer, "Sicherungen"));
+
+        Assert.False(ergebnis.IsWritable);
+        Assert.NotNull(ergebnis.Error);
     }
 
     [Fact]
     public void Ein_leerer_Pfad_meldet_einen_Fehler()
     {
-        Assert.NotNull(BackupTarget.TestWritable("   "));
+        var ergebnis = BackupTarget.Check("   ");
+
+        Assert.False(ergebnis.IsWritable);
+        Assert.Equal(StorageProblem.PathNotFound, ergebnis.Problem);
+    }
+
+    // Aus der Einordnung entsteht der Text, den der Anwender liest -
+    // deshalb gehoert geprueft, dass ueberhaupt einer entsteht und dass er
+    // nicht bei "Ein Fehler ist aufgetreten" stehen bleibt.
+    [Fact]
+    public void Ein_nicht_beschreibbares_Ziel_bekommt_einen_verstaendlichen_Text()
+    {
+        var ergebnis = BackupTarget.Check("   ");
+
+        var text = FileErrorText.ForBackupTargetChoice(ergebnis.Problem);
+
+        Assert.Contains("nicht als zweites Ziel übernommen", text);
+        Assert.DoesNotContain("Exception", text);
     }
 }

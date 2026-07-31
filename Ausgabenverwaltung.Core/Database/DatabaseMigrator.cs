@@ -1,4 +1,5 @@
 using System.Data;
+using Ausgabenverwaltung.Core.Logging;
 using Dapper;
 
 namespace Ausgabenverwaltung.Core.Database;
@@ -31,29 +32,91 @@ public static class DatabaseMigrator
     /// Fuehrt alle noch fehlenden Schritte aus und liefert den erreichten
     /// Stand. Ist nichts zu tun, wird nichts ausgefuehrt und der
     /// vorhandene Stand zurueckgegeben.
+    ///
+    /// Scheitert ein Schritt, wird seine Transaktion zurueckgerollt und
+    /// die urspruengliche Ausnahme weitergereicht. Bereits abgeschlossene
+    /// Schritte bleiben stehen - sie sind fuer sich genommen vollstaendig
+    /// und in SchemaVersion vermerkt, ein Zuruecknehmen "auf Verdacht"
+    /// wuerde nur einen zweiten Weg schaffen, auf dem etwas schiefgehen
+    /// kann.
     /// </summary>
     public static int MigrateToLatest(IDbConnection connection)
+        => MigrateToLatest(connection, Migrations, DatabaseInitializer.LoadScript);
+
+    /// <summary>
+    /// Dieselbe Ausfuehrung mit einer eigenen Schrittliste und einer
+    /// eigenen Quelle fuer die Skripte.
+    ///
+    /// Es gibt sie fuer die Tests: dass eine abgebrochene Umstellung die
+    /// Datenbank unveraendert zuruecklaesst, ist die eine Zusage, die sich
+    /// nicht durch Nachdenken belegen laesst - sie muss an einem Schritt
+    /// vorgefuehrt werden, der tatsaechlich scheitert. Mit den echten
+    /// Migrationen ginge das nur, indem man eine davon absichtlich kaputt
+    /// macht.
+    /// </summary>
+    public static int MigrateToLatest(
+        IDbConnection connection,
+        IReadOnlyList<(int FromVersion, string ScriptFileName)> migrations,
+        Func<string, string> loadScript)
     {
         var version = DatabaseInitializer.GetSchemaVersion(connection);
 
-        foreach (var (fromVersion, scriptFileName) in Migrations)
+        foreach (var (fromVersion, scriptFileName) in migrations)
         {
             if (fromVersion != version)
             {
                 continue;
             }
 
-            var script = DatabaseInitializer.LoadScript(scriptFileName);
+            var script = loadScript(scriptFileName);
+            var nextVersion = fromVersion + 1;
+
+            AppLog.Current.Info(LogEvents.MigrationStarted(fromVersion, nextVersion));
 
             using (var transaction = connection.BeginTransaction())
             {
-                connection.Execute(script, transaction: transaction);
-                transaction.Commit();
+                try
+                {
+                    connection.Execute(script, transaction: transaction);
+                    transaction.Commit();
+                }
+                catch (Exception ex)
+                {
+                    // Ausdruecklich zuruecknehmen statt sich auf Dispose zu
+                    // verlassen: der Rueckweg ist hier die ganze Zusage, die
+                    // dem Anwender gemacht wird ("die Daten sind
+                    // unveraendert"), und der soll im Code stehen und nicht
+                    // in einer Nebenwirkung.
+                    RollbackQuietly(transaction);
+
+                    AppLog.Current.Info(LogEvents.MigrationRolledBack(fromVersion, nextVersion));
+                    AppLog.Current.Exception(
+                        $"Schema-Migration {fromVersion} -> {nextVersion}", ex);
+
+                    throw;
+                }
             }
 
             version = DatabaseInitializer.GetSchemaVersion(connection);
+
+            AppLog.Current.Info(LogEvents.MigrationFinished(fromVersion, version));
         }
 
         return version;
+    }
+
+    // Ein gescheitertes Rollback darf die urspruengliche Ausnahme nicht
+    // verdecken - die beschreibt das eigentliche Problem. SQLite hat die
+    // Transaktion bei manchen Fehlern bereits selbst zurueckgenommen; das
+    // Rollback wirft dann, obwohl alles in Ordnung ist.
+    private static void RollbackQuietly(IDbTransaction transaction)
+    {
+        try
+        {
+            transaction.Rollback();
+        }
+        catch (Exception)
+        {
+        }
     }
 }

@@ -2,24 +2,69 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="220"
+        mc:Ignorable="d" d:DesignWidth="560" d:DesignHeight="420"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         x:Class="Ausgabenverwaltung.Views.StartupErrorWindow"
-        Width="{anzeige:Breite 480}"
+        Width="{anzeige:Breite 620}"
+        MaxHeight="{anzeige:Breite 680}"
         SizeToContent="Height"
-        MinHeight="{anzeige:Breite 220}"
-        CanResize="False"
+        CanResize="True"
         WindowStartupLocation="CenterScreen"
-        Title="Ausgabenverwaltung - Start nicht moeglich">
+        Title="Ausgabenverwaltung - Start nicht möglich">
 
     <DockPanel Margin="20">
-        <Button DockPanel.Dock="Bottom"
-                Content="Beenden"
-                HorizontalAlignment="Right"
-                Margin="0,16,0,0"
-                Click="OnBeendenClick" />
-        <TextBlock x:Name="MessageText"
-                   TextWrapping="Wrap"
-                   VerticalAlignment="Top" />
+
+        <Grid DockPanel.Dock="Bottom"
+              anzeige:Raster.Spalten="Auto,*,Auto,Auto"
+              Margin="0,16,0,0">
+            <Button Grid.Column="0"
+                    x:Name="OrdnerButton"
+                    Content="Ordner öffnen"
+                    Click="OnOrdnerOeffnenClick" />
+
+            <Button Grid.Column="2"
+                    x:Name="ErneutButton"
+                    Content="Erneut versuchen"
+                    Margin="0,0,8,0"
+                    Click="OnErneutVersuchenClick" />
+
+            <Button Grid.Column="3"
+                    x:Name="BeendenButton"
+                    Content="Beenden"
+                    IsDefault="True"
+                    Click="OnBeendenClick" />
+        </Grid>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="TitelText"
+                           Classes="ueberschrift"
+                           TextWrapping="Wrap" />
+
+                <TextBlock x:Name="MessageText"
+                           TextWrapping="Wrap" />
+
+                <Expander x:Name="TechnikBereich"
+                          Header="Technische Einzelheiten">
+                    <StackPanel Spacing="8">
+                        <TextBox x:Name="TechnikText"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="NoWrap"
+                                 FontFamily="Consolas,Courier New,monospace"
+                                 MaxHeight="{anzeige:Breite 220}" />
+
+                        <Button Content="In die Zwischenablage kopieren"
+                                HorizontalAlignment="Left"
+                                Click="OnKopierenClick" />
+
+                        <TextBlock x:Name="KopiertHinweis"
+                                   Classes="klein"
+                                   IsVisible="False"
+                                   Text="Der Text liegt in der Zwischenablage." />
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
     </DockPanel>
 </Window>

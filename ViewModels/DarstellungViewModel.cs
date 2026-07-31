@@ -3,6 +3,7 @@ using System.Linq;
 using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Settings;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -15,7 +16,7 @@ namespace Ausgabenverwaltung.ViewModels;
 /// sofort wirkt, und in dieselbe Einstellungsdatei schreiben, in der
 /// auch das Sicherungsziel steht.
 /// </summary>
-public sealed class DarstellungViewModel : ViewModelBase
+public sealed partial class DarstellungViewModel : ViewModelBase
 {
     private readonly AppSettingsStore _settingsStore;
 
@@ -68,6 +69,27 @@ public sealed class DarstellungViewModel : ViewModelBase
 
         // Laden und mit "with" weiterschreiben, damit das Sicherungsziel
         // in derselben Datei unangetastet bleibt.
-        _settingsStore.Save(_settingsStore.Load() with { FontScale = option.Faktor });
+        //
+        // Ein Fehler beim Schreiben bekommt hier ausdruecklich KEINEN
+        // Dialog: die Schriftgroesse ist bereits umgestellt und wirkt, es
+        // ginge nur darum, dass sie einen Neustart nicht uebersteht. Ein
+        // Fehlerfenster dafuer waere unverhaeltnismaessig. Der Hinweis
+        // steht neben der Auswahl, das Uebrige im Protokoll.
+        SpeicherHinweis = Schreibvorgang.Versuche(
+            "Beim Speichern der Schriftgroesse",
+            () => _settingsStore.Save(_settingsStore.Load() with { FontScale = option.Faktor })) is null
+            ? null
+            : "Die Schriftgröße wirkt sofort, ließ sich aber nicht dauerhaft merken — "
+              + "nach einem Neustart gilt wieder die vorherige Stufe.";
     }
+
+    /// <summary>
+    /// Hinweis, wenn die Einstellung nicht dauerhaft gemerkt werden
+    /// konnte. NULL im Normalfall.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SpeicherHinweisSichtbar))]
+    private string? _speicherHinweis;
+
+    public bool SpeicherHinweisSichtbar => SpeicherHinweis is not null;
 }

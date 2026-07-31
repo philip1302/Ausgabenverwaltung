@@ -4,8 +4,10 @@ using System.Linq;
 using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Entities;
+using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -133,21 +135,86 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Die Rueckfrage bei einem ungewoehnlichen, aber moeglichen Datum -
+    /// dieselbe Regel wie in der Erfassungsmaske (siehe
+    /// <see cref="DatePlausibility"/>).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DatumRueckfrageSichtbar))]
+    private string? _datumRueckfrageText;
+
+    public bool DatumRueckfrageSichtbar => DatumRueckfrageText is not null;
+
+    private bool _datumBestaetigt;
+
+    /// <summary>
+    /// Ein Fehler beim Schreiben. Steht im Dialog, und der Dialog bleibt
+    /// dabei offen und vollstaendig gefuellt.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SpeicherFehlerSichtbar))]
+    private string? _speicherFehlerText;
+
+    public bool SpeicherFehlerSichtbar => SpeicherFehlerText is not null;
+
+    // Eine Aenderung am Datum nimmt eine erteilte Bestaetigung zurueck.
+    partial void OnDatumTextChanged(string value)
+    {
+        _datumBestaetigt = false;
+        DatumRueckfrageText = null;
+    }
+
+    /// <summary>Der Anwender bestaetigt das ungewoehnliche Datum.</summary>
+    [RelayCommand]
+    private void DatumBestaetigen()
+    {
+        _datumBestaetigt = true;
+        DatumRueckfrageText = null;
+    }
+
+    [RelayCommand]
+    private void DatumRueckfrageAbbrechen() => DatumRueckfrageText = null;
+
+    /// <summary>
     /// Prueft alle Felder und liefert die uebernehmbaren Werte. Setzt bei
     /// Fehlern die Meldungen an allen betroffenen Feldern gleichzeitig -
     /// nicht nur am ersten -, damit nicht mehrfach gespeichert werden muss.
+    ///
+    /// Liefert auch dann false, wenn noch eine Rueckfrage offen ist: das
+    /// Datum ist dann in Ordnung, aber ungewoehnlich, und der Anwender
+    /// soll es einmal bestaetigen.
     /// </summary>
     public bool TryLeseWerte(out long amountCents, out DateOnly expenseDate)
     {
-        var betragGueltig = Money.TryParseEuroText(BetragText, out amountCents);
-        BetragFehler = betragGueltig ? null : "Ungueltiger Betrag (Beispiel: 12,50).";
+        // Dieselbe Pruefung wie in der Erfassungsmaske, aus Core (Regel 7).
+        var pruefung = ExpenseValidator.Validate(new ExpenseInput
+        {
+            AmountText = BetragText,
+            CategoryId = AusgewaehlteKategorie?.Id,
+            PayerId = AusgewaehlterZahler.Id,
+            DateText = DatumText,
+            Today = DateOnly.FromDateTime(DateTime.Now),
+        });
 
-        KategorieFehler = AusgewaehlteKategorie is null ? "Bitte eine Kategorie waehlen." : null;
+        amountCents = pruefung.AmountCents;
+        expenseDate = pruefung.Date;
 
-        var datumGueltig = GermanDateInput.TryParse(DatumText, out expenseDate);
-        DatumFehler = datumGueltig ? null : "Ungueltiges Datum (TT.MM.JJJJ).";
+        BetragFehler = pruefung.AmountError;
+        KategorieFehler = pruefung.CategoryError;
+        DatumFehler = pruefung.DateError;
 
-        return betragGueltig && datumGueltig && AusgewaehlteKategorie is not null;
+        if (!pruefung.IsValid)
+        {
+            return false;
+        }
+
+        if (pruefung.NeedsConfirmation && !_datumBestaetigt)
+        {
+            DatumRueckfrageText = pruefung.DateConfirmation;
+            return false;
+        }
+
+        return true;
     }
 
     public string? BemerkungOderNull =>

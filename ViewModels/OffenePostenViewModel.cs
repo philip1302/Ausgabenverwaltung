@@ -57,6 +57,20 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     [ObservableProperty]
     private string _rueckgaengigText = string.Empty;
 
+    /// <summary>
+    /// Ein Schreibfehler beim Abhaken oder Zuruecknehmen. Als Band ueber
+    /// der Liste; die Liste bleibt unveraendert stehen, weil auch in der
+    /// Datenbank nichts geaendert wurde.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SchreibFehlerSichtbar))]
+    private string? _schreibFehlerText;
+
+    public bool SchreibFehlerSichtbar => SchreibFehlerText is not null;
+
+    [RelayCommand]
+    private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DatumHeaderText))]
     [NotifyPropertyChangedFor(nameof(KategorieHeaderText))]
@@ -133,7 +147,15 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
             return;
         }
 
-        _openItemsRepository.SetSettledDate(zeile.Id, DateOnly.FromDateTime(DateTime.Now));
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Abhaken eines offenen Postens",
+            () => _openItemsRepository.SetSettledDate(zeile.Id, DateOnly.FromDateTime(DateTime.Now)));
+
+        if (SchreibFehlerText is not null)
+        {
+            return;
+        }
+
         LadeDaten();
         await ZeigeRueckgaengigHinweisAsync(new[] { zeile.Id }, "Als beglichen markiert.");
     }
@@ -148,9 +170,25 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
         }
 
         var heute = DateOnly.FromDateTime(DateTime.Now);
-        foreach (var zeile in ausgewaehlte)
+
+        // Bricht es mittendrin ab, sind die vorher abgehakten Posten
+        // bereits geschrieben. Genau deshalb wird die Liste danach in
+        // jedem Fall neu geladen - sie zeigt dann den tatsaechlichen
+        // Stand und nicht den erhofften.
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Abhaken mehrerer offener Posten",
+            () =>
+            {
+                foreach (var zeile in ausgewaehlte)
+                {
+                    _openItemsRepository.SetSettledDate(zeile.Id, heute);
+                }
+            });
+
+        if (SchreibFehlerText is not null)
         {
-            _openItemsRepository.SetSettledDate(zeile.Id, heute);
+            LadeDaten();
+            return;
         }
 
         LadeDaten();
@@ -182,12 +220,32 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
         if (!GermanDateInput.TryParse(zeile.AbweichendesDatumText, out var datum))
         {
-            zeile.AbweichendesDatumFehler = "Ungueltiges Datum (TT.MM.JJJJ).";
+            zeile.AbweichendesDatumFehler = "Das ist kein gültiges Datum. Beispiel: 05.03.2026";
+            return;
+        }
+
+        // Auch hier die harte Jahresgrenze: ein Begleichungsdatum im Jahr
+        // 200 ist derselbe Tippfehler wie bei einer Ausgabe (siehe
+        // DatePlausibility). Eine Rueckfrage gibt es hier bewusst nicht -
+        // das Feld steht direkt in der Zeile und ist in einem Zug wieder
+        // geaendert.
+        if (DatePlausibility.Error(datum) is string jahresFehler)
+        {
+            zeile.AbweichendesDatumFehler = jahresFehler;
             return;
         }
 
         zeile.WaehltAbweichendesDatum = false;
-        _openItemsRepository.SetSettledDate(zeile.Id, datum);
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Abhaken mit abweichendem Datum",
+            () => _openItemsRepository.SetSettledDate(zeile.Id, datum));
+
+        if (SchreibFehlerText is not null)
+        {
+            return;
+        }
+
         LadeDaten();
         await ZeigeRueckgaengigHinweisAsync(new[] { zeile.Id }, "Als beglichen markiert.");
     }
@@ -214,9 +272,22 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
         _rueckgaengigCts?.Cancel();
 
-        foreach (var id in _rueckgaengigIds)
+        var ids = _rueckgaengigIds;
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Zuruecknehmen einer Begleichung",
+            () =>
+            {
+                foreach (var id in ids)
+                {
+                    _openItemsRepository.SetSettledDate(id, null);
+                }
+            });
+
+        if (SchreibFehlerText is not null)
         {
-            _openItemsRepository.SetSettledDate(id, null);
+            LadeDaten();
+            return;
         }
 
         _rueckgaengigIds = Array.Empty<int>();
@@ -240,7 +311,15 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
             return;
         }
 
-        _openItemsRepository.SetSettledDate(zeile.Id, null);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Zuruecknehmen einer Begleichung",
+            () => _openItemsRepository.SetSettledDate(zeile.Id, null));
+
+        if (SchreibFehlerText is not null)
+        {
+            return;
+        }
+
         LadeDaten();
     }
 

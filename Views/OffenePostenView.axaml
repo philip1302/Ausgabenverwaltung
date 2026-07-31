@@ -43,6 +43,22 @@
     </UserControl.Styles>
 
     <DockPanel>
+        <!-- ============ Band: Schreibfehler ============
+             Die Liste darunter zeigt danach den tatsächlichen Stand aus
+             der Datenbank, nicht den erhofften. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding SchreibFehlerSichtbar}"
+                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                CornerRadius="2" Padding="10" Margin="0,0,0,8">
+            <Grid anzeige:Raster.Spalten="*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
+                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Schließen"
+                        VerticalAlignment="Top"
+                        Command="{Binding SchreibFehlerSchliessenCommand}" />
+            </Grid>
+        </Border>
+
         <!-- Rueckgaengig-Hinweis nach dem Abhaken -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding RueckgaengigSichtbar}"

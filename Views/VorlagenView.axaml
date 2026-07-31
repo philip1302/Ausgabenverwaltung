@@ -56,6 +56,22 @@
                         ToolTip.Tip="Erzeugt alle bis heute fälligen Buchungen aller aktiven Vorlagen — dasselbe, was auch beim Programmstart läuft." />
             </StackPanel>
 
+            <!-- ============ Band: Schreibfehler ============
+                 Die Liste darunter bleibt unverändert stehen: was nicht
+                 geschrieben wurde, wird auch nicht angezeigt. -->
+            <Border DockPanel.Dock="Top"
+                    IsVisible="{Binding SchreibFehlerSichtbar}"
+                    Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                    CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                <Grid anzeige:Raster.Spalten="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
+                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="Schließen"
+                            VerticalAlignment="Top"
+                            Command="{Binding SchreibFehlerSchliessenCommand}" />
+                </Grid>
+            </Border>
+
             <!-- ============ Band: Ergebnis der Erzeugung ============ -->
             <Border DockPanel.Dock="Top"
                     IsVisible="{Binding ErgebnisSichtbar}"
@@ -284,6 +300,14 @@
                                             Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).RueckwirkendAbbrechenCommand}" />
                                 </StackPanel>
                             </StackPanel>
+                        </Border>
+
+                        <!-- Schreibfehler: das Formular bleibt offen und
+                             vollständig gefüllt. -->
+                        <Border IsVisible="{Binding SpeicherFehlerSichtbar}"
+                                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                                CornerRadius="2" Padding="8">
+                            <TextBlock Text="{Binding SpeicherFehlerText}" TextWrapping="Wrap" />
                         </Border>
 
                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">

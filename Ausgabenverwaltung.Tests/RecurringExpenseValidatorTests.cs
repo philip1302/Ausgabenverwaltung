@@ -112,15 +112,32 @@ public class RecurringExpenseValidatorTests
     }
 
     [Fact]
-    public void Ankertag_wird_bei_Wochenrhythmus_ignoriert_statt_bemaengelt()
+    public void Ankertag_ohne_passende_Intervalleinheit_wird_bemaengelt()
     {
-        // Das Formular blendet das Feld bei Tag und Woche aus; ein dort
-        // stehen gebliebener Unsinnswert darf das Speichern nicht
-        // blockieren.
+        // Frueher wurde ein bei Tag/Woche stehen gebliebener Wert
+        // stillschweigend verworfen. Wer "alle 2 Wochen" und daneben "am
+        // 15." einstellt, meint aber etwas Bestimmtes und bekaeme sonst
+        // ohne ein Wort etwas anderes.
         var ergebnis = RecurringExpenseValidator.Validate(Eingabe() with
         {
             IntervalUnit = "week",
-            AnchorDayText = "99",
+            AnchorDayText = "15",
+        });
+
+        Assert.False(ergebnis.IsValid);
+        Assert.NotNull(ergebnis.AnchorDayError);
+        Assert.Null(ergebnis.AnchorDay);
+    }
+
+    [Fact]
+    public void Leerer_Ankertag_ist_bei_Wochenrhythmus_in_Ordnung()
+    {
+        // Der Normalfall aus dem Formular: das Feld ist bei Tag und Woche
+        // ausgeblendet und wird beim Wechsel der Einheit geraeumt.
+        var ergebnis = RecurringExpenseValidator.Validate(Eingabe() with
+        {
+            IntervalUnit = "week",
+            AnchorDayText = "",
         });
 
         Assert.True(ergebnis.IsValid);

@@ -79,6 +79,31 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
     (`CategoryColors`). Farbe ist immer ein Zusatz zum Text, nie
     sein Ersatz.
 
+11. **Das Protokoll ist teilbar.** `AppLog` schreibt eine Datei je
+    Tag nach `%APPDATA%\Ausgabenverwaltung\Logs\`, 30 Tage werden
+    behalten. Hinein kommen IDs, Anzahlen, Versionen, Dateinamen und
+    Pfade — **keine Betraege, Bemerkungen oder Personennamen**. Jedes
+    protokollierte Ereignis bekommt seinen Text in `LogEvents`, damit
+    an einer Stelle nachlesbar bleibt, was das Protokoll preisgibt.
+    Die Protokollierung wirft nie; schlaegt das Schreiben fehl, wird
+    es stillschweigend uebersprungen.
+
+12. **Keine rohe Ausnahme erreicht den Anwender.** Jeder Text kommt
+    aus Core (`Errors/FileErrorText`, `Errors/DatabaseErrorText`,
+    `Startup/StartupFailureText`, `Errors/UnexpectedErrorText`) und
+    sagt drei Dinge: was passiert ist, was das fuer die Daten
+    bedeutet, was der Anwender tun kann. Ausnahmenamen, Fehlernummern
+    und Aufrufstapel gehoeren ausschliesslich in den aufklappbaren
+    Bereich und ins Protokoll. Eine Meldung, die nur "Ein Fehler ist
+    aufgetreten" sagt, gibt es nicht — `MeldungsGrundsaetzeTests`
+    prueft das gegen alle Texte.
+
+13. **Ein Schreibfehler raeumt nie ein Formular.** Schreibende
+    Zugriffe laufen ueber `ViewModels/Schreibvorgang`; erst wenn er
+    `null` liefert, darf der Aufrufer Felder leeren, Dialoge
+    schliessen oder Listen neu laden. Feldfehler erscheinen am Feld,
+    nicht als Dialog.
+
 ## Stil
 - Kommentare auf Deutsch, Bezeichner auf Englisch
 - Ausfuehrliche Kommentare bei allem, was nicht offensichtlich ist

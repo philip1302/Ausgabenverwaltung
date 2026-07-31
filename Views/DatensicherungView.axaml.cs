@@ -1,6 +1,7 @@
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
+using Ausgabenverwaltung.Anzeige;
+using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.ViewModels;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
@@ -32,7 +33,12 @@ public partial class DatensicherungView : UserControl
         }
         catch (Exception ex)
         {
-            viewModel.MeldeFehler($"Der Ordner konnte nicht ausgewählt werden: {ex.Message}");
+            AppLog.Current.Exception("Beim Auswaehlen des zweiten Sicherungsziels", ex);
+
+            viewModel.MeldeFehler(
+                "Der Ordnerdialog ließ sich nicht öffnen oder wurde unerwartet "
+                + "beendet.\n\nEs wurde nichts verändert — das bisherige zweite Ziel "
+                + "gilt unverändert weiter. Bitte versuchen Sie es noch einmal.");
         }
     }
 
@@ -76,19 +82,29 @@ public partial class DatensicherungView : UserControl
             return;
         }
 
-        try
+        if (!Ordner.Oeffne(viewModel.SicherungsordnerPfad))
         {
-            // UseShellExecute laesst das Betriebssystem den Ordner in
-            // seinem Dateimanager oeffnen - unter Windows der Explorer.
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = viewModel.SicherungsordnerPfad,
-                UseShellExecute = true,
-            });
+            viewModel.MeldeFehler(
+                "Der Sicherungsordner ließ sich nicht im Explorer öffnen.\n\n"
+                + "Die Sicherungen selbst sind davon nicht betroffen — sie liegen "
+                + "unverändert an ihrem Ort. Bitte rufen Sie diesen Pfad von Hand "
+                + $"auf:\n{viewModel.SicherungsordnerPfad}");
         }
-        catch (Exception ex)
+    }
+
+    private void ProtokollordnerOeffnen_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DatensicherungViewModel viewModel)
         {
-            viewModel.MeldeFehler($"Der Sicherungsordner konnte nicht geöffnet werden: {ex.Message}");
+            return;
+        }
+
+        if (!Ordner.Oeffne(viewModel.ProtokollordnerPfad))
+        {
+            viewModel.MeldeFehler(
+                "Der Protokollordner ließ sich nicht im Explorer öffnen.\n\n"
+                + "Bitte rufen Sie diesen Pfad von Hand auf:\n"
+                + (viewModel.ProtokollordnerPfad ?? "(kein Protokollordner)"));
         }
     }
 
@@ -112,7 +128,13 @@ public partial class DatensicherungView : UserControl
         }
         catch (Exception ex)
         {
-            viewModel.MeldeFehler($"Der Pfad konnte nicht kopiert werden: {ex.Message}");
+            AppLog.Current.Exception("Beim Kopieren des Datenbankpfads", ex);
+
+            viewModel.MeldeFehler(
+                "Der Pfad ließ sich nicht in die Zwischenablage legen. Möglicherweise "
+                + "hält ein anderes Programm die Zwischenablage gerade besetzt.\n\n"
+                + "Es wurde nichts verändert. Der Pfad steht hier zum Abtippen:\n"
+                + viewModel.DatenbankPfad);
         }
     }
 }

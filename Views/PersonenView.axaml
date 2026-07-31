@@ -23,6 +23,21 @@
     </UserControl.Styles>
 
     <DockPanel>
+        <!-- ============ Band: Schreibfehler ============
+             Die Liste darunter bleibt unverändert stehen. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding SchreibFehlerSichtbar}"
+                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                CornerRadius="2" Padding="10" Margin="0,0,0,8">
+            <Grid anzeige:Raster.Spalten="*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
+                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Schließen"
+                        VerticalAlignment="Top"
+                        Command="{Binding SchreibFehlerSchliessenCommand}" />
+            </Grid>
+        </Border>
+
         <!-- Werkzeugleiste -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <Button Content="Neue Person" Command="{Binding NeuePersonCommand}" />

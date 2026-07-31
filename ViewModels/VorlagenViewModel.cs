@@ -92,6 +92,19 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     [ObservableProperty]
     private bool _ergebnisHatZeilen;
 
+    /// <summary>
+    /// Ein Schreibfehler ausserhalb des Formulars - Loeschen, Aktivieren,
+    /// Nachholen. Als Band ueber der Liste.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SchreibFehlerSichtbar))]
+    private string? _schreibFehlerText;
+
+    public bool SchreibFehlerSichtbar => SchreibFehlerText is not null;
+
+    [RelayCommand]
+    private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
+
     public VorlagenViewModel(
         RecurringExpenseRepository recurringExpenseRepository,
         CategoryRepository categoryRepository,
@@ -161,7 +174,19 @@ public sealed partial class VorlagenViewModel : ViewModelBase
             return;
         }
 
-        var erzeugt = SpeichereUndErzeuge(formular, geprueft);
+        // SpeichereUndErzeuge kann an mehreren Stellen schreiben. Ein
+        // Fehler dabei laesst das Formular offen und unveraendert stehen -
+        // die eingetippte Vorlage soll nicht verloren gehen.
+        IReadOnlyList<Expense> erzeugt = Array.Empty<Expense>();
+
+        formular.SpeicherFehlerText = Schreibvorgang.Versuche(
+            "Beim Speichern einer Vorlage",
+            () => erzeugt = SpeichereUndErzeuge(formular, geprueft));
+
+        if (formular.SpeicherFehlerText is not null)
+        {
+            return;
+        }
 
         Bearbeiten = null;
         LadeListe();
@@ -242,8 +267,20 @@ public sealed partial class VorlagenViewModel : ViewModelBase
             return;
         }
 
-        _recurringExpenseRepository.Activate(zeile.Id);
-        var erzeugt = _recurringExpenseRepository.GenerateDueOccurrences(zeile.Id, Heute);
+        IReadOnlyList<Expense> erzeugt = Array.Empty<Expense>();
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Reaktivieren einer Vorlage mit Nachholen",
+            () =>
+            {
+                _recurringExpenseRepository.Activate(zeile.Id);
+                erzeugt = _recurringExpenseRepository.GenerateDueOccurrences(zeile.Id, Heute);
+            });
+
+        if (SchreibFehlerText is not null)
+        {
+            return;
+        }
 
         _zuReaktivierendeZeile = null;
         ReaktivierungAnfrageText = null;
@@ -261,8 +298,18 @@ public sealed partial class VorlagenViewModel : ViewModelBase
 
         // Aktivieren und den Rueckstand ueberspringen: GeneratedThrough
         // wandert auf heute, ohne dass etwas erzeugt wird.
-        _recurringExpenseRepository.Activate(zeile.Id);
-        _recurringExpenseRepository.SetGeneratedThrough(zeile.Id, Heute);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Reaktivieren einer Vorlage ab heute",
+            () =>
+            {
+                _recurringExpenseRepository.Activate(zeile.Id);
+                _recurringExpenseRepository.SetGeneratedThrough(zeile.Id, Heute);
+            });
+
+        if (SchreibFehlerText is not null)
+        {
+            return;
+        }
 
         _zuReaktivierendeZeile = null;
         ReaktivierungAnfrageText = null;
@@ -310,7 +357,16 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     {
         if (_zuLoeschendeId is int id)
         {
-            _recurringExpenseRepository.Delete(id);
+            SchreibFehlerText = Schreibvorgang.Versuche(
+                "Beim Loeschen einer Vorlage",
+                () => _recurringExpenseRepository.Delete(id));
+
+            if (SchreibFehlerText is not null)
+            {
+                // Die Nachfrage bleibt stehen - der Versuch laesst sich
+                // gleich wiederholen.
+                return;
+            }
         }
 
         _zuLoeschendeId = null;
@@ -337,7 +393,17 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     {
         SchliesseBaender();
 
-        var erzeugt = _scheduler.RunNow(Heute);
+        IReadOnlyList<Expense> erzeugt = Array.Empty<Expense>();
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Erzeugen faelliger Buchungen von Hand",
+            () => erzeugt = _scheduler.RunNow(Heute));
+
+        if (SchreibFehlerText is not null)
+        {
+            return;
+        }
+
         LadeListe();
         ZeigeErgebnis(erzeugt, leerText: "Es war nichts fällig - alle Vorlagen sind auf dem aktuellen Stand.");
     }
@@ -457,6 +523,11 @@ public sealed partial class VorlagenViewModel : ViewModelBase
         ReaktivierungAnfrageText = null;
         _zuLoeschendeId = null;
         LoeschAnfrageText = null;
+
+        // Auch der Fehler von vorhin: er gehoerte zu dem Vorgang, der
+        // gerade weggeraeumt wird, und wuerde sonst ueber dem naechsten
+        // stehen bleiben.
+        SchreibFehlerText = null;
     }
 
     private void LadeListe()

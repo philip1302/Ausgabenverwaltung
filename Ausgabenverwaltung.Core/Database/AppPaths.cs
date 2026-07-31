@@ -9,6 +9,7 @@ public static class AppPaths
 {
     private const string AppFolderName = "Ausgabenverwaltung";
     private const string BackupFolderName = "Backups";
+    private const string LogFolderName = "Logs";
     private const string SettingsFileName = "settings.json";
 
     /// <summary>
@@ -41,6 +42,26 @@ public static class AppPaths
         var backupFolder = Path.Combine(EnsureAppFolder(appDataRoot), BackupFolderName);
         Directory.CreateDirectory(backupFolder);
         return backupFolder;
+    }
+
+    /// <summary>
+    /// Protokollordner: %APPDATA%\Ausgabenverwaltung\Logs. Bewusst NEBEN
+    /// dem Sicherungsordner und nicht darin: Sicherungen sind Daten, die
+    /// man aufhebt, Protokolle sind Notizen, die man weitergibt. Wer den
+    /// Sicherungsordner auf einen USB-Stick kopiert, soll nicht
+    /// unbeabsichtigt sein Protokoll mitkopieren - und umgekehrt soll ein
+    /// weitergegebenes Protokoll keine Sicherung enthalten.
+    ///
+    /// Wird bei Bedarf angelegt, wie der Sicherungsordner auch.
+    /// </summary>
+    public static string GetLogFolderPath()
+        => GetLogFolderPath(DefaultAppDataRoot);
+
+    public static string GetLogFolderPath(string appDataRoot)
+    {
+        var logFolder = Path.Combine(EnsureAppFolder(appDataRoot), LogFolderName);
+        Directory.CreateDirectory(logFolder);
+        return logFolder;
     }
 
     /// <summary>

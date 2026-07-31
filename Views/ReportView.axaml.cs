@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Ausgabenverwaltung.Core.Errors;
+using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.ViewModels;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -26,7 +28,8 @@ public partial class ReportView : UserControl
     }
 
     // Dateiauswahl und Schreiben sind Aufgabe der Oberflaeche; der
-    // CSV-Text selbst entsteht in Core (Reports.ReportCsv).
+    // CSV-Text selbst entsteht in Core (Reports.ReportCsv), und der Text
+    // einer Fehlermeldung ebenfalls (Errors.FileErrorText) - Regel 7.
     private async void CsvExportieren_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not ReportViewModel viewModel)
@@ -34,24 +37,38 @@ public partial class ReportView : UserControl
             return;
         }
 
+        // Der Dateiname wird vor dem Versuch gemerkt: nach einem Fehler
+        // soll die Meldung sagen, WELCHE Datei nicht ging, und dann steht
+        // das Ziel unter Umstaenden nicht mehr zur Verfuegung.
+        var dateiname = viewModel.CsvDateiname;
+
         try
         {
-            await ExportiereCsv(viewModel);
+            dateiname = await ExportiereCsv(viewModel) ?? dateiname;
         }
         catch (Exception ex)
         {
             // Ein fehlgeschlagener Export darf die Anwendung nicht
             // beenden - der Hinweis steht neben der Schaltflaeche.
-            viewModel.MeldeExport($"Export fehlgeschlagen: {ex.Message}");
+            //
+            // Der mit Abstand haeufigste Fall ist die noch in Excel
+            // geoeffnete Zieldatei. Er bekommt deshalb einen eigenen
+            // Hinweis statt einer Meldung ueber "Sharing violation".
+            AppLog.Current.Exception("Beim CSV-Export", ex);
+
+            viewModel.MeldeExport(
+                FileErrorText.ForCsvExport(StorageProblems.Classify(ex), dateiname));
         }
     }
 
-    private async Task ExportiereCsv(ReportViewModel viewModel)
+    // Liefert den tatsaechlich gewaehlten Dateinamen, damit eine
+    // Fehlermeldung ihn nennen kann - oder NULL, wenn abgebrochen wurde.
+    private async Task<string?> ExportiereCsv(ReportViewModel viewModel)
     {
         var fenster = TopLevel.GetTopLevel(this);
         if (fenster is null)
         {
-            return;
+            return null;
         }
 
         var ziel = await fenster.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -70,7 +87,7 @@ public partial class ReportView : UserControl
 
         if (ziel is null)
         {
-            return;
+            return null;
         }
 
         var text = viewModel.BaueCsv();
@@ -89,5 +106,7 @@ public partial class ReportView : UserControl
         await schreiber.FlushAsync();
 
         viewModel.MeldeExport($"Gespeichert: {ziel.Name}");
+
+        return ziel.Name;
     }
 }

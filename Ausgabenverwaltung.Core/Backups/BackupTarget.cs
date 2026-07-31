@@ -1,3 +1,6 @@
+using Ausgabenverwaltung.Core.Errors;
+using Ausgabenverwaltung.Core.Logging;
+
 namespace Ausgabenverwaltung.Core.Backups;
 
 /// <summary>
@@ -7,8 +10,7 @@ public static class BackupTarget
 {
     /// <summary>
     /// Schreibt einmal testweise eine winzige Datei in den Ordner und
-    /// loescht sie wieder. Liefert NULL, wenn das geklappt hat, sonst den
-    /// Fehlertext.
+    /// loescht sie wieder.
     ///
     /// Wird beim Auswaehlen des zweiten Ziels aufgerufen: fehlende
     /// Berechtigungen sollen sofort auffallen, im Moment der Entscheidung -
@@ -16,11 +18,16 @@ public static class BackupTarget
     /// Ordner existiert, sagt fuer sich genommen nichts darueber aus, ob
     /// hineingeschrieben werden darf.
     /// </summary>
-    public static string? TestWritable(string folderPath)
+    public static BackupTargetCheck Check(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath))
         {
-            return "Es wurde kein Ordner angegeben.";
+            return new BackupTargetCheck
+            {
+                IsWritable = false,
+                Problem = StorageProblem.PathNotFound,
+                Error = "Es wurde kein Ordner angegeben.",
+            };
         }
 
         var probePath = Path.Combine(folderPath, $"schreibprobe_{Guid.NewGuid():N}.tmp");
@@ -30,7 +37,8 @@ public static class BackupTarget
             Directory.CreateDirectory(folderPath);
             File.WriteAllText(probePath, "Schreibprobe der Ausgabenverwaltung.");
             File.Delete(probePath);
-            return null;
+
+            return BackupTargetCheck.Ok();
         }
         catch (Exception ex)
         {
@@ -45,7 +53,14 @@ public static class BackupTarget
             {
             }
 
-            return ex.Message;
+            AppLog.Current.Exception($"Bei der Schreibprobe in '{folderPath}'", ex);
+
+            return new BackupTargetCheck
+            {
+                IsWritable = false,
+                Problem = StorageProblems.Classify(ex),
+                Error = ex.Message,
+            };
         }
     }
 }

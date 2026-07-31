@@ -33,12 +33,32 @@ public static class DatabaseInitializer
         connection.Execute(LoadScript(CurrentSchemaFileName));
     }
 
-    // MAX() statt einer einfachen SELECT Version, weil jede Migration eine
-    // weitere Zeile in SchemaVersion hinterlaesst.
+    /// <summary>
+    /// Der Stand der Datenbank. Wirft
+    /// <see cref="SchemaVersionUnreadableException"/>, wenn sich kein
+    /// Stand bestimmen laesst - siehe <see cref="ReadSchemaVersion"/>.
+    /// </summary>
     public static int GetSchemaVersion(IDbConnection connection)
+        => ReadSchemaVersion(connection) ?? throw new SchemaVersionUnreadableException();
+
+    /// <summary>
+    /// Der Stand der Datenbank, oder NULL, wenn keiner darin steht.
+    ///
+    /// MAX() statt einer einfachen SELECT Version, weil jede Migration eine
+    /// weitere Zeile in SchemaVersion hinterlaesst. Auf einer leeren
+    /// Tabelle liefert MAX() allerdings NULL, und das kaeme als 0 heraus -
+    /// ein Stand, den es nie gab und auf den keine Migration passt. Diese
+    /// Ueberladung macht den Unterschied sichtbar, statt ihn in eine 0 zu
+    /// verwandeln.
+    /// </summary>
+    public static int? ReadSchemaVersion(IDbConnection connection)
     {
         const string sql = "SELECT MAX(Version) FROM SchemaVersion";
-        return connection.ExecuteScalar<int>(sql);
+        var version = connection.ExecuteScalar<int?>(sql);
+
+        // Ein Stand kleiner als 1 ist genauso wenig zu gebrauchen wie gar
+        // keiner: die erste Schema-Datei traegt Version 1 ein.
+        return version is null or < 1 ? null : version;
     }
 
     /// <summary>

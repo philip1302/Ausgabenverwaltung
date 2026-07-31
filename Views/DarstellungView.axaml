@@ -24,6 +24,15 @@
 
                     <TextBlock Text="{Binding Hinweis}" TextWrapping="Wrap" Foreground="Gray" />
 
+                    <!-- Die Einstellung ließ sich nicht dauerhaft merken.
+                         Ein Hinweis, kein Dialog: die Schriftgröße wirkt
+                         ja bereits. -->
+                    <Border IsVisible="{Binding SpeicherHinweisSichtbar}"
+                            Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                            Padding="8" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding SpeicherHinweis}" TextWrapping="Wrap" />
+                    </Border>
+
                     <!-- Auswahlknoepfe statt einer Auswahlliste: alle vier
                          Stufen stehen gleichzeitig da, und die Beschriftung
                          jeder Stufe ist bereits in der neuen Groesse

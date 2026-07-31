@@ -5,6 +5,7 @@ using System.Linq;
 using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Categories;
+using Ausgabenverwaltung.Core.Errors;
 using Ausgabenverwaltung.Core.Formatting;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -46,6 +47,21 @@ public sealed partial class KategorienViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _archivierteAnzeigen;
+
+    /// <summary>
+    /// Ein Schreibfehler bei einem Vorgang am Baum - archivieren,
+    /// loeschen, umsortieren, einfaerben. Als Band ueber dem Baum. Der
+    /// Baum selbst bleibt dabei unveraendert stehen: was nicht
+    /// geschrieben wurde, wird auch nicht angezeigt.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SchreibFehlerSichtbar))]
+    private string? _schreibFehlerText;
+
+    public bool SchreibFehlerSichtbar => SchreibFehlerText is not null;
+
+    [RelayCommand]
+    private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ArchivierungAnfrageAktiv))]
@@ -149,7 +165,19 @@ public sealed partial class KategorienViewModel : ViewModelBase
         }
         catch (DuplicateCategoryNameException)
         {
-            knoten.BearbeitungsFehler = $"Es gibt hier bereits eine Kategorie namens \"{name}\".";
+            knoten.BearbeitungsFehler =
+                $"Es gibt hier bereits eine Kategorie namens „{name}“. "
+                + "Bitte einen anderen Namen wählen — zwei gleichnamige Kategorien "
+                + "unter demselben Elternteil wären in den Auswertungen nicht "
+                + "auseinanderzuhalten.";
+            return;
+        }
+        catch (Exception ex)
+        {
+            // Schreibfehler: der Name bleibt im Bearbeitungsfeld stehen,
+            // damit er nicht noch einmal getippt werden muss.
+            knoten.BearbeitungsFehler = Schreibvorgang.Beschreibe(
+                "Beim Speichern eines Kategorienamens", ex);
             return;
         }
 
@@ -194,7 +222,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
             return;
         }
 
-        _categoryRepository.Archive(id, includeDescendants: false);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Archivieren einer Kategorie",
+            () => _categoryRepository.Archive(id, includeDescendants: false));
+
         LadeBaum();
     }
 
@@ -206,7 +237,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
             return;
         }
 
-        _categoryRepository.Archive(id, includeDescendants: false);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Archivieren einer Kategorie ohne ihre Unterkategorien",
+            () => _categoryRepository.Archive(id, includeDescendants: false));
+
         ArchivierungAnfrageKnoten = null;
         LadeBaum();
     }
@@ -219,7 +253,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
             return;
         }
 
-        _categoryRepository.Archive(id, includeDescendants: true);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Archivieren einer Kategorie samt Unterkategorien",
+            () => _categoryRepository.Archive(id, includeDescendants: true));
+
         ArchivierungAnfrageKnoten = null;
         LadeBaum();
     }
@@ -316,9 +353,17 @@ public sealed partial class KategorienViewModel : ViewModelBase
             LoeschAnfrageKnoten = null;
             LoeschHindernisKnoten = knoten;
             LoeschHindernisText =
-                $"\"{ex.Name}\" wird inzwischen verwendet: {BeschreibeVerwendung(ex.Usage)}. " +
-                "Löschen ist deshalb nicht möglich.";
+                $"„{ex.Name}“ wird inzwischen verwendet: {BeschreibeVerwendung(ex.Usage)}. " +
+                "Löschen ist deshalb nicht möglich. Es wurde nichts verändert.";
             ZusammenfuehrenMoeglich = ex.Usage.ChildCount == 0;
+            return;
+        }
+        catch (Exception ex)
+        {
+            // Schreibfehler statt Verwendungshindernis: die Nachfrage
+            // bleibt offen, damit sich der Versuch wiederholen laesst.
+            SchreibFehlerText = Schreibvorgang.Beschreibe(
+                "Beim Loeschen einer Kategorie", ex);
             return;
         }
 
@@ -445,9 +490,11 @@ public sealed partial class KategorienViewModel : ViewModelBase
         if (sicherung.NeedsAttention)
         {
             ZusammenfuehrenFehler =
-                "Vor dem Zusammenführen wird automatisch gesichert. Das ist fehlgeschlagen: "
-                + sicherung.PrimaryError
-                + " Es wurde nichts verändert.";
+                "Vor dem Zusammenführen wird automatisch gesichert, weil sich der "
+                + "Vorgang nicht rückgängig machen lässt. Genau diese Sicherung ist "
+                + "fehlgeschlagen.\n\n"
+                + FileErrorText.ForBackup(sicherung.PrimaryProblem) + "\n\n"
+                + "Zusammengeführt wurde deshalb nichts — es ist alles unverändert.";
             return;
         }
 
@@ -460,6 +507,16 @@ public sealed partial class KategorienViewModel : ViewModelBase
             // Zwischen Vorschau und Bestaetigung kann eine Unterkategorie
             // entstanden sein.
             ZusammenfuehrenFehler = ex.Message;
+            return;
+        }
+        catch (Exception ex)
+        {
+            // Merge laeuft vollstaendig in EINER Transaktion (Regel 8) -
+            // ein Fehler dabei hinterlaesst keine halb umgehaengten
+            // Ausgaben. Die Auswahl bleibt stehen, der Versuch laesst sich
+            // wiederholen; die Sicherung von eben liegt bereits.
+            ZusammenfuehrenFehler = Schreibvorgang.Beschreibe(
+                "Beim Zusammenfuehren von Kategorien", ex);
             return;
         }
 
@@ -488,6 +545,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
         ZusammenfuehrenVorschauText = string.Empty;
         ZusammenfuehrenFehler = null;
         ZielWurzeln.Clear();
+
+        // Auch der Schreibfehler von vorhin: er gehoerte zu dem Vorgang,
+        // der gerade weggeraeumt wird.
+        SchreibFehlerText = null;
     }
 
     /// <summary>
@@ -606,7 +667,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
             return;
         }
 
-        _categoryRepository.SetColor(id, option.Hex);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Setzen einer Kategoriefarbe",
+            () => _categoryRepository.SetColor(id, option.Hex));
+
         FarbwahlKnoten = null;
         LadeBaum();
     }
@@ -619,7 +683,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
             return;
         }
 
-        _categoryRepository.Restore(id);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Wiederherstellen einer Kategorie",
+            () => _categoryRepository.Restore(id));
+
         LadeBaum();
     }
 
@@ -631,7 +698,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
             return;
         }
 
-        _categoryRepository.MoveUp(id);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Verschieben einer Kategorie nach oben",
+            () => _categoryRepository.MoveUp(id));
+
         LadeBaum();
     }
 
@@ -643,7 +713,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
             return;
         }
 
-        _categoryRepository.MoveDown(id);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Verschieben einer Kategorie nach unten",
+            () => _categoryRepository.MoveDown(id));
+
         LadeBaum();
     }
 

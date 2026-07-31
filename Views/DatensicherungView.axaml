@@ -63,6 +63,10 @@
                     ToolTip.Tip="Sichert sofort, unabhängig davon, ob heute schon gesichert wurde." />
             <Button Content="Sicherungsordner öffnen"
                     Click="SicherungsordnerOeffnen_Click" />
+            <Button Content="Protokollordner öffnen"
+                    IsVisible="{Binding ProtokollordnerVerfuegbar}"
+                    Click="ProtokollordnerOeffnen_Click"
+                    ToolTip.Tip="Enthält das Protokoll der letzten 30 Tage — Programmstarts, Sicherungen, Fehler. Es enthält keine Beträge, Bemerkungen oder Namen und lässt sich deshalb weitergeben." />
         </StackPanel>
 
         <!-- ============ Band: Meldung ============ -->
@@ -90,6 +94,17 @@
                         <TextBlock Text="{Binding SicherungsordnerPfad}" Classes="pfad" />
                         <TextBlock Text="{Binding Ziel1StatusText}" Foreground="Gray"
                                    TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                        <!-- Eine beim Start gescheiterte Sicherung hält den
+                             Start nicht auf — sichtbar bleiben muss sie
+                             trotzdem, und zwar hier und dauerhaft, nicht
+                             nur als wegklickbares Band im Hauptfenster. -->
+                        <Border IsVisible="{Binding Ziel1FehlerSichtbar}"
+                                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                                Padding="8" Margin="0,8,0,0">
+                            <TextBlock Text="{Binding Ziel1FehlerText}" TextWrapping="Wrap" />
+                        </Border>
+
                         <TextBlock Foreground="Gray" TextWrapping="Wrap" FontStyle="Italic"
                                    Text="Läuft immer und braucht keine Einrichtung. Beim Programmstart wird höchstens einmal pro Tag gesichert." />
                     </StackPanel>
@@ -110,6 +125,15 @@
                                    Classes="zielstatus"
                                    Classes.veraltet="{Binding Ziel2Veraltet}"
                                    TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                        <!-- Ein nicht erreichbares zweites Ziel: eigener
+                             Text, ruhiger im Ton — Ziel 1 hat ja
+                             funktioniert, es fehlt nur die Kopie. -->
+                        <Border IsVisible="{Binding Ziel2FehlerSichtbar}"
+                                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                Padding="8" Margin="0,8,0,0">
+                            <TextBlock Text="{Binding Ziel2FehlerText}" TextWrapping="Wrap" />
+                        </Border>
 
                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                             <Button Content="Ordner wählen..." Click="ZweitesZielWaehlen_Click" />

@@ -79,6 +79,35 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     [ObservableProperty]
     private bool _bestaetigungSichtbar;
 
+    /// <summary>
+    /// Die Rueckfrage bei einem ungewoehnlichen, aber moeglichen Datum
+    /// (siehe <see cref="DatePlausibility"/>). Ein Band am Formular, kein
+    /// Dialog - Meldungen zu Feldern gehoeren an das Feld.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DatumRueckfrageSichtbar))]
+    private string? _datumRueckfrageText;
+
+    public bool DatumRueckfrageSichtbar => DatumRueckfrageText is not null;
+
+    // Der Anwender hat das ungewoehnliche Datum bestaetigt. Verfaellt bei
+    // jeder Aenderung des Datums, damit die Bestaetigung nicht fuer ein
+    // anderes Datum gilt als das gezeigte.
+    private bool _datumBestaetigt;
+
+    /// <summary>
+    /// Ein Fehler beim Schreiben in die Datenbank. Steht als Band ueber
+    /// dem Formular, und - das ist der Punkt - das Formular bleibt dabei
+    /// vollstaendig gefuellt. Nichts ist aergerlicher als eine geleerte
+    /// Maske nach einem Fehler, den der Anwender nicht zu verantworten
+    /// hat.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SpeicherFehlerSichtbar))]
+    private string? _speicherFehlerText;
+
+    public bool SpeicherFehlerSichtbar => SpeicherFehlerText is not null;
+
     public ObservableCollection<LetzteAusgabeZeile> LetzteAusgaben { get; } = new();
 
     public ErfassenViewModel(
@@ -146,28 +175,78 @@ public sealed partial class ErfassenViewModel : ViewModelBase
             ?? ZahlerOptionen.First(p => p.IsSelf);
     }
 
+    // Eine Aenderung am Datum nimmt eine erteilte Bestaetigung zurueck:
+    // sie galt fuer das Datum, das dabei stand, nicht fuer jedes weitere.
+    partial void OnDatumTextChanged(string value)
+    {
+        _datumBestaetigt = false;
+        DatumRueckfrageText = null;
+    }
+
+    /// <summary>Der Anwender bestaetigt das ungewoehnliche Datum.</summary>
+    [RelayCommand]
+    private void DatumBestaetigen()
+    {
+        _datumBestaetigt = true;
+        DatumRueckfrageText = null;
+    }
+
+    [RelayCommand]
+    private void DatumRueckfrageAbbrechen() => DatumRueckfrageText = null;
+
+    [RelayCommand]
+    private void SpeicherFehlerSchliessen() => SpeicherFehlerText = null;
+
     [RelayCommand]
     private async Task Speichern()
     {
-        var betragGueltig = Money.TryParseEuroText(BetragText, out var amountCents);
-        BetragFehler = betragGueltig ? null : "Ungueltiger Betrag (Beispiel: 12,50).";
+        // Die gesamte Pruefung liegt in Core (Regel 7) - hier werden die
+        // Meldungen nur auf ihre Felder verteilt.
+        var pruefung = ExpenseValidator.Validate(new ExpenseInput
+        {
+            AmountText = BetragText,
+            CategoryId = AusgewaehlteKategorie?.Id,
+            PayerId = AusgewaehlterZahler.Id,
+            DateText = DatumText,
+            Today = DateOnly.FromDateTime(DateTime.Now),
+        });
 
-        KategorieFehler = AusgewaehlteKategorie is null ? "Bitte eine Kategorie waehlen." : null;
+        BetragFehler = pruefung.AmountError;
+        KategorieFehler = pruefung.CategoryError;
+        DatumFehler = pruefung.DateError;
 
-        var datumGueltig = GermanDateInput.TryParse(DatumText, out var expenseDate);
-        DatumFehler = datumGueltig ? null : "Ungueltiges Datum (TT.MM.JJJJ).";
-
-        if (!betragGueltig || AusgewaehlteKategorie is null || !datumGueltig)
+        if (!pruefung.IsValid)
         {
             return;
         }
 
-        _expenseRepository.Create(
-            AusgewaehlteKategorie.Id,
-            amountCents,
-            expenseDate,
-            AusgewaehlterZahler.Id,
-            note: string.IsNullOrWhiteSpace(Bemerkung) ? null : Bemerkung);
+        // Ungewoehnliches, aber moegliches Datum: einmal nachfragen und
+        // erst beim naechsten Speichern durchlassen. Verboten wird nichts -
+        // wer alte Belege nachtraegt, hat gute Gruende dafuer.
+        if (pruefung.NeedsConfirmation && !_datumBestaetigt)
+        {
+            DatumRueckfrageText = pruefung.DateConfirmation;
+            return;
+        }
+
+        // Platte voll, Berechtigung entzogen, Laufwerk getrennt: dann
+        // steht hier ein Text und darunter das unveraenderte Formular.
+        // Geraeumt wird erst nach einem erfolgreichen Schreiben.
+        SpeicherFehlerText = Schreibvorgang.Versuche(
+            "Beim Speichern einer Ausgabe",
+            () => _expenseRepository.Create(
+                AusgewaehlteKategorie!.Id,
+                pruefung.AmountCents,
+                pruefung.Date,
+                AusgewaehlterZahler.Id,
+                note: string.IsNullOrWhiteSpace(Bemerkung) ? null : Bemerkung));
+
+        if (SpeicherFehlerText is not null)
+        {
+            return;
+        }
+
+        _datumBestaetigt = false;
 
         // Datum und Zahler bleiben absichtlich stehen (naechste Ausgabe
         // ist haeufig am selben Tag vom selben Zahler).

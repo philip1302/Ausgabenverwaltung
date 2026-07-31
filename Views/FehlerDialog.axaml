@@ -1,0 +1,77 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="560" d:DesignHeight="420"
+        x:Class="Ausgabenverwaltung.Views.FehlerDialog"
+        Width="{anzeige:Breite 620}"
+        MaxHeight="{anzeige:Breite 640}"
+        SizeToContent="Height"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner"
+        Title="Ausgabenverwaltung - unerwarteter Fehler">
+
+    <DockPanel Margin="20">
+
+        <!-- Die Schaltflaechen zuerst angedockt, damit sie bei langem
+             Meldungstext nicht aus dem Fenster wandern. -->
+        <Grid DockPanel.Dock="Bottom"
+              anzeige:Raster.Spalten="Auto,*,Auto,Auto"
+              Margin="0,16,0,0">
+            <Button Grid.Column="0"
+                    x:Name="ProtokollButton"
+                    Content="Protokollordner öffnen"
+                    Click="OnProtokollordnerOeffnenClick" />
+
+            <Button Grid.Column="2"
+                    x:Name="FortfahrenButton"
+                    Content="Fortfahren"
+                    Margin="0,0,8,0"
+                    Click="OnFortfahrenClick" />
+
+            <Button Grid.Column="3"
+                    x:Name="BeendenButton"
+                    Content="Beenden"
+                    Click="OnBeendenClick" />
+        </Grid>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="TitelText"
+                           Classes="ueberschrift"
+                           TextWrapping="Wrap" />
+
+                <TextBlock x:Name="MeldungText"
+                           TextWrapping="Wrap" />
+
+                <!-- Zugeklappt: der technische Text ist da, wenn er
+                     gebraucht wird, drängt sich aber niemandem auf, der
+                     ihn nicht lesen kann. -->
+                <Expander Header="Technische Einzelheiten">
+                    <StackPanel Spacing="8">
+                        <!-- Ein schreibgeschütztes Textfeld statt eines
+                             TextBlock: nur so lässt sich der Text mit der
+                             Maus markieren, und genau das will jemand
+                             tun, der ihn weitergeben soll. -->
+                        <TextBox x:Name="TechnikText"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="NoWrap"
+                                 FontFamily="Consolas,Courier New,monospace"
+                                 MaxHeight="{anzeige:Breite 220}" />
+
+                        <Button Content="In die Zwischenablage kopieren"
+                                HorizontalAlignment="Left"
+                                Click="OnKopierenClick" />
+
+                        <TextBlock x:Name="KopiertHinweis"
+                                   Classes="klein"
+                                   IsVisible="False"
+                                   Text="Der Text liegt in der Zwischenablage." />
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

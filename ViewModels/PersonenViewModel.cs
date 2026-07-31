@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using Ausgabenverwaltung.Core.OpenItems;
 using Ausgabenverwaltung.Core.People;
@@ -23,6 +24,19 @@ public sealed partial class PersonenViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _archivierteAnzeigen;
+
+    /// <summary>
+    /// Ein Schreibfehler beim Archivieren oder Wiederherstellen. Als Band
+    /// ueber der Liste; die Liste selbst bleibt unveraendert stehen.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SchreibFehlerSichtbar))]
+    private string? _schreibFehlerText;
+
+    public bool SchreibFehlerSichtbar => SchreibFehlerText is not null;
+
+    [RelayCommand]
+    private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
 
     public PersonenViewModel(PersonRepository personRepository, OpenItemsRepository openItemsRepository)
     {
@@ -84,7 +98,17 @@ public sealed partial class PersonenViewModel : ViewModelBase
         }
         catch (DuplicatePersonNameException)
         {
-            zeile.BearbeitungsFehler = $"Es gibt bereits eine Person namens \"{name}\".";
+            zeile.BearbeitungsFehler =
+                $"Es gibt bereits eine Person namens „{name}“. "
+                + "Bitte einen anderen Namen wählen — sonst wäre bei einer offenen "
+                + "Forderung nicht zu erkennen, wer gemeint ist.";
+            return;
+        }
+        catch (Exception ex)
+        {
+            // Schreibfehler: der Name bleibt im Bearbeitungsfeld stehen.
+            zeile.BearbeitungsFehler = Schreibvorgang.Beschreibe(
+                "Beim Speichern eines Personennamens", ex);
             return;
         }
 
@@ -120,7 +144,10 @@ public sealed partial class PersonenViewModel : ViewModelBase
             return;
         }
 
-        _personRepository.Archive(id);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Archivieren einer Person",
+            () => _personRepository.Archive(id));
+
         LadeListe();
     }
 
@@ -132,7 +159,10 @@ public sealed partial class PersonenViewModel : ViewModelBase
             return;
         }
 
-        _personRepository.Restore(id);
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Wiederherstellen einer Person",
+            () => _personRepository.Restore(id));
+
         LadeListe();
     }
 
