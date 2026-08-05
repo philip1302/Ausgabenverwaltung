@@ -153,14 +153,14 @@ public class RecurringExpenseValidatorTests
     }
 
     [Fact]
-    public void Negativer_Betrag_ist_zulaessig()
+    public void Negativer_Betrag_wird_abgelehnt()
     {
-        // Negative Werte sind Erstattungen - dieselbe Regel wie bei den
-        // einzelnen Ausgaben.
+        // Erstattung als eigenes Konzept entfaellt - dieselbe Regel wie bei
+        // den einzelnen Ausgaben.
         var ergebnis = RecurringExpenseValidator.Validate(Eingabe() with { AmountText = "-15,00" });
 
-        Assert.True(ergebnis.IsValid);
-        Assert.Equal(-15_00, ergebnis.AmountCents);
+        Assert.False(ergebnis.IsValid);
+        Assert.Equal("Der Betrag darf nicht negativ sein.", ergebnis.AmountError);
     }
 
     [Fact]
@@ -180,7 +180,28 @@ public class RecurringExpenseValidatorTests
             Eingabe() with { AmountText = "-15,00", IsIncome = true });
 
         Assert.False(ergebnis.IsValid);
-        Assert.Equal("Eine Einnahme darf keinen negativen Betrag haben.", ergebnis.AmountError);
+        Assert.Equal("Der Betrag darf nicht negativ sein.", ergebnis.AmountError);
+    }
+
+    [Fact]
+    public void Eine_Einnahme_mit_der_eigenen_Person_als_Zahler_wird_bemaengelt()
+    {
+        var ergebnis = RecurringExpenseValidator.Validate(
+            Eingabe() with { IsIncome = true, PayerIsSelf = true });
+
+        Assert.False(ergebnis.IsValid);
+        Assert.Equal(
+            "Eine Einnahme braucht einen Zahler, der nicht die eigene Person ist.",
+            ergebnis.PayerError);
+    }
+
+    [Fact]
+    public void Eine_Einnahme_mit_fremdem_Zahler_ist_gueltig()
+    {
+        var ergebnis = RecurringExpenseValidator.Validate(
+            Eingabe() with { IsIncome = true, PayerIsSelf = false });
+
+        Assert.Null(ergebnis.PayerError);
     }
 
     [Fact]

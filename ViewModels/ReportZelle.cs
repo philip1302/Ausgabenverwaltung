@@ -19,12 +19,13 @@ public sealed class ReportZelle
 
         // Zeitabschnitte ohne Buchung zeigen einen Bindestrich statt
         // "0,00" - sonst waere nicht unterscheidbar, ob nichts gebucht
-        // wurde oder sich Ausgabe und Erstattung aufgehoben haben.
+        // wurde oder sich Ausgabe und Einnahme aufgehoben haben.
         Text = betrag.HasValues
             ? EuroText.Format(betrag.SumCents)
             : "–";
 
-        IstErstattung = betrag.HasValues && EuroText.IsNegative(betrag.SumCents);
+        IstAusgabe = betrag.HasValues && EuroText.IsNegative(betrag.SumCents);
+        IstEinnahme = betrag.HasValues && EuroText.IsPositive(betrag.SumCents);
 
         KategorieId = kategorieId;
         PeriodenKey = periodenKey;
@@ -37,11 +38,17 @@ public sealed class ReportZelle
     public bool HatWerte { get; }
 
     /// <summary>
-    /// Erstattungsueberhang: die Zelle summiert sich auf einen negativen
+    /// Ausgabenueberhang: die Zelle summiert sich auf einen negativen
     /// Betrag. Wird gedaempft rot hervorgehoben, zusaetzlich zum
     /// Minuszeichen.
     /// </summary>
-    public bool IstErstattung { get; }
+    public bool IstAusgabe { get; }
+
+    /// <summary>
+    /// Einnahmenueberhang: die Zelle summiert sich auf einen positiven
+    /// Betrag. Wird gedaempft hellgruen hervorgehoben.
+    /// </summary>
+    public bool IstEinnahme { get; }
 
     /// <summary>NULL = alle Kategorien (Summenzeile).</summary>
     public int? KategorieId { get; }

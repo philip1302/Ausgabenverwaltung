@@ -24,6 +24,13 @@ public sealed record RecurringExpenseInput
     /// <summary>NULL = noch kein Zahler gewaehlt.</summary>
     public int? PayerId { get; init; }
 
+    /// <summary>
+    /// Ob der gewaehlte Zahler die eigene Person ist (siehe
+    /// Expenses.ExpenseInput.PayerIsSelf - dieselbe Pruefung, dieselbe
+    /// Begruendung).
+    /// </summary>
+    public bool PayerIsSelf { get; init; }
+
     public required string AmountText { get; init; }
 
     /// <summary>

@@ -222,15 +222,21 @@ public sealed class ExpenseRepository
     /// </summary>
     public ExpenseListSummary Summarize(ReportFilter filter)
     {
-        // Eine Einnahme mindert die Summe statt sie zu erhoehen - deshalb
-        // hier per CASE das Vorzeichen kippen statt einfach zu addieren
-        // (siehe Entities.Expense.IsIncome).
+        // Das Vorzeichen kommt vom Buchungstyp: eine Ausgabe mindert die
+        // Summe (negativ), eine Einnahme erhoeht sie (positiv) - aber
+        // erst, sobald sie tatsaechlich eingegangen ist (SettledDate
+        // gesetzt). Eine noch offene Einnahme ist noch nicht real
+        // geflossenes Geld und geht deshalb weder erhoehend noch
+        // mindernd ein (siehe Entities.Expense.IsIncome). ABS() macht die
+        // Rechnung robust gegenueber etwaigen Alt-Datensaetzen, die noch
+        // aus der Zeit vor dieser Regel einen negativen Betrag tragen
+        // (frueher: Erstattung).
         const string sql = """
             SELECT COUNT(*)                                       AS Anzahl,
                    COALESCE(SUM(
-                       CASE WHEN e.IsIncome = 1
-                            THEN -e.AmountCents
-                            ELSE  e.AmountCents
+                       CASE WHEN e.IsIncome = 1 AND e.SettledDate IS NOT NULL THEN  ABS(e.AmountCents)
+                            WHEN e.IsIncome = 1                              THEN  0
+                            ELSE                                                  -ABS(e.AmountCents)
                        END), 0)                                    AS SummeCents
             FROM   Expense e
             JOIN   Person  p ON p.Id = e.PayerId

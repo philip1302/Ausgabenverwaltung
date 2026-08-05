@@ -8,7 +8,13 @@ public sealed class Expense
     public int Id { get; set; }
     public int CategoryId { get; set; }
 
-    /// <summary>Betrag in Cent. Negative Werte = Erstattung.</summary>
+    /// <summary>
+    /// Betrag in Cent, immer positiv - ExpenseValidator lehnt negative
+    /// Eingaben ab. Ob der Betrag die Summen erhoeht oder mindert und mit
+    /// welchem Vorzeichen/welcher Farbe er angezeigt wird, ergibt sich
+    /// ausschliesslich aus <see cref="IsIncome"/> (siehe
+    /// Formatting.EuroText.FormatSigned).
+    /// </summary>
     public long AmountCents { get; set; }
 
     public DateOnly ExpenseDate { get; set; }
@@ -28,11 +34,11 @@ public sealed class Expense
     /// <summary>
     /// Ob dieser Betrag eine allgemeine Einnahme ist statt einer Ausgabe
     /// (z. B. ein Gehaltseingang, der vorher nicht als Ausgabe gebucht
-    /// war). Eine Einnahme MINDERT die Summen in Liste und Auswertung,
-    /// statt sie zu erhoehen - unabhaengig vom Vorzeichen von
-    /// AmountCents, das weiterhin ausschliesslich "Erstattung" bedeutet.
-    /// Beide Konzepte schliessen sich aus: ExpenseValidator lehnt einen
-    /// negativen Betrag bei IsIncome = true ab.
+    /// war). Eine Einnahme ERHOEHT die Ergebnis-Summen (Liste, Auswertung),
+    /// sobald sie beglichen ist (SettledDate gesetzt), eine Ausgabe
+    /// MINDERT sie immer - das Vorzeichen kommt ausschliesslich von
+    /// diesem Feld, nie vom gespeicherten Vorzeichen von AmountCents
+    /// (das immer positiv ist).
     /// </summary>
     public bool IsIncome { get; set; }
 

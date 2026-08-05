@@ -24,15 +24,21 @@ public static class ReportFilterSql
         AND   e.ExpenseDate <  @ToText
 
         -- @PayerScope: 'self' | 'others' | 'all' | 'self_or_open'
-        -- Der letzte Wert mischt bewusst Zahler und Status (Regel 4):
-        -- eigene Ausgaben zaehlen immer, fremde nur, solange sie noch
-        -- offen sind - beglichene fremde Ausgaben fallen heraus.
+        -- Der letzte Wert mischt bewusst Zahler, Status und Buchungstyp:
+        -- eigene Buchungen zaehlen immer, fremde Buchungen zaehlen dazu,
+        -- solange sie noch offen sind (jeder Typ - eine offene Einnahme
+        -- traegt ohnehin schon 0 zur Summe bei, siehe SumCentsSql), UND
+        -- zusaetzlich eine fremde Einnahme, sobald sie beglichen ist -
+        -- sonst faellt eine schon beglichene Einnahme hier komplett aus
+        -- dem Filter, statt (wie eine beglichene fremde Ausgabe) einfach
+        -- nicht mehr zu zaehlen.
         AND  (@PayerScope = 'all'
               OR (@PayerScope = 'self'   AND p.IsSelf = 1)
               OR (@PayerScope = 'others' AND p.IsSelf = 0)
               OR (@PayerScope = 'self_or_open' AND (
                       p.IsSelf = 1
                       OR (p.IsSelf = 0 AND e.SettledDate IS NULL)
+                      OR (p.IsSelf = 0 AND e.IsIncome = 1 AND e.SettledDate IS NOT NULL)
                   )))
 
         -- Einzelner Zahler, unabhaengig vom PayerScope waehlbar.

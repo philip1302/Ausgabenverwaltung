@@ -35,17 +35,24 @@ public static class MonthlyBurden
     /// Eine Vorlage, deren Startdatum noch in der Zukunft liegt, zaehlt
     /// dagegen mit - sie ist eine kommende, aber beschlossene Belastung.
     ///
-    /// Eine Einnahme-Vorlage (siehe RecurringExpense.IsIncome, z. B. ein
-    /// monatliches Gehalt) MINDERT die Belastung statt sie zu erhoehen -
-    /// dieselbe Vorzeichen-Regel wie bei ExpenseRepository.Summarize und
-    /// ReportRepository.
+    /// Das Vorzeichen kommt vom Vorlagentyp: eine Ausgaben-Vorlage
+    /// mindert die Belastung (negativ), eine Einnahme-Vorlage (siehe
+    /// RecurringExpense.IsIncome, z. B. ein monatliches Gehalt) erhoeht
+    /// sie (positiv) - und zwar unbedingt, anders als bei den einzelnen
+    /// Buchungen in ExpenseRepository.Summarize/ReportRepository, wo eine
+    /// Einnahme erst zaehlt, sobald sie tatsaechlich eingegangen ist
+    /// (SettledDate gesetzt). Eine Vorlage selbst hat kein SettledDate -
+    /// "monatliche Belastung" ist eine Vorausschau ueber aktive Vorlagen,
+    /// kein Rueckblick auf bereits eingegangene Buchungen, und kennt
+    /// deshalb keinen offen/beglichen-Zustand, an dem sich jene Regel
+    /// festmachen liesse.
     /// </summary>
     public static long TotalPerMonthCents(IEnumerable<RecurringExpense> templates, DateOnly asOf)
     {
         var summeEuro = templates
             .Where(template => template.IsActive)
             .Where(template => template.EndDate is null || template.EndDate >= asOf)
-            .Sum(template => template.IsIncome ? -PerMonthEuro(template) : PerMonthEuro(template));
+            .Sum(template => template.IsIncome ? PerMonthEuro(template) : -PerMonthEuro(template));
 
         return Money.ToCents(summeEuro);
     }

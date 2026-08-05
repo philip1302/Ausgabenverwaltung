@@ -55,7 +55,8 @@ public class ExpenseListQueryTests : IDisposable
         int? payerId = null,
         SettlementStatus status = SettlementStatus.Alle,
         string? searchText = null,
-        int? recurringExpenseId = null) => new()
+        int? recurringExpenseId = null,
+        PayerScope payerScope = PayerScope.All) => new()
     {
         From = DateOnly.MinValue,
         To = DateOnly.MaxValue,
@@ -64,6 +65,7 @@ public class ExpenseListQueryTests : IDisposable
         Status = status,
         SearchText = searchText,
         RecurringExpenseId = recurringExpenseId,
+        PayerScope = payerScope,
     };
 
     private IReadOnlyList<ExpenseListItem> Query(
@@ -162,7 +164,7 @@ public class ExpenseListQueryTests : IDisposable
         var summary = _expenses.Summarize(Alles(recurringExpenseId: vorlage.Id));
 
         Assert.Equal(2, summary.Count);
-        Assert.Equal(24000, summary.SumCents);
+        Assert.Equal(-24000, summary.SumCents);
     }
 
     [Fact]
@@ -434,21 +436,52 @@ public class ExpenseListQueryTests : IDisposable
         var summary = _expenses.Summarize(filter);
 
         Assert.Equal(2, summary.Count);
-        Assert.Equal(3500, summary.SumCents);
+        Assert.Equal(-3500, summary.SumCents);
         Assert.Equal(summary.Count, Query(filter).Count);
-        Assert.Equal(summary.SumCents, Query(filter).Sum(i => i.AmountCents));
+        // Summarize liefert das vorzeichenbehaftete Ergebnis (Ausgabe
+        // negativ), Query die rohen, immer positiven Betraege - deshalb
+        // hier mit demselben Vorzeichen wie Format Signed nachgerechnet.
+        Assert.Equal(
+            summary.SumCents,
+            Query(filter).Sum(i => i.IsIncome ? i.AmountCents : -i.AmountCents));
     }
 
     [Fact]
-    public void Summarize_verrechnet_negative_Erstattungen()
+    public void Summarize_verrechnet_eine_beglichene_Einnahme_positiv_gegen_die_Ausgabe()
     {
+        // Ersetzt die frueher separat erfasste "negative Erstattung": ein
+        // tatsaechlicher Rueckfluss wird jetzt als Einnahme gebucht.
         _expenses.Create(_wohnenId, 5000, new DateOnly(2026, 3, 1), _selfId);
-        _expenses.Create(_wohnenId, -1500, new DateOnly(2026, 3, 2), _selfId);
+        _expenses.Create(
+            _wohnenId, 1500, new DateOnly(2026, 3, 2), _otherId,
+            isIncome: true, settledDate: new DateOnly(2026, 3, 10));
 
         var summary = _expenses.Summarize(Alles());
 
         Assert.Equal(2, summary.Count);
-        Assert.Equal(3500, summary.SumCents);
+        Assert.Equal(-3500, summary.SumCents);
+    }
+
+    // PayerScope.SelfAndOpen wird bisher nirgends in der Ausgabenliste
+    // gesetzt, aber die WHERE-Klausel ist mit der Auswertung geteilt
+    // (ReportFilterSql) und muss dieselbe Treffermenge liefern - siehe
+    // ReportRepositoryTests.PayerScope_SelfAndOpen_zaehlt_eine_beglichene_fremde_Einnahme_positiv_mit.
+    [Fact]
+    public void Summarize_beachtet_PayerScope_SelfAndOpen_auch_fuer_beglichene_fremde_Einnahmen()
+    {
+        _expenses.Create(_wohnenId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(
+            _wohnenId, 400, new DateOnly(2026, 3, 2), _otherId,
+            isIncome: true, settledDate: new DateOnly(2026, 3, 10));
+        _expenses.Create(
+            _wohnenId, 900, new DateOnly(2026, 3, 3), _otherId, isIncome: true);
+
+        var summary = _expenses.Summarize(Alles(payerScope: PayerScope.SelfAndOpen));
+
+        // -1000 (eigene Ausgabe) + 400 (beglichene fremde Einnahme) + 0
+        // (offene fremde Einnahme, zaehlt aber zur Trefferzahl) = -600.
+        Assert.Equal(3, summary.Count);
+        Assert.Equal(-600, summary.SumCents);
     }
 
     [Fact]

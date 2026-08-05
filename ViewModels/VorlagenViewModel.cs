@@ -47,9 +47,13 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     [ObservableProperty]
     private string _monatlicheBelastungText = string.Empty;
 
-    /// <summary>Die monatliche Belastung ist negativ - Erstattungen ueberwiegen.</summary>
+    /// <summary>Die monatliche Belastung ist negativ - Ausgaben ueberwiegen.</summary>
     [ObservableProperty]
-    private bool _monatlicheBelastungIstErstattung;
+    private bool _monatlicheBelastungIstAusgabe;
+
+    /// <summary>Die monatliche Belastung ist positiv - Einnahmen ueberwiegen.</summary>
+    [ObservableProperty]
+    private bool _monatlicheBelastungIstEinnahme;
 
     [ObservableProperty]
     private bool _keineVorlagen;
@@ -558,6 +562,7 @@ public sealed partial class VorlagenViewModel : ViewModelBase
 
         var belastungCents = MonthlyBurden.TotalPerMonthCents(vorlagen, heute);
         MonatlicheBelastungText = EuroText.Format(belastungCents);
-        MonatlicheBelastungIstErstattung = EuroText.IsNegative(belastungCents);
+        MonatlicheBelastungIstAusgabe = EuroText.IsNegative(belastungCents);
+        MonatlicheBelastungIstEinnahme = EuroText.IsPositive(belastungCents);
     }
 }

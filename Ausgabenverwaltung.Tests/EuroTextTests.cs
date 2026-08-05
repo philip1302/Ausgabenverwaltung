@@ -101,4 +101,35 @@ public class EuroTextTests
         // Formatierung aber auch dann nicht verfaelschen.
         Assert.Equal("0,00" + Geschuetzt + "€", EuroText.Format(0, isIncome: true));
     }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    public void IsPositive_erkennt_Ueberschuesse(long cents, bool erwartet)
+    {
+        Assert.Equal(erwartet, EuroText.IsPositive(cents));
+    }
+
+    [Fact]
+    public void FormatSigned_stellt_bei_Einnahme_ein_Plus_voran()
+    {
+        Assert.Equal("+300,00" + Geschuetzt + "€", EuroText.FormatSigned(30000, isIncome: true));
+    }
+
+    [Fact]
+    public void FormatSigned_stellt_bei_Ausgabe_ein_Minus_voran()
+    {
+        Assert.Equal("-300,00" + Geschuetzt + "€", EuroText.FormatSigned(30000, isIncome: false));
+    }
+
+    [Fact]
+    public void FormatSigned_ignoriert_das_gespeicherte_Vorzeichen_und_richtet_sich_nur_nach_dem_Typ()
+    {
+        // Alt-Datensaetze aus der Zeit vor dieser Regel koennen noch einen
+        // negativen Betrag tragen (frueher "Erstattung"). FormatSigned
+        // formatiert sie trotzdem allein nach ihrem aktuellen Typ.
+        Assert.Equal("-300,00" + Geschuetzt + "€", EuroText.FormatSigned(-30000, isIncome: false));
+        Assert.Equal("+300,00" + Geschuetzt + "€", EuroText.FormatSigned(-30000, isIncome: true));
+    }
 }

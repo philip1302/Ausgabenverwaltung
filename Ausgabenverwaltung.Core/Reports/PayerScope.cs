@@ -11,11 +11,14 @@ public enum PayerScope
     All,
 
     /// <summary>
-    /// Eigene Ausgaben (unabhaengig vom Status - Regel 4) PLUS die noch
-    /// nicht beglichenen Ausgaben anderer im Zeitraum: "was habe ich
-    /// bisher getragen, und was kommt aus offenen Forderungen noch auf
-    /// mich zu". Anders als die uebrigen drei Werte mischt dieser bewusst
-    /// den Zahler- mit dem Status-Filter - siehe
+    /// Eigene Buchungen (unabhaengig vom Status - Regel 4) PLUS alle noch
+    /// offenen Buchungen anderer PLUS zusaetzlich die bereits beglichenen
+    /// Einnahmen anderer im Zeitraum: "was habe ich bisher getragen bzw.
+    /// erhalten, und was kommt aus offenen Forderungen noch auf mich zu".
+    /// Eine noch offene Einnahme anderer erscheint zwar (Regel aus
+    /// SumCentsSql: eine Einnahme zaehlt erst nach Begleichung), traegt
+    /// aber noch nichts zur Summe bei. Anders als die uebrigen drei Werte
+    /// mischt dieser bewusst Zahler, Status UND Buchungstyp - siehe
     /// <see cref="ReportFilterSql.Where"/>.
     /// </summary>
     SelfAndOpen,

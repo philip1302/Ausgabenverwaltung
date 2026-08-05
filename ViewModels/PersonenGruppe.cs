@@ -31,11 +31,12 @@ public sealed partial class PersonenGruppe : ObservableObject
 
     public void AktualisiereZwischensumme()
     {
-        // Eine Einnahme mindert die Zwischensumme statt sie zu erhoehen
-        // (siehe Entities.Expense.IsIncome).
+        // Bewusst ohne Fallunterscheidung nach IstEinnahme: eine offene
+        // Ausgabe und eine offene Einnahme schulden mir beide Geld in
+        // derselben Richtung (siehe OpenItemsRepository.GetOpenSumsByPayer).
         var summeCents = Zeilen
             .Where(z => !z.IstBeglichen)
-            .Sum(z => z.IstEinnahme ? -z.AmountCents : z.AmountCents);
+            .Sum(z => z.AmountCents);
         ZwischensummeText = EuroText.Format(summeCents);
         ZwischensummeIstErstattung = EuroText.IsNegative(summeCents);
     }

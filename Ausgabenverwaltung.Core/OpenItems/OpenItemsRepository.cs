@@ -112,15 +112,15 @@ public sealed class OpenItemsRepository
     /// </summary>
     public IReadOnlyDictionary<int, long> GetOpenSumsByPayer()
     {
-        // Eine Einnahme mindert die Summe statt sie zu erhoehen (siehe
-        // Entities.Expense.IsIncome) - auch hier, falls einer Einnahme
-        // ausnahmsweise ein fremder Zahler zugeordnet wurde.
+        // Bewusst OHNE Fallunterscheidung nach IsIncome: eine offene
+        // Ausgabe ("die Person schuldet mir das noch zurueck") und eine
+        // offene Einnahme ("die Person schuldet mir das noch") zeigen in
+        // dieselbe Richtung - beides ist Geld, das mir die Person noch
+        // schuldet. Anders als bei den Ergebnis-Summen (siehe
+        // Expenses.ExpenseRepository.Summarize) gibt es hier also kein
+        // Vorzeichen umzukehren.
         const string sql = """
-            SELECT e.PayerId,
-                   SUM(CASE WHEN e.IsIncome = 1
-                            THEN -e.AmountCents
-                            ELSE  e.AmountCents
-                       END) AS SummeCents
+            SELECT e.PayerId, SUM(e.AmountCents) AS SummeCents
             FROM   Expense e
             JOIN   Person  p ON p.Id = e.PayerId
             WHERE  e.SettledDate IS NULL

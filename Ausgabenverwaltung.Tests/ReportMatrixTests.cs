@@ -90,18 +90,18 @@ public class ReportMatrixTests : IDisposable
         var matrix = Baue(Jahr2026(ReportGrouping.Year));
 
         var wohnenZeile = Assert.Single(matrix.Rows);
-        Assert.Equal(6000, wohnenZeile.Total.SumCents);
+        Assert.Equal(-6000, wohnenZeile.Total.SumCents);
         Assert.Equal(3, wohnenZeile.Total.Count);
 
         var nebenkostenZeile = Assert.Single(wohnenZeile.Children);
-        Assert.Equal(5000, nebenkostenZeile.Total.SumCents);
+        Assert.Equal(-5000, nebenkostenZeile.Total.SumCents);
 
         var stromZeile = Assert.Single(nebenkostenZeile.Children);
-        Assert.Equal(3000, stromZeile.Total.SumCents);
+        Assert.Equal(-3000, stromZeile.Total.SumCents);
 
         // Die Gesamtsumme zaehlt jede Buchung genau einmal, obwohl sie in
         // drei Zeilen steckt.
-        Assert.Equal(6000, matrix.Total.SumCents);
+        Assert.Equal(-6000, matrix.Total.SumCents);
         Assert.Equal(3, matrix.Total.Count);
     }
 
@@ -116,8 +116,8 @@ public class ReportMatrixTests : IDisposable
         var matrix = Baue(Jahr2026(ReportGrouping.Month));
         var zeile = Assert.Single(matrix.Rows);
 
-        Assert.Equal(1000, zeile.Cell("2026-01").SumCents);
-        Assert.Equal(3000, zeile.Cell("2026-03").SumCents);
+        Assert.Equal(-1000, zeile.Cell("2026-01").SumCents);
+        Assert.Equal(-3000, zeile.Cell("2026-03").SumCents);
         Assert.Equal(2, zeile.Cell("2026-03").Count);
     }
 
@@ -144,11 +144,16 @@ public class ReportMatrixTests : IDisposable
 
     // Eine Zelle mit Summe 0 ist etwas anderes als eine Zelle ohne Buchung.
     [Fact]
-    public void Summe_null_aus_Ausgabe_und_Erstattung_gilt_als_belegt()
+    public void Summe_null_aus_Ausgabe_und_Einnahme_gilt_als_belegt()
     {
+        // Ersetzt die frueher separat erfasste "negative Erstattung": eine
+        // Ausgabe (negativ) und eine gleich hohe beglichene Einnahme
+        // (positiv) heben sich in der Summe genau auf.
         var kategorie = _categories.Create("Sonstiges", null);
         _expenses.Create(kategorie.Id, 5000, new DateOnly(2026, 3, 1), _selfId);
-        _expenses.Create(kategorie.Id, -5000, new DateOnly(2026, 3, 2), _selfId);
+        _expenses.Create(
+            kategorie.Id, 5000, new DateOnly(2026, 3, 2), _otherId,
+            isIncome: true, settledDate: new DateOnly(2026, 3, 10));
 
         var matrix = Baue(Jahr2026(ReportGrouping.Month));
         var zelle = matrix.Rows[0].Cell("2026-03");
@@ -171,10 +176,10 @@ public class ReportMatrixTests : IDisposable
 
         var matrix = Baue(Jahr2026(ReportGrouping.Month));
 
-        Assert.Equal(1400, matrix.ColumnTotal("2026-01").SumCents);
+        Assert.Equal(-1400, matrix.ColumnTotal("2026-01").SumCents);
         Assert.Equal(2, matrix.ColumnTotal("2026-01").Count);
-        Assert.Equal(700, matrix.ColumnTotal("2026-02").SumCents);
-        Assert.Equal(2100, matrix.Total.SumCents);
+        Assert.Equal(-700, matrix.ColumnTotal("2026-02").SumCents);
+        Assert.Equal(-2100, matrix.Total.SumCents);
         Assert.Equal(3, matrix.Total.Count);
     }
 
@@ -202,7 +207,7 @@ public class ReportMatrixTests : IDisposable
 
         var oben = Assert.Single(matrix.Rows);
         Assert.Equal("Wohnen", oben.Name);
-        Assert.Equal(2000, matrix.Total.SumCents);
+        Assert.Equal(-2000, matrix.Total.SumCents);
     }
 
     [Fact]
@@ -246,8 +251,8 @@ public class ReportMatrixTests : IDisposable
             SearchText = "Baumarkt",
         });
 
-        Assert.Equal(2500, nurAndere.Total.SumCents);
-        Assert.Equal(3500, nurBaumarkt.Total.SumCents);
+        Assert.Equal(-2500, nurAndere.Total.SumCents);
+        Assert.Equal(-3500, nurBaumarkt.Total.SumCents);
     }
 
     // Die Summe der Kreuztabelle muss mit der der Ausgabenliste
@@ -294,7 +299,7 @@ public class ReportMatrixTests : IDisposable
         var zeile = Assert.Single(matrix.Rows);
 
         Assert.True(zeile.IsArchived);
-        Assert.Equal(4200, zeile.Total.SumCents);
+        Assert.Equal(-4200, zeile.Total.SumCents);
     }
 
     [Fact]

@@ -73,7 +73,7 @@ public sealed partial class ReportViewModel : ViewModelBase
         new ZahlerBereichOption("alle", PayerScope.All),
         new ZahlerBereichOption("nur ich", PayerScope.Self),
         new ZahlerBereichOption("nur andere", PayerScope.Others),
-        new ZahlerBereichOption("ich + offene Posten", PayerScope.SelfAndOpen),
+        new ZahlerBereichOption("ich + offene Posten & Einnahmen", PayerScope.SelfAndOpen),
     };
 
     // ---------------- Filter ----------------
@@ -147,9 +147,13 @@ public sealed partial class ReportViewModel : ViewModelBase
     [ObservableProperty]
     private string _detailSummeText = string.Empty;
 
-    /// <summary>Die Summe des Dialogs ist negativ - Erstattungen ueberwiegen.</summary>
+    /// <summary>Die Summe des Dialogs ist negativ - Ausgaben ueberwiegen.</summary>
     [ObservableProperty]
-    private bool _detailSummeIstErstattung;
+    private bool _detailSummeIstAusgabe;
+
+    /// <summary>Die Summe des Dialogs ist positiv - Einnahmen ueberwiegen.</summary>
+    [ObservableProperty]
+    private bool _detailSummeIstEinnahme;
 
     public ReportViewModel(
         ReportRepository reportRepository,
@@ -324,7 +328,8 @@ public sealed partial class ReportViewModel : ViewModelBase
             ? "1 Buchung"
             : $"{summary.Count.ToString("N0", DeDe)} Buchungen";
         DetailSummeText = EuroText.Format(summary.SumCents);
-        DetailSummeIstErstattung = EuroText.IsNegative(summary.SumCents);
+        DetailSummeIstAusgabe = EuroText.IsNegative(summary.SumCents);
+        DetailSummeIstEinnahme = EuroText.IsPositive(summary.SumCents);
 
         DetailTitel = zelle.Beschreibung;
     }

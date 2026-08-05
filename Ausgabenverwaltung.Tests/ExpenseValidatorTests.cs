@@ -60,13 +60,15 @@ public class ExpenseValidatorTests
     }
 
     [Fact]
-    public void Ein_negativer_Betrag_bleibt_erlaubt()
+    public void Ein_negativer_Betrag_wird_abgelehnt()
     {
-        // So werden Erstattungen erfasst.
+        // Erstattung als eigenes Konzept entfaellt - ein tatsaechlicher
+        // Rueckfluss wird als Einnahme erfasst, das Vorzeichen kommt beim
+        // Anzeigen ausschliesslich vom Typ (siehe EuroText.FormatSigned).
         var ergebnis = ExpenseValidator.Validate(Eingabe() with { AmountText = "-15,00" });
 
-        Assert.True(ergebnis.IsValid);
-        Assert.Equal(-1500L, ergebnis.AmountCents);
+        Assert.False(ergebnis.IsValid);
+        Assert.Equal("Der Betrag darf nicht negativ sein.", ergebnis.AmountError);
     }
 
     [Fact]
@@ -82,13 +84,13 @@ public class ExpenseValidatorTests
     [Fact]
     public void Eine_Einnahme_mit_negativem_Betrag_wird_abgelehnt()
     {
-        // Die beiden Vorzeichen-Konzepte (Erstattung vs. Einnahme) duerfen
-        // sich nicht vermischen.
+        // Gilt fuer Einnahmen wie Ausgaben gleichermassen - siehe
+        // Ein_negativer_Betrag_wird_abgelehnt.
         var ergebnis = ExpenseValidator.Validate(
             Eingabe() with { AmountText = "-15,00", IsIncome = true });
 
         Assert.False(ergebnis.IsValid);
-        Assert.Equal("Eine Einnahme darf keinen negativen Betrag haben.", ergebnis.AmountError);
+        Assert.Equal("Der Betrag darf nicht negativ sein.", ergebnis.AmountError);
     }
 
     // ================= Pflichtfelder =================
@@ -109,6 +111,42 @@ public class ExpenseValidatorTests
 
         Assert.False(ergebnis.IsValid);
         Assert.NotNull(ergebnis.PayerError);
+    }
+
+    [Fact]
+    public void Eine_Einnahme_mit_der_eigenen_Person_als_Zahler_wird_bemaengelt()
+    {
+        // Eine Einnahme kommt immer von jemand anderem - sonst liesse sich
+        // ueber die Offene-Posten-Liste nie verfolgen, ob sie tatsaechlich
+        // eingegangen ist (Regel 4).
+        var ergebnis = ExpenseValidator.Validate(
+            Eingabe() with { IsIncome = true, PayerIsSelf = true });
+
+        Assert.False(ergebnis.IsValid);
+        Assert.Equal(
+            "Eine Einnahme braucht einen Zahler, der nicht die eigene Person ist.",
+            ergebnis.PayerError);
+    }
+
+    [Fact]
+    public void Eine_Einnahme_mit_fremdem_Zahler_ist_gueltig()
+    {
+        var ergebnis = ExpenseValidator.Validate(
+            Eingabe() with { IsIncome = true, PayerIsSelf = false });
+
+        Assert.Null(ergebnis.PayerError);
+    }
+
+    [Fact]
+    public void Ein_fehlender_Zahler_geht_bei_einer_Einnahme_vor_der_Selbst_Pruefung()
+    {
+        // PayerIsSelf ist bei PayerId == null nicht aussagekraeftig - die
+        // "kein Zahler gewaehlt"-Meldung muss trotzdem erscheinen, nicht
+        // die Einnahme-spezifische.
+        var ergebnis = ExpenseValidator.Validate(
+            Eingabe() with { IsIncome = true, PayerId = null });
+
+        Assert.Equal("Bitte einen Zahler wählen.", ergebnis.PayerError);
     }
 
     [Fact]

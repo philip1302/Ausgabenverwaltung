@@ -47,6 +47,27 @@ public static class EuroText
     }
 
     /// <summary>
+    /// Die Anzeigeform fuer eine EINZELNE Buchung mit bekanntem Typ:
+    /// Vorzeichen kommt ausschliesslich von <paramref name="isIncome"/>
+    /// ("+" Einnahme, "-" Ausgabe), nie vom gespeicherten Wert selbst -
+    /// deshalb <c>Math.Abs</c>. Das faengt auch Alt-Datensaetze ab, die
+    /// noch aus der Zeit vor dieser Regel einen negativen Betrag tragen
+    /// (frueher: Erstattung) - sie werden einfach nach ihrem heutigen Typ
+    /// formatiert, ohne Sonderbehandlung.
+    ///
+    /// Nicht zu verwechseln mit der zweistelligen Ueberladung von
+    /// <see cref="Format"/>: die bleibt bewusst unveraendert und dient nur
+    /// noch der (unveraenderten) Offene-Posten-Liste, wo Ausgaben ihr
+    /// gespeichertes Vorzeichen behalten und nur Einnahmen ein "+"
+    /// bekommen.
+    /// </summary>
+    public static string FormatSigned(long cents, bool isIncome)
+    {
+        var vorzeichen = isIncome ? "+" : "-";
+        return vorzeichen + Money.ToDecimal(Math.Abs(cents)).ToString("N2", DeDe) + NonBreakingSpace + Symbol;
+    }
+
+    /// <summary>
     /// Die reine Zahl ohne Zeichen und OHNE Tausendertrennzeichen, fuer
     /// die beiden Stellen, an denen ein €-Zeichen schaden wuerde:
     ///
@@ -62,9 +83,21 @@ public static class EuroText
         Money.ToDecimal(cents).ToString("0.00", DeDe);
 
     /// <summary>
-    /// Ob der Betrag eine Erstattung ist. Steht hier und nicht als
-    /// "&lt; 0" in jeder Zeile, damit die Anzeige einen Namen fuer das hat,
-    /// was sie farblich hervorhebt.
+    /// Fuer eine SUMME ueber mehrere Buchungen (gemischt aus Ausgaben und
+    /// Einnahmen): ob das Ergebnis insgesamt negativ ist, also die
+    /// Ausgaben ueberwiegen. Steht hier und nicht als "&lt; 0" in jeder
+    /// Zeile, damit die Anzeige einen Namen fuer das hat, was sie
+    /// farblich (rot, Classes.ausgabe) hervorhebt. Fuer eine einzelne
+    /// Buchung mit bekanntem Typ gilt stattdessen deren IsIncome direkt -
+    /// siehe FormatSigned.
     /// </summary>
     public static bool IsNegative(long cents) => cents < 0;
+
+    /// <summary>
+    /// Das Gegenstueck zu <see cref="IsNegative"/>: ob eine Summe
+    /// insgesamt positiv ist, also die beglichenen Einnahmen die
+    /// Ausgaben eines Zeitabschnitts uebersteigen. Hervorgehoben in Gruen
+    /// (Classes.einnahme).
+    /// </summary>
+    public static bool IsPositive(long cents) => cents > 0;
 }

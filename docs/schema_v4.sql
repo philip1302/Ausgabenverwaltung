@@ -166,7 +166,9 @@ CREATE TABLE Expense (
     CategoryId      INTEGER NOT NULL,
 
     -- Betrag in Cent: 4.200,00 EUR -> 420000
-    -- Niemals Gleitkomma. Negative Werte = Erstattung.
+    -- Niemals Gleitkomma, immer positiv - ob der Betrag die Summen
+    -- erhoeht oder mindert, ergibt sich ausschliesslich aus IsIncome
+    -- weiter unten, nie aus dem Vorzeichen dieser Spalte.
     AmountCents     INTEGER NOT NULL,
 
     -- Belegdatum 'YYYY-MM-DD'. Dieses Format sortiert
@@ -196,15 +198,14 @@ CREATE TABLE Expense (
 
     -- Neu in Version 4: 0/1, ob dieser Betrag eine allgemeine
     -- Einnahme ist statt einer Ausgabe (z. B. Gehaltseingang, der
-    -- vorher nicht als Ausgabe gebucht war). Eine Einnahme MINDERT
-    -- die Summen in Liste und Auswertung, statt sie zu erhoehen -
-    -- unabhaengig vom Vorzeichen von AmountCents, das weiterhin
-    -- ausschliesslich "Erstattung" bedeutet (siehe oben). Beide
-    -- Konzepte schliessen sich gegenseitig aus: ExpenseValidator
-    -- lehnt einen negativen Betrag bei IsIncome = 1 ab, eine Zeile
-    -- ist also nie beides zugleich. Steht hinter ModifiedUtc statt
-    -- an der thematisch passenderen Stelle weiter oben: ALTER TABLE
-    -- ADD COLUMN haengt neue Spalten immer hinten an (siehe
+    -- vorher nicht als Ausgabe gebucht war). Eine Einnahme ERHOEHT
+    -- die Ergebnis-Summen (Liste, Auswertung), sobald sie beglichen
+    -- ist (SettledDate gesetzt), eine Ausgabe MINDERT sie immer - das
+    -- Vorzeichen kommt ausschliesslich von dieser Spalte, nie vom
+    -- gespeicherten Vorzeichen von AmountCents (das immer positiv
+    -- ist, siehe oben). Steht hinter ModifiedUtc statt an der
+    -- thematisch passenderen Stelle weiter oben: ALTER TABLE ADD
+    -- COLUMN haengt neue Spalten immer hinten an (siehe
     -- DatabaseMigratorTests), und alle Spalten-Definitionen muessen
     -- in SQLite ohnehin vor den Tabellen-Constraints (FOREIGN KEY)
     -- stehen.

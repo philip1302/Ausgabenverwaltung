@@ -183,8 +183,8 @@
                             <TextBlock Text="Zahler" Classes="filterbeschriftung" />
                             <ComboBox ItemsSource="{Binding ZahlerBereichOptionen}"
                                       SelectedItem="{Binding AusgewaehlterZahlerBereich}"
-                                      Width="{anzeige:Breite 200}"
-                                      ToolTip.Tip="„Ich + offene Posten“ zählt eigene Ausgaben und alle noch nicht beglichenen Ausgaben anderer im Zeitraum zusammen.">
+                                      Width="{anzeige:Breite 260}"
+                                      ToolTip.Tip="„Ich + offene Posten &amp; Einnahmen“ zählt eigene Buchungen, alle noch nicht beglichenen Ausgaben anderer sowie alle bereits beglichenen Einnahmen von anderen im Zeitraum zusammen.">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:ZahlerBereichOption">
                                         <TextBlock Text="{Binding Bezeichnung}" />
@@ -326,7 +326,8 @@
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:ReportZelle">
                                                             <Button Classes="zelle" Width="{anzeige:Breite 125}"
-                                                                    Classes.erstattung="{Binding IstErstattung}"
+                                                                    Classes.ausgabe="{Binding IstAusgabe}"
+                                                                    Classes.einnahme="{Binding IstEinnahme}"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
                                                                     ToolTip.Tip="{Binding Beschreibung}"
@@ -338,7 +339,8 @@
 
                                                 <Button Classes="zelle" Width="{anzeige:Breite 145}"
                                                         FontWeight="SemiBold"
-                                                        Classes.erstattung="{Binding Summe.IstErstattung}"
+                                                        Classes.ausgabe="{Binding Summe.IstAusgabe}"
+                                                        Classes.einnahme="{Binding Summe.IstEinnahme}"
                                                         Content="{Binding Summe.Text}"
                                                         IsEnabled="{Binding Summe.HatWerte}"
                                                         ToolTip.Tip="{Binding Summe.Beschreibung}"
@@ -351,7 +353,8 @@
                                                      Buchungen, den ein Klick oeffnen koennte. -->
                                                 <TextBlock Classes="tabellenzelle zahl" Width="{anzeige:Breite 145}"
                                                            FontWeight="SemiBold"
-                                                           Classes.erstattung="{Binding DurchschnittIstErstattung}"
+                                                           Classes.ausgabe="{Binding DurchschnittIstAusgabe}"
+                                                           Classes.einnahme="{Binding DurchschnittIstEinnahme}"
                                                            Text="{Binding DurchschnittText}"
                                                            ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
                                             </StackPanel>
@@ -385,7 +388,8 @@
                                                         <DataTemplate x:DataType="vm:ReportZelle">
                                                             <Button Classes="zelle" Width="{anzeige:Breite 125}"
                                                                     FontWeight="Bold"
-                                                                    Classes.erstattung="{Binding IstErstattung}"
+                                                                    Classes.ausgabe="{Binding IstAusgabe}"
+                                                                    Classes.einnahme="{Binding IstEinnahme}"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
                                                                     ToolTip.Tip="{Binding Beschreibung}"
@@ -396,7 +400,8 @@
                                                 </ItemsControl>
                                                 <Button Classes="zelle" Width="{anzeige:Breite 145}"
                                                         FontWeight="Bold"
-                                                        Classes.erstattung="{Binding Summe.IstErstattung}"
+                                                        Classes.ausgabe="{Binding Summe.IstAusgabe}"
+                                                        Classes.einnahme="{Binding Summe.IstEinnahme}"
                                                         Content="{Binding Summe.Text}"
                                                         IsEnabled="{Binding Summe.HatWerte}"
                                                         ToolTip.Tip="{Binding Summe.Beschreibung}"
@@ -404,7 +409,8 @@
                                                         CommandParameter="{Binding Summe}" />
                                                 <TextBlock Classes="tabellenzelle zahl" Width="{anzeige:Breite 145}"
                                                            FontWeight="Bold"
-                                                           Classes.erstattung="{Binding DurchschnittIstErstattung}"
+                                                           Classes.ausgabe="{Binding DurchschnittIstAusgabe}"
+                                                           Classes.einnahme="{Binding DurchschnittIstEinnahme}"
                                                            Text="{Binding DurchschnittText}"
                                                            ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
                                             </StackPanel>
@@ -450,7 +456,8 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
                             <TextBlock FontWeight="Bold"
                                        VerticalAlignment="Center"
-                                       Classes.erstattung="{Binding DetailSummeIstErstattung}"
+                                       Classes.ausgabe="{Binding DetailSummeIstAusgabe}"
+                                       Classes.einnahme="{Binding DetailSummeIstEinnahme}"
                                        Text="{Binding DetailSummeText, StringFormat='Summe: {0}'}" />
                             <Button Content="Schließen"
                                     Command="{Binding DetailsSchliessenCommand}" />
@@ -496,7 +503,8 @@
                                                            Classes="tabellenzelle" />
                                         <TextBlock Grid.Column="4" Text="{Binding BetragText}"
                                                    Classes="tabellenzelle zahl"
-                                                   Classes.erstattung="{Binding IstErstattung}" />
+                                                   Classes.ausgabe="{Binding IstAusgabe}"
+                                                   Classes.einnahme="{Binding IstEinnahme}" />
                                         <anzeige:Textzelle Grid.Column="6" Inhalt="{Binding PayerName}"
                                                            Classes="tabellenzelle" />
                                         <anzeige:Textzelle Grid.Column="8" Inhalt="{Binding Note}"

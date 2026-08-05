@@ -15,7 +15,12 @@ public sealed class ExpenseListItem
     public required int CategoryId { get; init; }
     public required string CategoryFullPath { get; init; }
 
-    /// <summary>Betrag in Cent. Negative Werte = Erstattung.</summary>
+    /// <summary>
+    /// Betrag in Cent, immer positiv. Ob er die Summen erhoeht oder mindert
+    /// und mit welchem Vorzeichen/welcher Farbe er angezeigt wird, ergibt
+    /// sich ausschliesslich aus <see cref="IsIncome"/> (siehe
+    /// Formatting.EuroText.FormatSigned).
+    /// </summary>
     public required long AmountCents { get; init; }
 
     /// <summary>Ob dieser Betrag eine Einnahme ist (siehe Entities.Expense.IsIncome).</summary>

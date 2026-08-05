@@ -39,7 +39,18 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
     public string VorlageHinweis { get; }
 
     public IReadOnlyList<CategoryOption> KategorieVorschlaege { get; }
-    public IReadOnlyList<Person> ZahlerOptionen { get; }
+
+    // Alle waehlbaren Personen (inkl. eines inzwischen archivierten
+    // Zahlers, siehe Konstruktor), ungefiltert - die Quelle, aus der
+    // AktualisiereZahlerAuswahl das tatsaechlich waehlbare ZahlerOptionen
+    // aufbaut. Bei einer Einnahme faellt die Ich-Person dort heraus: eine
+    // Einnahme kommt immer von jemand anderem, sonst liesse sich nie
+    // verfolgen, ob sie ueber die Offene-Posten-Liste tatsaechlich
+    // eingegangen ist (Regel 4).
+    private readonly List<Person> _allePersonen;
+
+    [ObservableProperty]
+    private IReadOnlyList<Person> _zahlerOptionen = Array.Empty<Person>();
 
     [ObservableProperty]
     private string _betragText;
@@ -77,11 +88,29 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
     /// und Auswertung, statt sie zu erhoehen.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BezahltAmLabelText))]
     private bool _istEinnahme;
+
+    /// <summary>
+    /// Erklaert, warum das Haekchen bei "Einnahme" gerade automatisch
+    /// zurueckgesetzt wurde: es gibt ausser der Ich-Person niemanden, dem
+    /// sich die Einnahme zuordnen liesse (siehe AktualisiereZahlerAuswahl).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EinnahmeHinweisSichtbar))]
+    private string? _einnahmeHinweisText;
+
+    public bool EinnahmeHinweisSichtbar => EinnahmeHinweisText is not null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BezahltAmSichtbar))]
     private Person _ausgewaehlterZahler;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZahlerFehlerSichtbar))]
+    private string? _zahlerFehler;
+
+    public bool ZahlerFehlerSichtbar => !string.IsNullOrEmpty(ZahlerFehler);
 
     /// <summary>
     /// "Bezahlt am" ist nur bei einem fremden Zahler ueberhaupt gemeint
@@ -89,6 +118,9 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
     /// SettledDate unangetastet.
     /// </summary>
     public bool BezahltAmSichtbar => !AusgewaehlterZahler.IsSelf;
+
+    /// <summary>Wortwahl passend zur Buchungsart, siehe OffenerPostenZeile.BeglichenText.</summary>
+    public string BezahltAmLabelText => IstEinnahme ? "Erhalten am" : "Bezahlt am";
 
     [ObservableProperty]
     private string _bezahltAmText = string.Empty;
@@ -107,7 +139,12 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
         ExpenseId = zeile.Id;
         IstAusVorlage = zeile.IstAusVorlage;
         VorlageHinweis = zeile.VorlageHinweis;
-        IstEinnahme = zeile.IstEinnahme;
+
+        // Direkte Feldzuweisung statt der Eigenschaft: OnIstEinnahmeChanged
+        // greift auf _allePersonen/ZahlerOptionen zu, die an dieser Stelle
+        // noch nicht aufgebaut sind (siehe AktualisiereZahlerAuswahl weiter
+        // unten, die das nach der Personenliste einmalig nachholt).
+        _istEinnahme = zeile.IstEinnahme;
 
         // Ist die Kategorie der Buchung inzwischen archiviert oder keine
         // Blattkategorie mehr, fehlt sie in den waehlbaren Kategorien. Sie
@@ -131,11 +168,9 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
         KategorieVorschlaege = vorschlaege;
         _ausgewaehlteKategorie = vorschlaege.First(option => option.Id == zeile.CategoryId);
 
-        ZahlerOptionen = zahler;
-
         // Auch ein inzwischen archivierter Zahler muss erhalten bleiben -
         // sonst wuerde ein Speichern die Buchung stillschweigend umbuchen.
-        _ausgewaehlterZahler = zahler.FirstOrDefault(person => person.Id == zeile.PayerId)
+        var geladenerZahler = zahler.FirstOrDefault(person => person.Id == zeile.PayerId)
             ?? new Person
             {
                 Id = zeile.PayerId,
@@ -145,10 +180,12 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
                 CreatedUtc = DateTime.UnixEpoch,
             };
 
-        if (ZahlerOptionen.All(person => person.Id != _ausgewaehlterZahler.Id))
-        {
-            ZahlerOptionen = zahler.Prepend(_ausgewaehlterZahler).ToList();
-        }
+        _allePersonen = zahler.Any(person => person.Id == geladenerZahler.Id)
+            ? zahler.ToList()
+            : zahler.Prepend(geladenerZahler).ToList();
+
+        _ausgewaehlterZahler = geladenerZahler;
+        AktualisiereZahlerAuswahl();
 
         // EuroText.Plain und nicht EuroText.Format: in ein Eingabefeld
         // gehoert die blanke Zahl (das €-Zeichen steht als Beschriftung
@@ -198,15 +235,35 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
         DatumRueckfrageText = null;
     }
 
-    // Beim Ankreuzen auf die Ich-Person vorbelegen, sofern gerade ein
-    // fremder Zahler gewaehlt ist - dasselbe Verhalten wie in der
-    // Erfassungsmaske (siehe ErfassenViewModel.OnIstEinnahmeChanged).
-    partial void OnIstEinnahmeChanged(bool value)
+    partial void OnIstEinnahmeChanged(bool value) => AktualisiereZahlerAuswahl();
+
+    /// <summary>
+    /// Baut ZahlerOptionen aus _allePersonen neu auf - dasselbe Verfahren
+    /// wie in der Erfassungsmaske (siehe
+    /// <see cref="ErfassenViewModel.AktualisiereZahlerAuswahl"/>): bei
+    /// einer Einnahme faellt die Ich-Person heraus, eine bereits
+    /// getroffene Auswahl bleibt erhalten, sofern sie weiterhin waehlbar
+    /// ist, und gibt es ausser der Ich-Person niemanden, wird die Einnahme
+    /// sofort zurueckgesetzt und ein Hinweistext erklaert warum.
+    /// </summary>
+    private void AktualisiereZahlerAuswahl()
     {
-        if (value && !AusgewaehlterZahler.IsSelf)
+        if (IstEinnahme && _allePersonen.All(p => p.IsSelf))
         {
-            AusgewaehlterZahler = ZahlerOptionen.First(person => person.IsSelf);
+            IstEinnahme = false;
+            EinnahmeHinweisText = "Für eine Einnahme wird zunächst eine weitere Person benötigt (siehe Verwaltung › Personen).";
+            return;
         }
+
+        EinnahmeHinweisText = null;
+
+        var ausgewaehlteId = AusgewaehlterZahler.Id;
+        var gefiltert = _allePersonen.Where(p => !IstEinnahme || !p.IsSelf).ToList();
+        ZahlerOptionen = gefiltert;
+
+        AusgewaehlterZahler = gefiltert.FirstOrDefault(p => p.Id == ausgewaehlteId)
+            ?? gefiltert.FirstOrDefault(p => !IstEinnahme && p.IsSelf)
+            ?? gefiltert.First();
     }
 
     /// <summary>Der Anwender bestaetigt das ungewoehnliche Datum.</summary>
@@ -238,6 +295,7 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
             IsIncome = IstEinnahme,
             CategoryId = AusgewaehlteKategorie?.Id,
             PayerId = AusgewaehlterZahler.Id,
+            PayerIsSelf = AusgewaehlterZahler.IsSelf,
             DateText = DatumText,
             Today = DateOnly.FromDateTime(DateTime.Now),
         });
@@ -248,6 +306,7 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
 
         BetragFehler = pruefung.AmountError;
         KategorieFehler = pruefung.CategoryError;
+        ZahlerFehler = pruefung.PayerError;
         DatumFehler = pruefung.DateError;
 
         // Bei der eigenen Person wird SettledDate nie ausgewertet
