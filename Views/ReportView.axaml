@@ -10,9 +10,10 @@
              x:DataType="vm:ReportViewModel">
 
     <!-- Spaltenbreiten der Kreuztabelle: Kategorie 300, jeder
-         Zeitabschnitt 125, Summe 145. Die beiden Wertspalten sind je
-         15 Pixel breiter als frueher (110/130): seit die Betraege das
-         €-Zeichen tragen, braucht "-1.234,56 €" mehr Platz.
+         Zeitabschnitt 125, Summe 145, Durchschnitt je Zeitabschnitt 145.
+         Die drei Wertspalten sind je 15 Pixel breiter als frueher
+         (110/130): seit die Betraege das €-Zeichen tragen, braucht
+         "-1.234,56 €" mehr Platz.
          Feste Breiten statt eines Grids,
          weil die Anzahl der Spalten erst zur Laufzeit feststeht - Kopf-
          und Wertzeilen bauen sich aus denselben Breiten auf und stehen
@@ -263,6 +264,9 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <TextBlock Text="Summe" Classes="tabellenkopf zahl" Width="{anzeige:Breite 145}" />
+                            <TextBlock Text="Ø je Zeitabschnitt" Classes="tabellenkopf zahl"
+                                       Width="{anzeige:Breite 145}"
+                                       ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
                         </StackPanel>
                     </Border>
 
@@ -339,6 +343,16 @@
                                                         ToolTip.Tip="{Binding Summe.Beschreibung}"
                                                         Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZelleOeffnenCommand}"
                                                         CommandParameter="{Binding Summe}" />
+
+                                                <!-- Kein Button wie die uebrigen Zellen: der
+                                                     Durchschnitt ist eine Rechnung ueber die
+                                                     Summe, kein eigener Ausschnitt der
+                                                     Buchungen, den ein Klick oeffnen koennte. -->
+                                                <TextBlock Classes="tabellenzelle zahl" Width="{anzeige:Breite 145}"
+                                                           FontWeight="SemiBold"
+                                                           Classes.erstattung="{Binding DurchschnittIstErstattung}"
+                                                           Text="{Binding DurchschnittText}"
+                                                           ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -387,6 +401,11 @@
                                                         ToolTip.Tip="{Binding Summe.Beschreibung}"
                                                         Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZelleOeffnenCommand}"
                                                         CommandParameter="{Binding Summe}" />
+                                                <TextBlock Classes="tabellenzelle zahl" Width="{anzeige:Breite 145}"
+                                                           FontWeight="Bold"
+                                                           Classes.erstattung="{Binding DurchschnittIstErstattung}"
+                                                           Text="{Binding DurchschnittText}"
+                                                           ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>

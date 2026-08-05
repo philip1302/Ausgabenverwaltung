@@ -35,6 +35,7 @@ public static class ReportCsv
         }
 
         kopf.Add(Quote("Summe"));
+        kopf.Add(Quote("Durchschnitt je Zeitabschnitt"));
         AppendLine(text, kopf);
 
         foreach (var row in visibleRows)
@@ -50,6 +51,7 @@ public static class ReportCsv
             }
 
             felder.Add(Amount(row.Total));
+            felder.Add(AverageAmount(row.Total, matrix.PeriodKeys.Count));
             AppendLine(text, felder);
         }
 
@@ -60,6 +62,7 @@ public static class ReportCsv
         }
 
         summen.Add(Amount(matrix.Total));
+        summen.Add(AverageAmount(matrix.Total, matrix.PeriodKeys.Count));
         AppendLine(text, summen);
 
         return text.ToString();
@@ -81,6 +84,14 @@ public static class ReportCsv
     private static string Amount(ReportAmount amount) =>
         amount.HasValues
             ? EuroText.Plain(amount.SumCents)
+            : string.Empty;
+
+    // Dieselbe Leer-statt-Bindestrich-Regel wie bei Amount(): Excel soll
+    // hier ebenfalls rechnen koennen statt an einem Textzeichen zu
+    // scheitern.
+    private static string AverageAmount(ReportAmount total, int periodCount) =>
+        total.HasValues
+            ? EuroText.Plain(total.AveragePerPeriod(periodCount))
             : string.Empty;
 
     // Textfelder stehen immer in Anfuehrungszeichen - sonst wirft Excel

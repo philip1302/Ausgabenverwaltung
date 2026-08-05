@@ -62,11 +62,15 @@ public class ReportCsvTests
 
         var csv = ReportCsv.Build(matrix, sichtbar);
 
+        // Durchschnitt = Summe / Anzahl Zeitabschnitte (hier drei:
+        // Jan/Feb/Mär 2026). Wohnen und die Summenzeile: 1230,50 / 3 =
+        // 410,1666... -> 410,17 (Money rundet auf den Cent). Strom:
+        // 30,00 / 3 = 10,00 exakt.
         Assert.Equal(
-            "\"Kategorie\";\"Jan 2026\";\"Feb 2026\";\"Mär 2026\";\"Summe\"\r\n" +
-            "\"Wohnen\";1200,50;;30,00;1230,50\r\n" +
-            "\"    Strom\";;;30,00;30,00\r\n" +
-            "\"Summe\";1200,50;;30,00;1230,50\r\n",
+            "\"Kategorie\";\"Jan 2026\";\"Feb 2026\";\"Mär 2026\";\"Summe\";\"Durchschnitt je Zeitabschnitt\"\r\n" +
+            "\"Wohnen\";1200,50;;30,00;1230,50;410,17\r\n" +
+            "\"    Strom\";;;30,00;30,00;10,00\r\n" +
+            "\"Summe\";1200,50;;30,00;1230,50;410,17\r\n",
             csv);
     }
 
@@ -158,6 +162,8 @@ public class ReportCsvTests
         var csv = ReportCsv.Build(
             ReportMatrix.Empty(ReportGrouping.Month), Array.Empty<ReportMatrixRow>());
 
-        Assert.Equal("\"Kategorie\";\"Summe\"\r\n\"Summe\";\r\n", csv);
+        Assert.Equal(
+            "\"Kategorie\";\"Summe\";\"Durchschnitt je Zeitabschnitt\"\r\n\"Summe\";;\r\n",
+            csv);
     }
 }
