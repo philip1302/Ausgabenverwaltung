@@ -60,11 +60,11 @@ public class KategorienFarbenTests : IDisposable
     {
         var optionen = NeuesViewModel().Farboptionen;
 
-        Assert.Equal(15, optionen.Count);
+        Assert.Equal(20, optionen.Count);
         Assert.True(optionen[0].IstKeineFarbe);
 
         var echteFarben = optionen.Skip(1).Select(o => FarbeVon(o.Pinsel)).ToList();
-        Assert.Equal(14, echteFarben.Distinct().Count());
+        Assert.Equal(19, echteFarben.Distinct().Count());
         Assert.DoesNotContain(Color.Parse(CategoryColorPalette.DefaultHex), echteFarben);
     }
 

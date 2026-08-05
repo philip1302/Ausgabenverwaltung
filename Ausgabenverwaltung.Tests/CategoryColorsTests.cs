@@ -104,13 +104,13 @@ public class CategoryColorsTests
     }
 
     [Fact]
-    public void Die_Palette_ist_vierzehn_verschiedene_gueltige_Farben()
+    public void Die_Palette_ist_neunzehn_verschiedene_gueltige_Farben()
     {
         var palette = CategoryColorPalette.Colors;
 
-        Assert.Equal(14, palette.Count);
-        Assert.Equal(14, palette.Select(farbe => farbe.Hex.ToUpperInvariant()).Distinct().Count());
-        Assert.Equal(14, palette.Select(farbe => farbe.Name).Distinct().Count());
+        Assert.Equal(19, palette.Count);
+        Assert.Equal(19, palette.Select(farbe => farbe.Hex.ToUpperInvariant()).Distinct().Count());
+        Assert.Equal(19, palette.Select(farbe => farbe.Name).Distinct().Count());
 
         // Format '#RRGGBB' - alles andere waere fuer die Anzeige unbrauchbar.
         Assert.All(palette, farbe =>

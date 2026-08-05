@@ -7,7 +7,7 @@ namespace Ausgabenverwaltung.Core.Categories;
 /// unterscheidbar sind, und Toene, auf denen Text nicht mehr lesbar ist.
 ///
 /// Alle Werte sind so gewaehlt, dass sie
-/// - nebeneinander unterscheidbar bleiben (14 Toene ueber den ganzen
+/// - nebeneinander unterscheidbar bleiben (19 Toene ueber den ganzen
 ///   Farbkreis, keine zwei benachbarten aus derselben Ecke),
 /// - dunkel genug sind, um als Punkt oder schmaler Balken auf dem hellen
 ///   Hintergrund der Anwendung sichtbar zu sein,
@@ -34,6 +34,8 @@ public static class CategoryColorPalette
         new("#C9A227", "Ocker"),
         new("#7F8C3A", "Oliv"),
         new("#2E9E5B", "Grün"),
+        new("#1F6B3A", "Waldgrün"),
+        new("#4CAF7D", "Minze"),
         new("#159A8C", "Petrol"),
         new("#2980B9", "Blau"),
         new("#34495E", "Marine"),
@@ -41,8 +43,11 @@ public static class CategoryColorPalette
         new("#8E44AD", "Violett"),
         new("#B03A6E", "Beere"),
         new("#D96C8F", "Rosé"),
+        new("#B08968", "Sand"),
         new("#8D6E63", "Braun"),
+        new("#6B4226", "Kastanie"),
         new("#607D8B", "Graublau"),
+        new("#97A3AD", "Silber"),
     ];
 
     /// <summary>
