@@ -18,4 +18,17 @@ public readonly record struct ReportAmount(long SumCents, int Count)
 
     public ReportAmount Add(ReportAmount other) =>
         new(SumCents + other.SumCents, Count + other.Count);
+
+    /// <summary>
+    /// Durchschnitt je Zeitabschnitt ueber den ganzen ausgewerteten
+    /// Zeitraum: SumCents geteilt durch die Anzahl der ANGEZEIGTEN
+    /// Zeitabschnitte (<see cref="ReportMatrix.PeriodKeys"/>) - NICHT
+    /// <see cref="Count"/>, das ist die Anzahl der Buchungen. Die
+    /// Umwandlung nach Euro und zurueck laeuft ueber <see cref="Money"/>
+    /// (Regel 1), weil hier gerundet werden muss.
+    /// </summary>
+    public long AveragePerPeriod(int periodCount) =>
+        !HasValues || periodCount <= 0
+            ? 0
+            : Money.ToCents(Money.ToDecimal(SumCents) / periodCount);
 }

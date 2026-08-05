@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Ausgabenverwaltung.Anzeige;
+using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Reports;
 using Avalonia.Media;
 
@@ -24,6 +25,8 @@ public sealed class ReportZeile
         bool istSummenZeile,
         IReadOnlyList<ReportZelle> zellen,
         ReportZelle summe,
+        ReportAmount summenBetrag,
+        int periodenAnzahl,
         IBrush farbe)
     {
         Quelle = quelle;
@@ -36,6 +39,23 @@ public sealed class ReportZeile
         IstSummenZeile = istSummenZeile;
         Zellen = zellen;
         Summe = summe;
+
+        // Durchschnitt je Zeitabschnitt statt einer weiteren anklickbaren
+        // Zelle: er bildet keinen eigenen Ausschnitt der Buchungen ab
+        // (den zeigt schon die Summenspalte), sondern nur deren Rechnung
+        // ueber die angezeigten Zeitabschnitte - siehe
+        // ReportAmount.AveragePerPeriod.
+        if (summenBetrag.HasValues && periodenAnzahl > 0)
+        {
+            var cents = summenBetrag.AveragePerPeriod(periodenAnzahl);
+            DurchschnittText = EuroText.Format(cents);
+            DurchschnittIstErstattung = EuroText.IsNegative(cents);
+        }
+        else
+        {
+            DurchschnittText = "–";
+            DurchschnittIstErstattung = false;
+        }
     }
 
     /// <summary>
@@ -82,6 +102,17 @@ public sealed class ReportZeile
     /// <summary>Die Summenspalte rechts.</summary>
     public ReportZelle Summe { get; }
 
+    /// <summary>
+    /// Durchschnitt je Zeitabschnitt ganz rechts, neben der Summe: dieselbe
+    /// Summe geteilt durch die Anzahl der angezeigten Zeitabschnitte. Ein
+    /// Bindestrich statt "0,00", wenn die Zeile keine Buchung traegt oder
+    /// gar keine Spalte angezeigt wird - dieselbe Ausnahme wie bei
+    /// <see cref="ReportZelle"/>.
+    /// </summary>
+    public string DurchschnittText { get; }
+
+    public bool DurchschnittIstErstattung { get; }
+
     public static ReportZeile FuerKategorie(
         ReportMatrixRow row,
         IReadOnlyList<ReportSpalte> spalten,
@@ -103,6 +134,7 @@ public sealed class ReportZeile
         return new ReportZeile(
             row, row.Name, row.Depth, row.IsArchived,
             hatKinder, istAufgeklappt, istSummenZeile: false, zellen, summe,
+            row.Total, spalten.Count,
             Farbpinsel.Fuer(farbe));
     }
 
@@ -129,6 +161,7 @@ public sealed class ReportZeile
         return new ReportZeile(
             quelle: null, "Summe", tiefe: 0, istArchiviert: false,
             hatKinder: false, istAufgeklappt: false, istSummenZeile: true, zellen, summe,
+            matrix.Total, spalten.Count,
             Brushes.Transparent);
     }
 }
