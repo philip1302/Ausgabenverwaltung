@@ -28,16 +28,15 @@ public class DatabaseMigratorTests : IDisposable
         => connection.Query<string>($"SELECT name FROM pragma_table_info('{tabelle}')").ToList();
 
     [Fact]
-    public void Version_1_wird_auf_Version_2_gehoben()
+    public void Version_1_wird_in_einem_Rutsch_auf_die_aktuelle_Version_gehoben()
     {
         LegeVersion1An();
         Assert.Equal(1, DatabaseInitializer.GetSchemaVersion(_connection));
 
         var version = DatabaseMigrator.MigrateToLatest(_connection);
 
-        Assert.Equal(2, version);
         Assert.Equal(DatabaseInitializer.ExpectedSchemaVersion, version);
-        Assert.Equal(2, DatabaseInitializer.GetSchemaVersion(_connection));
+        Assert.Equal(DatabaseInitializer.ExpectedSchemaVersion, DatabaseInitializer.GetSchemaVersion(_connection));
     }
 
     [Fact]
@@ -112,6 +111,31 @@ public class DatabaseMigratorTests : IDisposable
         // Und die Vererbung liefert fuer diesen Stand den Standardwert.
         var farben = new CategoryRepository(_connection).GetResolvedColors();
         Assert.Equal(CategoryColorPalette.DefaultHex, farben[1]);
+    }
+
+    [Fact]
+    public void Migration_v2_zu_v3_vergibt_SortOrder_nach_bisheriger_alphabetischer_Reihenfolge()
+    {
+        // Stand der Version 2 - vor Einfuehrung von Person.SortOrder gab
+        // es nur die alphabetische Sortierung ueber Name. Die Migration
+        // muss genau diese Reihenfolge als Startwert einfrieren, damit
+        // sich fuer bereits vorhandene Personen beim ersten Start nichts
+        // sichtbar aendert.
+        _connection.Execute(DatabaseInitializer.LoadScript("schema_v2.sql"));
+        _connection.Execute("""
+            INSERT INTO Person (Id, Name, IsSelf, IsArchived, CreatedUtc)
+            VALUES (1, 'Ich', 1, 0, '2026-01-01T00:00:00Z'),
+                   (2, 'Zora', 0, 0, '2026-01-02T00:00:00Z'),
+                   (3, 'Anna', 0, 0, '2026-01-03T00:00:00Z');
+            """);
+
+        DatabaseMigrator.MigrateToLatest(_connection);
+
+        Assert.Contains("SortOrder", Spaltennamen(_connection, "Person"));
+
+        var namenNachSortOrder = _connection.Query<string>(
+            "SELECT Name FROM Person ORDER BY SortOrder").ToList();
+        Assert.Equal(new[] { "Anna", "Ich", "Zora" }, namenNachSortOrder);
     }
 
     [Fact]

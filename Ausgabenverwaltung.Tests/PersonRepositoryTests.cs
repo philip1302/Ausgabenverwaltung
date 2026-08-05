@@ -99,14 +99,56 @@ public class PersonRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void GetAll_liefert_Personen_alphabetisch_sortiert()
+    public void GetAll_liefert_Personen_in_Erstellungsreihenfolge()
     {
+        // Keine alphabetische Sortierung mehr, sondern SortOrder: die
+        // zuerst angelegte Person steht zuerst, unabhaengig vom Namen -
+        // erst MoveUp/MoveDown aendern das (siehe unten).
         _repository.Create("Bernd");
         _repository.Create("Anna");
 
         var names = _repository.GetAll().Select(p => p.Name).ToList();
 
-        Assert.Equal(new[] { "Anna", "Bernd" }, names);
+        Assert.Equal(new[] { "Bernd", "Anna" }, names);
+    }
+
+    [Fact]
+    public void MoveDown_und_MoveUp_vertauschen_SortOrder_mit_Nachbarn()
+    {
+        var erste = _repository.Create("Erste");
+        _repository.Create("Zweite");
+
+        _repository.MoveDown(erste.Id);
+        var nachUnten = _repository.GetAll();
+        Assert.Equal("Zweite", nachUnten[0].Name);
+        Assert.Equal("Erste", nachUnten[1].Name);
+
+        _repository.MoveUp(erste.Id);
+        var nachOben = _repository.GetAll();
+        Assert.Equal("Erste", nachOben[0].Name);
+        Assert.Equal("Zweite", nachOben[1].Name);
+    }
+
+    [Fact]
+    public void MoveUp_am_Anfang_der_Liste_aendert_nichts()
+    {
+        var erste = _repository.Create("Erste");
+        _repository.Create("Zweite");
+
+        _repository.MoveUp(erste.Id);
+
+        Assert.Equal("Erste", _repository.GetAll()[0].Name);
+    }
+
+    [Fact]
+    public void MoveDown_am_Ende_der_Liste_aendert_nichts()
+    {
+        _repository.Create("Erste");
+        var zweite = _repository.Create("Zweite");
+
+        _repository.MoveDown(zweite.Id);
+
+        Assert.Equal("Zweite", _repository.GetAll()[1].Name);
     }
 
     [Fact]
