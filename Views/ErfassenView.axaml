@@ -133,6 +133,19 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+            <TextBlock Text="{Binding ZahlerFehler}"
+                       IsVisible="{Binding ZahlerFehlerSichtbar}"
+                       Foreground="Red" />
+
+            <!-- Kein anderer Zahler vorhanden, um eine gerade angekreuzte
+                 Einnahme zuzuordnen - das Haekchen wurde deshalb bereits
+                 automatisch zurueckgesetzt (siehe
+                 ErfassenViewModel.AktualisiereZahlerAuswahl). -->
+            <TextBlock Text="{Binding EinnahmeHinweisText}"
+                       IsVisible="{Binding EinnahmeHinweisSichtbar}"
+                       TextWrapping="Wrap"
+                       Foreground="#B8860B"
+                       Margin="0,6,0,0" />
 
             <Button Content="Speichern"
                     Command="{Binding SpeichernCommand}"
@@ -153,7 +166,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding VorText}" />
                             <TextBlock Text="{Binding BetragText}"
-                                       Classes.erstattung="{Binding IstErstattung}"
+                                       Classes.ausgabe="{Binding IstAusgabe}"
                                        Classes.einnahme="{Binding IstEinnahme}" />
                             <TextBlock Text="{Binding NachText}" />
                         </StackPanel>

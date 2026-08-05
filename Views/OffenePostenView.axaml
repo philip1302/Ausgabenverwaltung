@@ -182,8 +182,8 @@
 
                                                     <StackPanel Grid.Column="11" Orientation="Horizontal" Spacing="6"
                                                                 IsVisible="{Binding !IstBeglichen}">
-                                                        <Button Content="Abhaken"
-                                                                ToolTip.Tip="Heute als beglichen markieren"
+                                                        <Button Content="{Binding AbhakenButtonText}"
+                                                                ToolTip.Tip="{Binding AbhakenToolTip}"
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbhakenCommand}"
                                                                 CommandParameter="{Binding}" />
                                                         <Button Content="Datum…"

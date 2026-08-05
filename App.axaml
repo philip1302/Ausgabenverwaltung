@@ -25,19 +25,28 @@
         <x:Double x:Key="SchriftNormal">14</x:Double>
         <x:Double x:Key="SchriftUeberschrift">16</x:Double>
 
-        <!-- Die Farbe negativer Betraege (Erstattungen). Gedaempft und
-             nicht signalrot: sie unterscheidet eine Erstattung von einer
-             Ausgabe, sie warnt nicht. Und sie ist ein ZUSATZ - das
-             Minuszeichen steht ohnehin davor und traegt die Angabe auch
-             ohne Farbwahrnehmung. -->
+        <!-- Die Farbe negativer Betraege in der (unveraendert gebliebenen)
+             Offene-Posten-Liste. Gedaempft und nicht signalrot: sie
+             warnt nicht, sie ergaenzt nur. Ausserhalb der Offene-Posten-
+             Liste steht dieselbe Bedeutung heute unter AusgabeFarbe -
+             siehe dort. -->
         <SolidColorBrush x:Key="ErstattungFarbe">#A03A30</SolidColorBrush>
 
-        <!-- Die Farbe von Einnahmen - gedaempftes Gruen als Gegenstueck zum
-             gedaempften Rot der Erstattungen, ebenso kein Signalton. Auch
-             hier ist die Farbe ein ZUSATZ: das vorangestellte "+" (siehe
-             EuroText.Format) traegt die Angabe bereits ohne
+        <!-- Die Farbe von Ausgaben ausserhalb der Offene-Posten-Liste:
+             derselbe gedaempfte Rotton wie ErstattungFarbe, unter eigenem
+             Namen, weil er hier eine andere Bedeutung traegt (jede
+             Ausgabe, nicht nur ein negativer Betrag). Auch hier ist die
+             Farbe ein ZUSATZ - das Minuszeichen aus EuroText.FormatSigned
+             steht ohnehin davor und traegt die Angabe auch ohne
              Farbwahrnehmung (Regel 10). -->
-        <SolidColorBrush x:Key="EinnahmeFarbe">#2E7D32</SolidColorBrush>
+        <SolidColorBrush x:Key="AusgabeFarbe">#A03A30</SolidColorBrush>
+
+        <!-- Die Farbe von Einnahmen - gedaempftes Hellgruen als
+             Gegenstueck zum gedaempften Rot der Ausgaben, ebenso kein
+             Signalton. Auch hier ist die Farbe ein ZUSATZ: das
+             vorangestellte "+" (siehe EuroText.FormatSigned) traegt die
+             Angabe bereits ohne Farbwahrnehmung (Regel 10). -->
+        <SolidColorBrush x:Key="EinnahmeFarbe">#66BB6A</SolidColorBrush>
     </Application.Resources>
 
     <!-- Wiederverwendbare Tabellen-Styles fuer alle Listen-/Tabellenansichten
@@ -138,12 +147,13 @@
             <Setter Property="TextAlignment" Value="Center" />
         </Style>
 
-        <!-- Negative Betraege (Erstattungen). Zwei Regeln, weil Betraege
-             an beiden Stellen stehen: als Text in den Tabellenzellen und
-             als Inhalt der anklickbaren Zellen der Kreuztabelle. Bei den
-             Schaltflaechen greift die Regel im Vorlagenbaum, weil das
-             Thema die Vordergrundfarbe im Zustand "pointerover" sonst am
-             ContentPresenter selbst ueberschreibt. -->
+        <!-- Negative Betraege in der Offene-Posten-Liste (dort weiterhin
+             "Erstattung" im urspruenglichen Sinn). Zwei Regeln, weil
+             Betraege an beiden Stellen stehen: als Text in den
+             Tabellenzellen und als Inhalt der anklickbaren Zellen der
+             Kreuztabelle. Bei den Schaltflaechen greift die Regel im
+             Vorlagenbaum, weil das Thema die Vordergrundfarbe im Zustand
+             "pointerover" sonst am ContentPresenter selbst ueberschreibt. -->
         <Style Selector=":is(TextBlock).erstattung">
             <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
         </Style>
@@ -151,10 +161,19 @@
             <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
         </Style>
 
-        <!-- Einnahmen - dasselbe Muster wie .erstattung oben, nur gruen.
-             IsIncome und ein negativer Betrag schliessen sich laut
-             ExpenseValidator gegenseitig aus, eine Zeile traegt also nie
-             beide Klassen gleichzeitig. -->
+        <!-- Ausgaben ausserhalb der Offene-Posten-Liste - dasselbe Muster
+             wie .erstattung oben, unter eigenem Namen (siehe AusgabeFarbe). -->
+        <Style Selector=":is(TextBlock).ausgabe">
+            <Setter Property="Foreground" Value="{DynamicResource AusgabeFarbe}" />
+        </Style>
+        <Style Selector="Button.ausgabe /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource AusgabeFarbe}" />
+        </Style>
+
+        <!-- Einnahmen - dasselbe Muster, nur gruen. Ausgabe und Einnahme
+             schliessen sich beim Buchungstyp gegenseitig aus, und ein
+             Betrag ist nach ExpenseValidator nie negativ - eine Zeile
+             traegt also nie .ausgabe und .einnahme gleichzeitig. -->
         <Style Selector=":is(TextBlock).einnahme">
             <Setter Property="Foreground" Value="{DynamicResource EinnahmeFarbe}" />
         </Style>

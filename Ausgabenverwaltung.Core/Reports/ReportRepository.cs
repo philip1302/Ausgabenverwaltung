@@ -128,14 +128,19 @@ public sealed class ReportRepository
                 END
         """;
 
-    // Eine Einnahme mindert die Summe statt sie zu erhoehen - deshalb hier
-    // per CASE das Vorzeichen kippen statt einfach zu addieren (siehe
-    // Entities.Expense.IsIncome). Eigene Konstante wie GroupKeySql, weil
+    // Das Vorzeichen kommt vom Buchungstyp: eine Ausgabe mindert die
+    // Summe (negativ), eine Einnahme erhoeht sie (positiv) - aber erst,
+    // sobald sie tatsaechlich eingegangen ist (SettledDate gesetzt). Eine
+    // noch offene Einnahme ist noch nicht real geflossenes Geld und geht
+    // deshalb weder erhoehend noch mindernd ein (siehe
+    // Entities.Expense.IsIncome). ABS() macht die Rechnung robust
+    // gegenueber etwaigen Alt-Datensaetzen mit noch negativem Betrag
+    // (frueher: Erstattung). Eigene Konstante wie GroupKeySql, weil
     // Evaluate und EvaluateMatrix dieselbe Rechenregel brauchen.
     private const string SumCentsSql = """
-                SUM(CASE WHEN e.IsIncome = 1
-                         THEN -e.AmountCents
-                         ELSE  e.AmountCents
+                SUM(CASE WHEN e.IsIncome = 1 AND e.SettledDate IS NOT NULL THEN  ABS(e.AmountCents)
+                         WHEN e.IsIncome = 1                              THEN  0
+                         ELSE                                                  -ABS(e.AmountCents)
                     END)
         """;
 

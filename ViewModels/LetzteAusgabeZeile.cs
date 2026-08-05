@@ -7,8 +7,8 @@ namespace Ausgabenverwaltung.ViewModels;
 /// Eine Zeile der Liste "Letzte Ausgaben" unter der Erfassungsmaske.
 ///
 /// Bewusst dreigeteilt statt als ein fertiger Text: nur so laesst sich
-/// der Betrag als Erstattung hervorheben, ohne die ganze Zeile
-/// einzufaerben. Zusammengesetzt wird sie erst in der Ansicht.
+/// der Betrag als Ausgabe oder Einnahme hervorheben, ohne die ganze
+/// Zeile einzufaerben. Zusammengesetzt wird sie erst in der Ansicht.
 /// </summary>
 public sealed class LetzteAusgabeZeile
 {
@@ -16,8 +16,8 @@ public sealed class LetzteAusgabeZeile
     {
         VorText = GermanDateInput.ToText(expense.ExpenseDate) + "  ·  ";
 
-        BetragText = EuroText.Format(expense.AmountCents, expense.IsIncome);
-        IstErstattung = EuroText.IsNegative(expense.AmountCents);
+        BetragText = EuroText.FormatSigned(expense.AmountCents, expense.IsIncome);
+        IstAusgabe = !expense.IsIncome;
         IstEinnahme = expense.IsIncome;
 
         NachText = $"  ·  {expense.CategoryName}  ·  {expense.PayerName}"
@@ -29,9 +29,10 @@ public sealed class LetzteAusgabeZeile
 
     public string BetragText { get; }
 
-    public bool IstErstattung { get; }
+    /// <summary>Ausgabe (nicht Einnahme) - wird gedaempft rot hervorgehoben.</summary>
+    public bool IstAusgabe { get; }
 
-    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben.</summary>
+    /// <summary>Einnahme - wird gedaempft hellgruen hervorgehoben.</summary>
     public bool IstEinnahme { get; }
 
     /// <summary>Alles nach dem Betrag: Kategorie, Zahler, Bemerkung.</summary>

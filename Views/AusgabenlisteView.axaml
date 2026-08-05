@@ -272,7 +272,8 @@
                            VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2"
                            FontWeight="Bold"
-                           Classes.erstattung="{Binding SummeIstErstattung}"
+                           Classes.ausgabe="{Binding SummeIstAusgabe}"
+                           Classes.einnahme="{Binding SummeIstEinnahme}"
                            Text="{Binding SummeText, StringFormat='Summe: {0}'}" />
             </Grid>
 
@@ -395,7 +396,7 @@
 
                                 <TextBlock Grid.Column="8" Text="{Binding BetragText}"
                                            Classes="tabellenzelle zahl"
-                                           Classes.erstattung="{Binding IstErstattung}"
+                                           Classes.ausgabe="{Binding IstAusgabe}"
                                            Classes.einnahme="{Binding IstEinnahme}" />
                                 <anzeige:Textzelle Grid.Column="10" Inhalt="{Binding PayerName}"
                                                    Classes="tabellenzelle" />
@@ -546,6 +547,19 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
+                    <TextBlock Text="{Binding ZahlerFehler}"
+                               IsVisible="{Binding ZahlerFehlerSichtbar}"
+                               Foreground="Red" />
+
+                    <!-- Kein anderer Zahler vorhanden, um eine gerade
+                         angekreuzte Einnahme zuzuordnen - das Haekchen
+                         wurde deshalb bereits automatisch zurueckgesetzt
+                         (siehe AusgabeBearbeitenViewModel.AktualisiereZahlerAuswahl). -->
+                    <TextBlock Text="{Binding EinnahmeHinweisText}"
+                               IsVisible="{Binding EinnahmeHinweisSichtbar}"
+                               TextWrapping="Wrap"
+                               Foreground="#B8860B"
+                               Margin="0,6,0,0" />
 
                     <!-- Nur bei fremdem Zahler ueberhaupt gemeint (Regel
                          4) - das Abhaken selbst bleibt Aufgabe von
@@ -553,7 +567,7 @@
                          bereits eingetragenes Datum korrigieren. Leer =
                          weiterhin offen. -->
                     <StackPanel IsVisible="{Binding BezahltAmSichtbar}">
-                        <TextBlock Text="Bezahlt am" Margin="0,10,0,0" />
+                        <TextBlock Text="{Binding BezahltAmLabelText}" Margin="0,10,0,0" />
                         <TextBox Text="{Binding BezahltAmText}"
                                  PlaceholderText="TT.MM.JJJJ (leer = offen)"
                                  Width="{anzeige:Breite 150}"

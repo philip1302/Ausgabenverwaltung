@@ -162,4 +162,19 @@ public class OpenItemsRepositoryTests : IDisposable
         Assert.Equal(1500, summen[_otherId]);
         Assert.False(summen.ContainsKey(_selfId));
     }
+
+    [Fact]
+    public void GetOpenSumsByPayer_addiert_offene_Ausgaben_und_offene_Einnahmen_statt_zu_verrechnen()
+    {
+        // Eine offene Ausgabe ("Mitbewohner schuldet mir das zurueck")
+        // und eine offene Einnahme ("Mitbewohner schuldet mir das noch")
+        // zeigen in dieselbe Richtung - beides ist Geld, das mir die
+        // Person noch schuldet, kein Vorzeichenwechsel.
+        _expenses.Create(_categoryId, 1000, Heute.AddDays(-1), _otherId);
+        _expenses.Create(_categoryId, 500, Heute.AddDays(-2), _otherId, isIncome: true);
+
+        var summen = _repository.GetOpenSumsByPayer();
+
+        Assert.Equal(1500, summen[_otherId]);
+    }
 }

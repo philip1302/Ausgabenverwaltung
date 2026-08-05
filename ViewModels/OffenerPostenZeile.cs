@@ -22,7 +22,7 @@ public sealed partial class OffenerPostenZeile : ObservableObject
     /// <summary>Erstattung (negativer Betrag) - wird gedaempft rot hervorgehoben.</summary>
     public bool IstErstattung { get; }
 
-    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben und mindert die Zwischensumme.</summary>
+    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben.</summary>
     public bool IstEinnahme { get; }
     public string CategoryFullPath { get; }
     public string? Note { get; }
@@ -34,8 +34,19 @@ public sealed partial class OffenerPostenZeile : ObservableObject
     public bool IstBeglichen => SettledDate is not null;
 
     public string BeglichenText => SettledDate is DateOnly datum
-        ? $"beglichen am {GermanDateInput.ToText(datum)}"
+        ? $"{(IstEinnahme ? "erhalten am" : "beglichen am")} {GermanDateInput.ToText(datum)}"
         : string.Empty;
+
+    /// <summary>
+    /// Wortwahl passend zur Buchungsart: eine Ausgabe wird "abgehakt"
+    /// (die fremde Person hat zurueckgezahlt), eine Einnahme "erhalten"
+    /// (das Geld ist tatsaechlich eingegangen).
+    /// </summary>
+    public string AbhakenButtonText => IstEinnahme ? "Erhalten" : "Abhaken";
+
+    public string AbhakenToolTip => IstEinnahme
+        ? "Heute als erhalten markieren"
+        : "Heute als beglichen markieren";
 
     [ObservableProperty]
     private bool _istAusgewaehlt;

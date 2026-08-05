@@ -57,7 +57,17 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
 
     public IReadOnlyList<CategoryOption> KategorieVorschlaege { get; }
 
-    public IReadOnlyList<Person> ZahlerOptionen { get; }
+    // Alle waehlbaren Personen (inkl. eines inzwischen archivierten
+    // Zahlers, siehe BaueZahlerOptionen), ungefiltert - die Quelle, aus
+    // der AktualisiereZahlerAuswahl das tatsaechlich waehlbare
+    // ZahlerOptionen aufbaut. Bei einer Einnahme faellt die Ich-Person
+    // dort heraus: eine Einnahme kommt immer von jemand anderem, sonst
+    // liesse sich nie verfolgen, ob sie ueber die Offene-Posten-Liste
+    // tatsaechlich eingegangen ist (Regel 4).
+    private readonly IReadOnlyList<Person> _allePersonen;
+
+    [ObservableProperty]
+    private IReadOnlyList<Person> _zahlerOptionen = Array.Empty<Person>();
 
     // ---------------- Felder ----------------
 
@@ -106,6 +116,17 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _istEinnahme;
+
+    /// <summary>
+    /// Erklaert, warum das Haekchen bei "Einnahme" gerade automatisch
+    /// zurueckgesetzt wurde: es gibt ausser der Ich-Person niemanden, dem
+    /// sich die Einnahme zuordnen liesse (siehe AktualisiereZahlerAuswahl).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EinnahmeHinweisSichtbar))]
+    private string? _einnahmeHinweisText;
+
+    public bool EinnahmeHinweisSichtbar => EinnahmeHinweisText is not null;
 
     // ---------------- Rhythmus ----------------
 
@@ -245,13 +266,13 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
         _urspruenglichesStartdatum = vorlage?.StartDate;
 
         KategorieVorschlaege = BaueKategorieVorschlaege(vorlage, kategoriePfad, waehlbareKategorien);
-        ZahlerOptionen = BaueZahlerOptionen(vorlage, zahler);
+        _allePersonen = BaueZahlerOptionen(vorlage, zahler);
 
         if (vorlage is null)
         {
             _ausgewaehlteIntervallEinheit = IntervallOptionen.First(option => option.Wert == "month");
-            _ausgewaehlterZahler = ZahlerOptionen.FirstOrDefault(person => person.IsSelf)
-                ?? ZahlerOptionen.FirstOrDefault();
+            _ausgewaehlterZahler = _allePersonen.FirstOrDefault(person => person.IsSelf)
+                ?? _allePersonen.FirstOrDefault();
             _startDatumText = GermanDateInput.ToText(heute);
             _ankertagText = heute.Day.ToString(CultureInfo.InvariantCulture);
         }
@@ -269,7 +290,7 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
 
             _ausgewaehlteKategorie = KategorieVorschlaege
                 .FirstOrDefault(option => option.Id == vorlage.CategoryId);
-            _ausgewaehlterZahler = ZahlerOptionen
+            _ausgewaehlterZahler = _allePersonen
                 .FirstOrDefault(person => person.Id == vorlage.PayerId);
 
             _ausgewaehlteIntervallEinheit =
@@ -283,6 +304,7 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
             _istAktiv = vorlage.IsActive;
         }
 
+        AktualisiereZahlerAuswahl();
         AktualisiereVorschau();
     }
 
@@ -328,15 +350,35 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
     partial void OnEndDatumTextChanged(string value) => AktualisiereVorschau();
     partial void OnIstAktivChanged(bool value) => AktualisiereVorschau();
 
-    // Beim Ankreuzen auf die Ich-Person vorbelegen, sofern gerade ein
-    // fremder Zahler gewaehlt ist - dasselbe Verhalten wie in der
-    // Erfassungsmaske (siehe ErfassenViewModel.OnIstEinnahmeChanged).
-    partial void OnIstEinnahmeChanged(bool value)
+    partial void OnIstEinnahmeChanged(bool value) => AktualisiereZahlerAuswahl();
+
+    /// <summary>
+    /// Baut ZahlerOptionen aus _allePersonen neu auf - dasselbe Verfahren
+    /// wie in der Erfassungsmaske (siehe
+    /// <see cref="ErfassenViewModel.AktualisiereZahlerAuswahl"/>): bei
+    /// einer Einnahme faellt die Ich-Person heraus, eine bereits
+    /// getroffene Auswahl bleibt erhalten, sofern sie weiterhin waehlbar
+    /// ist, und gibt es ausser der Ich-Person niemanden, wird die Einnahme
+    /// sofort zurueckgesetzt und ein Hinweistext erklaert warum.
+    /// </summary>
+    private void AktualisiereZahlerAuswahl()
     {
-        if (value && AusgewaehlterZahler is { IsSelf: false })
+        if (IstEinnahme && _allePersonen.All(person => person.IsSelf))
         {
-            AusgewaehlterZahler = ZahlerOptionen.FirstOrDefault(person => person.IsSelf);
+            IstEinnahme = false;
+            EinnahmeHinweisText = "Für eine Einnahme wird zunächst eine weitere Person benötigt (siehe Verwaltung › Personen).";
+            return;
         }
+
+        EinnahmeHinweisText = null;
+
+        var ausgewaehlteId = AusgewaehlterZahler?.Id;
+        var gefiltert = _allePersonen.Where(person => !IstEinnahme || !person.IsSelf).ToList();
+        ZahlerOptionen = gefiltert;
+
+        AusgewaehlterZahler = gefiltert.FirstOrDefault(person => person.Id == ausgewaehlteId)
+            ?? gefiltert.FirstOrDefault(person => !IstEinnahme && person.IsSelf)
+            ?? gefiltert.FirstOrDefault();
     }
 
     /// <summary>
@@ -387,6 +429,7 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
         Title = Titel,
         CategoryId = AusgewaehlteKategorie?.Id,
         PayerId = AusgewaehlterZahler?.Id,
+        PayerIsSelf = AusgewaehlterZahler?.IsSelf ?? false,
         AmountText = BetragText,
         IsIncome = IstEinnahme,
         IntervalUnit = AusgewaehlteIntervallEinheit.Wert,

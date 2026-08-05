@@ -15,7 +15,7 @@ public static class ExpenseValidator
 {
     public static ExpenseValidation Validate(ExpenseInput input)
     {
-        var (amountCents, amountError) = PruefeBetrag(input.AmountText, input.IsIncome);
+        var (amountCents, amountError) = PruefeBetrag(input.AmountText);
         var (date, dateError, dateConfirmation) = PruefeDatum(input.DateText, input.Today);
 
         return new ExpenseValidation
@@ -26,9 +26,19 @@ public static class ExpenseValidator
                 ? "Bitte eine Kategorie wählen."
                 : null,
 
+            // Eine Einnahme kommt immer von jemand anderem - erst damit
+            // laesst sich ueber die Offene-Posten-Liste verfolgen, ob sie
+            // tatsaechlich eingegangen ist (Regel 4: SettledDate wird bei
+            // der eigenen Person nie ausgewertet). Die Oberflaeche
+            // verhindert die Wahl der eigenen Person bei einer Einnahme
+            // bereits (die Ich-Person faellt aus der Auswahl heraus),
+            // diese Pruefung ist die zweite, von der UI unabhaengige
+            // Absicherung (Regel 7).
             PayerError = input.PayerId is null
                 ? "Bitte einen Zahler wählen."
-                : null,
+                : input.IsIncome && input.PayerIsSelf
+                    ? "Eine Einnahme braucht einen Zahler, der nicht die eigene Person ist."
+                    : null,
 
             DateError = dateError,
             DateConfirmation = dateConfirmation,
@@ -38,7 +48,7 @@ public static class ExpenseValidator
         };
     }
 
-    private static (long Cents, string? Fehler) PruefeBetrag(string? amountText, bool isIncome)
+    private static (long Cents, string? Fehler) PruefeBetrag(string? amountText)
     {
         if (string.IsNullOrWhiteSpace(amountText))
         {
@@ -54,22 +64,20 @@ public static class ExpenseValidator
         // keine Ausgabe. Sie entsteht fast immer durch ein abgeschicktes
         // leeres Feld oder eine abgeschnittene Eingabe und wuerde sonst
         // still in der Liste landen.
-        //
-        // Negative Betraege bleiben ausdruecklich erlaubt - so werden
-        // Erstattungen erfasst (siehe die Darstellung als "Erstattung" in
-        // der Ausgabenliste). Bei einer Einnahme waere ein negativer
-        // Betrag aber zweideutig (mindert er die Summe zusaetzlich, oder
-        // hebt er sich mit dem Einnahme-Attribut gerade auf?) - deshalb
-        // hier ausdruecklich abgelehnt, statt die beiden Vorzeichen-
-        // Konzepte miteinander zu vermischen.
         if (cents == 0)
         {
             return (0, "Der Betrag darf nicht null sein.");
         }
 
-        if (isIncome && cents < 0)
+        // Das Vorzeichen kommt ausschliesslich vom Buchungstyp
+        // (Entities.Expense.IsIncome, siehe EuroText.FormatSigned) -
+        // Ausgabe erscheint negativ/rot, Einnahme positiv/gruen. Eingegeben
+        // wird deshalb immer ein positiver Betrag; es gibt kein manuelles
+        // negatives Vorzeichen mehr (frueher: Erstattung - ein tatsaechlicher
+        // Rueckfluss wird jetzt als Einnahme erfasst).
+        if (cents < 0)
         {
-            return (0, "Eine Einnahme darf keinen negativen Betrag haben.");
+            return (0, "Der Betrag darf nicht negativ sein.");
         }
 
         return (cents, null);

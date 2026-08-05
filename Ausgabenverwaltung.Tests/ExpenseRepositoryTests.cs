@@ -196,12 +196,14 @@ public class ExpenseRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void Summarize_zieht_Einnahmen_von_der_Summe_ab_statt_sie_zu_addieren()
+    public void Summarize_verrechnet_eine_beglichene_Einnahme_positiv_gegen_die_Ausgabe()
     {
-        // 500,00 € Ausgabe, 200,00 € Einnahme -> Summe 300,00 €, nicht 700,00 €.
+        // 500,00 € Ausgabe (negativ), 200,00 € beglichene (tatsaechlich
+        // eingegangene) Einnahme (positiv) -> Summe -300,00 €, nicht -700,00 €.
         _repository.Create(_categoryId, 50000, new DateOnly(2026, 3, 1), _selfId);
         _repository.Create(
-            _categoryId, 20000, new DateOnly(2026, 3, 2), _selfId, isIncome: true);
+            _categoryId, 20000, new DateOnly(2026, 3, 2), _otherId,
+            isIncome: true, settledDate: new DateOnly(2026, 3, 10));
 
         var filter = new ReportFilter
         {
@@ -212,6 +214,28 @@ public class ExpenseRepositoryTests : IDisposable
         var summary = _repository.Summarize(filter);
 
         Assert.Equal(2, summary.Count);
-        Assert.Equal(30000, summary.SumCents);
+        Assert.Equal(-30000, summary.SumCents);
+    }
+
+    [Fact]
+    public void Summarize_zaehlt_eine_noch_offene_Einnahme_weder_erhoehend_noch_mindernd()
+    {
+        // Eine noch nicht eingegangene Einnahme ist noch nicht real
+        // geflossenes Geld - sie darf die Summe nicht veraendern, bis sie
+        // ueber die Offene-Posten-Liste als erhalten markiert wurde.
+        _repository.Create(_categoryId, 50000, new DateOnly(2026, 3, 1), _selfId);
+        _repository.Create(
+            _categoryId, 20000, new DateOnly(2026, 3, 2), _otherId, isIncome: true);
+
+        var filter = new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2026, 12, 31),
+        };
+
+        var summary = _repository.Summarize(filter);
+
+        Assert.Equal(2, summary.Count);
+        Assert.Equal(-50000, summary.SumCents);
     }
 }

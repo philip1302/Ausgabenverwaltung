@@ -28,6 +28,17 @@ public sealed record ExpenseInput
     /// <summary>NULL, solange kein Zahler gewaehlt ist.</summary>
     public int? PayerId { get; init; }
 
+    /// <summary>
+    /// Ob der gewaehlte Zahler (PayerId) die eigene Person ist. Nur fuer
+    /// die Pruefung gebraucht: eine Einnahme kommt immer von jemand
+    /// anderem, sonst liesse sich nie verfolgen, ob sie ueber die
+    /// Offene-Posten-Liste tatsaechlich eingegangen ist (Regel 4 -
+    /// SettledDate wird bei der eigenen Person nie ausgewertet). Vom
+    /// Aufrufer aus der gewaehlten Person uebernommen, damit hier keine
+    /// eigene Personenabfrage noetig ist.
+    /// </summary>
+    public bool PayerIsSelf { get; init; }
+
     public required string DateText { get; init; }
 
     /// <summary>

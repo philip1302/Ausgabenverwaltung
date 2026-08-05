@@ -425,11 +425,11 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
     private void AktualisiereGesamtsumme()
     {
-        // Eine Einnahme mindert die Gesamtsumme statt sie zu erhoehen
-        // (siehe Entities.Expense.IsIncome).
+        // Bewusst ohne Fallunterscheidung nach IstEinnahme - siehe
+        // PersonenGruppe.AktualisiereZwischensumme.
         var summeCents = Gruppen.SelectMany(g => g.Zeilen)
             .Where(z => !z.IstBeglichen)
-            .Sum(z => z.IstEinnahme ? -z.AmountCents : z.AmountCents);
+            .Sum(z => z.AmountCents);
         GesamtsummeText = EuroText.Format(summeCents);
         GesamtsummeIstErstattung = EuroText.IsNegative(summeCents);
     }

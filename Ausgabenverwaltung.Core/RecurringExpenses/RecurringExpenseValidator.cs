@@ -20,7 +20,7 @@ public static class RecurringExpenseValidator
                 nameof(input), input.IntervalUnit, "Unbekannte IntervalUnit.");
         }
 
-        var (amountCents, betragFehler) = PruefeBetrag(input.AmountText, input.IsIncome);
+        var (amountCents, betragFehler) = PruefeBetrag(input.AmountText);
 
         var anzahlGueltig =
             int.TryParse(
@@ -44,9 +44,14 @@ public static class RecurringExpenseValidator
                 ? "Bitte eine Kategorie wählen."
                 : null,
 
+            // Dieselbe Begruendung wie bei einer einzelnen Ausgabe (siehe
+            // Expenses.ExpenseValidator.Validate): eine Einnahme kommt
+            // immer von jemand anderem.
             PayerError = input.PayerId is null
                 ? "Bitte einen Zahler wählen."
-                : null,
+                : input.IsIncome && input.PayerIsSelf
+                    ? "Eine Einnahme braucht einen Zahler, der nicht die eigene Person ist."
+                    : null,
 
             AmountError = betragFehler,
 
@@ -71,7 +76,7 @@ public static class RecurringExpenseValidator
     // Dieselbe Regel wie bei einer einzelnen Ausgabe (siehe
     // Expenses.ExpenseValidator): eine Vorlage ueber 0,00 € erzeugt Monat
     // fuer Monat Buchungen, die nichts aussagen.
-    private static (long Cents, string? Fehler) PruefeBetrag(string? amountText, bool isIncome)
+    private static (long Cents, string? Fehler) PruefeBetrag(string? amountText)
     {
         if (string.IsNullOrWhiteSpace(amountText))
         {
@@ -89,11 +94,12 @@ public static class RecurringExpenseValidator
         }
 
         // Dieselbe Begruendung wie bei einer einzelnen Ausgabe (siehe
-        // Expenses.ExpenseValidator.PruefeBetrag): die beiden Vorzeichen-
-        // Konzepte (Erstattung vs. Einnahme) sollen sich nie vermischen.
-        if (isIncome && cents < 0)
+        // Expenses.ExpenseValidator.PruefeBetrag): das Vorzeichen kommt
+        // ausschliesslich vom Buchungstyp, eingegeben wird immer ein
+        // positiver Betrag.
+        if (cents < 0)
         {
-            return (0, "Eine Einnahme darf keinen negativen Betrag haben.");
+            return (0, "Der Betrag darf nicht negativ sein.");
         }
 
         return (cents, null);

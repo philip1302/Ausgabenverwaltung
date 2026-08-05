@@ -24,13 +24,13 @@ public sealed partial class AusgabeZeile : ObservableObject
     public string BetragText { get; }
 
     /// <summary>
-    /// Erstattung (negativer Betrag). Die Zeile hebt den Betrag dann
-    /// gedaempft rot hervor - zusaetzlich zum Minuszeichen, das die
-    /// Angabe auch ohne Farbwahrnehmung traegt.
+    /// Ausgabe (nicht Einnahme). Die Zeile hebt den Betrag dann gedaempft
+    /// rot hervor - zusaetzlich zum Minuszeichen, das die Angabe auch
+    /// ohne Farbwahrnehmung traegt.
     /// </summary>
-    public bool IstErstattung { get; }
+    public bool IstAusgabe { get; }
 
-    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben und mindert die Summen.</summary>
+    /// <summary>Einnahme - wird gedaempft hellgruen hervorgehoben und mindert die Summen.</summary>
     public bool IstEinnahme { get; }
     public int PayerId { get; }
     public string PayerName { get; }
@@ -86,8 +86,8 @@ public sealed partial class AusgabeZeile : ObservableObject
         CategoryId = item.CategoryId;
         CategoryFullPath = item.CategoryFullPath;
         AmountCents = item.AmountCents;
-        BetragText = EuroText.Format(item.AmountCents, item.IsIncome);
-        IstErstattung = EuroText.IsNegative(item.AmountCents);
+        BetragText = EuroText.FormatSigned(item.AmountCents, item.IsIncome);
+        IstAusgabe = !item.IsIncome;
         IstEinnahme = item.IsIncome;
         PayerId = item.PayerId;
         PayerName = item.PayerName;
@@ -107,7 +107,7 @@ public sealed partial class AusgabeZeile : ObservableObject
         StatusText = item.PayerIsSelf
             ? "—"
             : item.SettledDate is DateOnly beglichen
-                ? $"beglichen am {GermanDateInput.ToText(beglichen)}"
+                ? $"{(item.IsIncome ? "erhalten am" : "beglichen am")} {GermanDateInput.ToText(beglichen)}"
                 : "offen";
     }
 

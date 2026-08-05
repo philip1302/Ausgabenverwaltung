@@ -119,7 +119,8 @@
                            Foreground="Gray" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" FontWeight="Bold"
                            ToolTip.Tip="Alle aktiven, nicht abgelaufenen Vorlagen auf Monatsbasis umgerechnet (jährlich durch zwölf, wöchentlich mit der mittleren Monatslänge)."
-                           Classes.erstattung="{Binding MonatlicheBelastungIstErstattung}"
+                           Classes.ausgabe="{Binding MonatlicheBelastungIstAusgabe}"
+                           Classes.einnahme="{Binding MonatlicheBelastungIstEinnahme}"
                            Text="{Binding MonatlicheBelastungText, StringFormat='Monatliche Belastung: {0}'}" />
             </Grid>
 
@@ -194,7 +195,7 @@
                                                        Classes.archiviert="{Binding !IstAktiv}" />
                                     <TextBlock Grid.Column="4" Text="{Binding BetragText}"
                                                Classes="tabellenzelle zahl"
-                                               Classes.erstattung="{Binding IstErstattung}"
+                                               Classes.ausgabe="{Binding IstAusgabe}"
                                                Classes.einnahme="{Binding IstEinnahme}"
                                                Classes.archiviert="{Binding !IstAktiv}" />
                                     <anzeige:Textzelle Grid.Column="6" Inhalt="{Binding RhythmusText}"
@@ -386,6 +387,17 @@
                             </ComboBox>
                             <TextBlock Text="{Binding ZahlerFehler}"
                                        IsVisible="{Binding ZahlerFehlerSichtbar}" Foreground="Red" />
+
+                            <!-- Kein anderer Zahler vorhanden, um eine
+                                 gerade angekreuzte Einnahme zuzuordnen -
+                                 das Haekchen wurde deshalb bereits
+                                 automatisch zurueckgesetzt (siehe
+                                 VorlageBearbeitenViewModel.AktualisiereZahlerAuswahl). -->
+                            <TextBlock Text="{Binding EinnahmeHinweisText}"
+                                       IsVisible="{Binding EinnahmeHinweisSichtbar}"
+                                       TextWrapping="Wrap"
+                                       Foreground="#B8860B"
+                                       Margin="0,6,0,0" />
 
                             <TextBlock Text="Bemerkung" Classes="formularbeschriftung" />
                             <TextBox Text="{Binding Bemerkung}" />

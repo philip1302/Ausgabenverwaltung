@@ -51,7 +51,7 @@ public class ReportRepositoryTests : IDisposable
         });
 
         var group = Assert.Single(result);
-        Assert.Equal(6000, group.SumCents);
+        Assert.Equal(-6000, group.SumCents);
         Assert.Equal(3, group.Count);
     }
 
@@ -70,7 +70,7 @@ public class ReportRepositoryTests : IDisposable
         });
 
         var group = Assert.Single(result);
-        Assert.Equal(100, group.SumCents);
+        Assert.Equal(-100, group.SumCents);
         Assert.Equal(1, group.Count);
     }
 
@@ -104,8 +104,8 @@ public class ReportRepositoryTests : IDisposable
         Assert.Equal(
             new[] { "2025-Q4", "2026-Q1" },
             result.Select(r => r.GroupKey));
-        Assert.Equal(500, result.Single(r => r.GroupKey == "2025-Q4").SumCents);
-        Assert.Equal(700, result.Single(r => r.GroupKey == "2026-Q1").SumCents);
+        Assert.Equal(-500, result.Single(r => r.GroupKey == "2025-Q4").SumCents);
+        Assert.Equal(-700, result.Single(r => r.GroupKey == "2026-Q1").SumCents);
     }
 
     [Fact]
@@ -130,8 +130,8 @@ public class ReportRepositoryTests : IDisposable
             Grouping = ReportGrouping.Year,
         });
 
-        Assert.Equal(1000, Assert.Single(nurIch).SumCents);
-        Assert.Equal(2500, Assert.Single(nurAndere).SumCents);
+        Assert.Equal(-1000, Assert.Single(nurIch).SumCents);
+        Assert.Equal(-2500, Assert.Single(nurAndere).SumCents);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class ReportRepositoryTests : IDisposable
         });
 
         var group = Assert.Single(result);
-        Assert.Equal(4200, group.SumCents);
+        Assert.Equal(-4200, group.SumCents);
     }
 
     // PayerId und Status kommen aus demselben Filtermodell wie die
@@ -170,7 +170,7 @@ public class ReportRepositoryTests : IDisposable
             Grouping = ReportGrouping.Year,
         });
 
-        Assert.Equal(2500, Assert.Single(result).SumCents);
+        Assert.Equal(-2500, Assert.Single(result).SumCents);
     }
 
     // Regel 4: eigene Ausgaben haben keinen Status und zaehlen weder als
@@ -200,12 +200,13 @@ public class ReportRepositoryTests : IDisposable
             Grouping = ReportGrouping.Year,
         });
 
-        Assert.Equal(2500, Assert.Single(offene).SumCents);
-        Assert.Equal(700, Assert.Single(beglichene).SumCents);
+        Assert.Equal(-2500, Assert.Single(offene).SumCents);
+        Assert.Equal(-700, Assert.Single(beglichene).SumCents);
     }
 
-    // PayerScope.SelfAndOpen mischt bewusst Zahler und Status: eigene
-    // Ausgaben zaehlen immer, fremde nur, solange sie noch offen sind.
+    // PayerScope.SelfAndOpen mischt bewusst Zahler, Status und Buchungstyp:
+    // eigene Buchungen zaehlen immer, fremde Ausgaben nur, solange sie noch
+    // offen sind, fremde Einnahmen dagegen erst, sobald sie beglichen sind.
     [Fact]
     public void PayerScope_SelfAndOpen_zaehlt_eigene_und_offene_fremde_Ausgaben_zusammen()
     {
@@ -224,23 +225,55 @@ public class ReportRepositoryTests : IDisposable
             Grouping = ReportGrouping.Year,
         });
 
-        // 1000 (eigene) + 2500 (fremd, offen) - die beglichenen 700 fallen
+        // -1000 (eigene) - 2500 (fremd, offen) - die beglichenen 700 fallen
         // heraus.
         var group = Assert.Single(result);
-        Assert.Equal(3500, group.SumCents);
+        Assert.Equal(-3500, group.SumCents);
         Assert.Equal(2, group.Count);
     }
 
     [Fact]
-    public void Evaluate_zieht_Einnahmen_von_der_Summe_ab_statt_sie_zu_addieren()
+    public void PayerScope_SelfAndOpen_zaehlt_eine_beglichene_fremde_Einnahme_positiv_mit()
+    {
+        // Eine beglichene fremde Einnahme faellt beim urspruenglichen Filter
+        // komplett heraus (weder Summe noch Trefferzahl) - das war der
+        // gemeldete Fehler. Eine noch offene fremde Einnahme erscheint
+        // dagegen wie bisher (Trefferzahl), traegt aber 0 zur Summe bei.
+        var kategorie = _categories.Create("Sonstiges", null);
+        _expenses.Create(kategorie.Id, 1000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(
+            kategorie.Id, 400, new DateOnly(2026, 3, 2), _otherId,
+            isIncome: true, settledDate: new DateOnly(2026, 3, 10));
+        _expenses.Create(
+            kategorie.Id, 900, new DateOnly(2026, 3, 3), _otherId, isIncome: true);
+
+        var result = _repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            PayerScope = PayerScope.SelfAndOpen,
+            Grouping = ReportGrouping.Year,
+        });
+
+        // -1000 (eigene Ausgabe) + 400 (beglichene fremde Einnahme) + 0
+        // (offene fremde Einnahme, zaehlt aber zur Trefferzahl) = -600.
+        var group = Assert.Single(result);
+        Assert.Equal(-600, group.SumCents);
+        Assert.Equal(3, group.Count);
+    }
+
+    [Fact]
+    public void Evaluate_verrechnet_eine_beglichene_Einnahme_positiv_gegen_die_Ausgabe()
     {
         var kategorie = _categories.Create("Sonstiges", null);
 
-        // 500,00 € Ausgabe, 200,00 € Einnahme -> Summe 300,00 €, nicht
-        // 700,00 € (siehe Entities.Expense.IsIncome).
+        // 500,00 € Ausgabe (negativ), 200,00 € beglichene (tatsaechlich
+        // eingegangene) Einnahme (positiv) -> Summe -300,00 €, nicht
+        // -700,00 € (siehe Entities.Expense.IsIncome).
         _expenses.Create(kategorie.Id, 50000, new DateOnly(2026, 3, 1), _selfId);
         _expenses.Create(
-            kategorie.Id, 20000, new DateOnly(2026, 3, 2), _selfId, isIncome: true);
+            kategorie.Id, 20000, new DateOnly(2026, 3, 2), _otherId,
+            isIncome: true, settledDate: new DateOnly(2026, 3, 10));
 
         var result = _repository.Evaluate(new ReportFilter
         {
@@ -250,16 +283,41 @@ public class ReportRepositoryTests : IDisposable
         });
 
         var group = Assert.Single(result);
-        Assert.Equal(30000, group.SumCents);
+        Assert.Equal(-30000, group.SumCents);
         Assert.Equal(2, group.Count);
     }
 
     [Fact]
-    public void EvaluateMatrix_zieht_Einnahmen_von_der_Summe_ab_statt_sie_zu_addieren()
+    public void Evaluate_zaehlt_eine_noch_offene_Einnahme_weder_erhoehend_noch_mindernd()
+    {
+        var kategorie = _categories.Create("Sonstiges", null);
+
+        // Noch nicht eingegangen - darf die Summe nicht veraendern, bis
+        // sie ueber die Offene-Posten-Liste als erhalten markiert wurde.
+        _expenses.Create(kategorie.Id, 50000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(
+            kategorie.Id, 20000, new DateOnly(2026, 3, 2), _otherId, isIncome: true);
+
+        var result = _repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Grouping = ReportGrouping.Year,
+        });
+
+        var group = Assert.Single(result);
+        Assert.Equal(-50000, group.SumCents);
+        Assert.Equal(2, group.Count);
+    }
+
+    [Fact]
+    public void EvaluateMatrix_verrechnet_eine_beglichene_Einnahme_positiv_gegen_die_Ausgabe()
     {
         var kategorie = _categories.Create("Sonstiges", null);
         _expenses.Create(kategorie.Id, 50000, new DateOnly(2026, 3, 1), _selfId, isIncome: false);
-        _expenses.Create(kategorie.Id, 20000, new DateOnly(2026, 3, 2), _selfId, isIncome: true);
+        _expenses.Create(
+            kategorie.Id, 20000, new DateOnly(2026, 3, 2), _otherId,
+            isIncome: true, settledDate: new DateOnly(2026, 3, 10));
 
         var cells = _repository.EvaluateMatrix(new ReportFilter
         {
@@ -270,7 +328,27 @@ public class ReportRepositoryTests : IDisposable
 
         var cell = Assert.Single(cells);
         Assert.Equal(kategorie.Id, cell.CategoryId);
-        Assert.Equal(30000, cell.SumCents);
+        Assert.Equal(-30000, cell.SumCents);
+        Assert.Equal(2, cell.Count);
+    }
+
+    [Fact]
+    public void EvaluateMatrix_zaehlt_eine_noch_offene_Einnahme_weder_erhoehend_noch_mindernd()
+    {
+        var kategorie = _categories.Create("Sonstiges", null);
+        _expenses.Create(kategorie.Id, 50000, new DateOnly(2026, 3, 1), _selfId, isIncome: false);
+        _expenses.Create(kategorie.Id, 20000, new DateOnly(2026, 3, 2), _otherId, isIncome: true);
+
+        var cells = _repository.EvaluateMatrix(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Grouping = ReportGrouping.Year,
+        });
+
+        var cell = Assert.Single(cells);
+        Assert.Equal(kategorie.Id, cell.CategoryId);
+        Assert.Equal(-50000, cell.SumCents);
         Assert.Equal(2, cell.Count);
     }
 }
