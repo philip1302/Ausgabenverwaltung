@@ -23,8 +23,10 @@
     <EmbeddedResource Include="..\docs\schema_v1.sql" Link="schema_v1.sql" />
     <EmbeddedResource Include="..\docs\schema_v2.sql" Link="schema_v2.sql" />
     <EmbeddedResource Include="..\docs\schema_v3.sql" Link="schema_v3.sql" />
+    <EmbeddedResource Include="..\docs\schema_v4.sql" Link="schema_v4.sql" />
     <EmbeddedResource Include="..\docs\migration_v1_to_v2.sql" Link="migration_v1_to_v2.sql" />
     <EmbeddedResource Include="..\docs\migration_v2_to_v3.sql" Link="migration_v2_to_v3.sql" />
+    <EmbeddedResource Include="..\docs\migration_v3_to_v4.sql" Link="migration_v3_to_v4.sql" />
   </ItemGroup>
 
 </Project>

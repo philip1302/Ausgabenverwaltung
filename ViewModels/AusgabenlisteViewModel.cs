@@ -391,13 +391,15 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             return;
         }
 
-        if (!dialog.TryLeseWerte(out var amountCents, out var expenseDate))
+        if (!dialog.TryLeseWerte(out var amountCents, out var expenseDate, out var settledDate))
         {
             return;
         }
 
-        // Update setzt ModifiedUtc; SettledDate wird unveraendert
-        // durchgereicht (Regel 4 - hier wird nicht abgehakt).
+        // Update setzt ModifiedUtc. SettledDate kommt bei fremdem Zahler
+        // aus dem neuen "Bezahlt am"-Feld (Regel 4); bei der eigenen
+        // Person liefert TryLeseWerte dafuer immer NULL, unabhaengig vom
+        // bisherigen Wert.
         dialog.SpeicherFehlerText = Schreibvorgang.Versuche(
             "Beim Speichern einer bearbeiteten Ausgabe",
             () => _expenseRepository.Update(
@@ -407,7 +409,8 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
                 expenseDate,
                 dialog.AusgewaehlterZahler.Id,
                 dialog.BemerkungOderNull,
-                dialog.SettledDate));
+                settledDate,
+                dialog.IstEinnahme));
 
         // Der Dialog bleibt bei einem Schreibfehler offen und gefuellt -
         // sonst waeren die Aenderungen weg, die gerade nicht gespeichert

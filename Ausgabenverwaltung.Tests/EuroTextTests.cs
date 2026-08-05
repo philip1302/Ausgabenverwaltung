@@ -79,4 +79,26 @@ public class EuroTextTests
     {
         Assert.Equal(erwartet, EuroText.IsNegative(cents));
     }
+
+    [Fact]
+    public void Format_stellt_bei_Einnahme_ein_Plus_voran()
+    {
+        Assert.Equal("+300,00" + Geschuetzt + "€", EuroText.Format(30000, isIncome: true));
+    }
+
+    [Fact]
+    public void Format_ohne_isIncome_Parameter_bleibt_wie_bisher()
+    {
+        // Default false: bestehende Aufrufstellen sind unveraendert.
+        Assert.Equal("300,00" + Geschuetzt + "€", EuroText.Format(30000));
+    }
+
+    [Fact]
+    public void Format_stellt_bei_Nullbetrag_und_isIncome_kein_Plus_voran()
+    {
+        // Ein "+0,00 €" waere irrefuehrend - der Sonderfall existiert in
+        // der Praxis nicht (ein Betrag von 0,00 wird abgelehnt), soll die
+        // Formatierung aber auch dann nicht verfaelschen.
+        Assert.Equal("0,00" + Geschuetzt + "€", EuroText.Format(0, isIncome: true));
+    }
 }

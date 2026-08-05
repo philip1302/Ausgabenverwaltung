@@ -171,6 +171,11 @@ public sealed class CategoryRepository
     {
         EnsureMergeAllowed(sourceId, targetId);
 
+        // SumCents bleibt bewusst eine reine Addition ohne Ruecksicht auf
+        // Expense.IsIncome: das ist kein Auswertungsergebnis, sondern eine
+        // "wie viel Geld haengt an dieser Kategorie"-Vorschau vor dem
+        // Verschieben - anders als ReportRepository/ExpenseRepository.Summarize
+        // dreht sich hier fuer eine Einnahme nichts um.
         const string sql = """
             SELECT
                 (SELECT COUNT(*) FROM Expense

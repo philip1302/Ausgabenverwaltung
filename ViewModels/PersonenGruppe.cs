@@ -31,7 +31,11 @@ public sealed partial class PersonenGruppe : ObservableObject
 
     public void AktualisiereZwischensumme()
     {
-        var summeCents = Zeilen.Where(z => !z.IstBeglichen).Sum(z => z.AmountCents);
+        // Eine Einnahme mindert die Zwischensumme statt sie zu erhoehen
+        // (siehe Entities.Expense.IsIncome).
+        var summeCents = Zeilen
+            .Where(z => !z.IstBeglichen)
+            .Sum(z => z.IstEinnahme ? -z.AmountCents : z.AmountCents);
         ZwischensummeText = EuroText.Format(summeCents);
         ZwischensummeIstErstattung = EuroText.IsNegative(summeCents);
     }

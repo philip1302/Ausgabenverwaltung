@@ -34,7 +34,8 @@ public sealed class RecurringExpenseRepository
         int? anchorDay,
         DateOnly startDate,
         DateOnly? endDate,
-        string? note = null)
+        string? note = null,
+        bool isIncome = false)
     {
         var nowUtc = DateTime.UtcNow;
 
@@ -43,12 +44,12 @@ public sealed class RecurringExpenseRepository
                 (CategoryId, PayerId, AmountCents, Note, Title,
                  IntervalUnit, IntervalCount, AnchorDay,
                  StartDate, EndDate, GeneratedThrough,
-                 IsActive, CreatedUtc, ModifiedUtc)
+                 IsActive, IsIncome, CreatedUtc, ModifiedUtc)
             VALUES
                 (@CategoryId, @PayerId, @AmountCents, @Note, @Title,
                  @IntervalUnit, @IntervalCount, @AnchorDay,
                  @StartDateText, @EndDateText, NULL,
-                 1, @NowUtcText, @NowUtcText)
+                 1, @IsIncome, @NowUtcText, @NowUtcText)
             """;
 
         _connection.Execute(insertSql, new
@@ -63,6 +64,7 @@ public sealed class RecurringExpenseRepository
             AnchorDay = anchorDay,
             StartDateText = IsoDate.ToDateText(startDate),
             EndDateText = endDate is DateOnly end ? IsoDate.ToDateText(end) : null,
+            IsIncome = isIncome,
             NowUtcText = IsoDateTime.ToUtcText(nowUtc),
         });
 
@@ -83,6 +85,7 @@ public sealed class RecurringExpenseRepository
             EndDate = endDate,
             GeneratedThrough = null,
             IsActive = true,
+            IsIncome = isIncome,
             CreatedUtc = nowUtc,
             ModifiedUtc = nowUtc,
         };
@@ -99,7 +102,8 @@ public sealed class RecurringExpenseRepository
         int? anchorDay,
         DateOnly startDate,
         DateOnly? endDate,
-        string? note)
+        string? note,
+        bool isIncome = false)
     {
         const string sql = """
             UPDATE RecurringExpense
@@ -113,6 +117,7 @@ public sealed class RecurringExpenseRepository
                 AnchorDay = @AnchorDay,
                 StartDate = @StartDateText,
                 EndDate = @EndDateText,
+                IsIncome = @IsIncome,
                 ModifiedUtc = @NowUtcText
             WHERE Id = @Id
             """;
@@ -130,6 +135,7 @@ public sealed class RecurringExpenseRepository
             AnchorDay = anchorDay,
             StartDateText = IsoDate.ToDateText(startDate),
             EndDateText = endDate is DateOnly end ? IsoDate.ToDateText(end) : null,
+            IsIncome = isIncome,
             NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow),
         });
     }
@@ -234,7 +240,7 @@ public sealed class RecurringExpenseRepository
             SELECT Id, CategoryId, PayerId, AmountCents, Note, Title,
                    IntervalUnit, IntervalCount, AnchorDay,
                    StartDate, EndDate, GeneratedThrough,
-                   IsActive, CreatedUtc, ModifiedUtc
+                   IsActive, IsIncome, CreatedUtc, ModifiedUtc
             FROM RecurringExpense
             WHERE Id = @Id
             """;
@@ -249,7 +255,7 @@ public sealed class RecurringExpenseRepository
             SELECT Id, CategoryId, PayerId, AmountCents, Note, Title,
                    IntervalUnit, IntervalCount, AnchorDay,
                    StartDate, EndDate, GeneratedThrough,
-                   IsActive, CreatedUtc, ModifiedUtc
+                   IsActive, IsIncome, CreatedUtc, ModifiedUtc
             FROM RecurringExpense
             WHERE IsActive = 1
             ORDER BY Title
@@ -270,7 +276,7 @@ public sealed class RecurringExpenseRepository
             SELECT Id, CategoryId, PayerId, AmountCents, Note, Title,
                    IntervalUnit, IntervalCount, AnchorDay,
                    StartDate, EndDate, GeneratedThrough,
-                   IsActive, CreatedUtc, ModifiedUtc
+                   IsActive, IsIncome, CreatedUtc, ModifiedUtc
             FROM RecurringExpense
             ORDER BY IsActive DESC, Title COLLATE NOCASE
             """;
@@ -383,10 +389,10 @@ public sealed class RecurringExpenseRepository
         const string sql = """
             INSERT INTO Expense
                 (CategoryId, AmountCents, ExpenseDate, Note, PayerId,
-                 SettledDate, RecurringExpenseId, CreatedUtc, ModifiedUtc)
+                 SettledDate, RecurringExpenseId, IsIncome, CreatedUtc, ModifiedUtc)
             VALUES
                 (@CategoryId, @AmountCents, @ExpenseDateText, @Note, @PayerId,
-                 NULL, @RecurringExpenseId, @NowUtcText, @NowUtcText)
+                 NULL, @RecurringExpenseId, @IsIncome, @NowUtcText, @NowUtcText)
             """;
 
         _connection.Execute(sql, new
@@ -397,6 +403,7 @@ public sealed class RecurringExpenseRepository
             template.Note,
             template.PayerId,
             RecurringExpenseId = template.Id,
+            template.IsIncome,
             NowUtcText = IsoDateTime.ToUtcText(nowUtc),
         }, transaction);
 
@@ -412,6 +419,7 @@ public sealed class RecurringExpenseRepository
             PayerId = template.PayerId,
             SettledDate = null,
             RecurringExpenseId = template.Id,
+            IsIncome = template.IsIncome,
             CreatedUtc = nowUtc,
             ModifiedUtc = nowUtc,
         };
@@ -449,6 +457,7 @@ public sealed class RecurringExpenseRepository
         EndDate = row.EndDate is null ? null : IsoDate.ParseDate(row.EndDate),
         GeneratedThrough = row.GeneratedThrough is null ? null : IsoDate.ParseDate(row.GeneratedThrough),
         IsActive = row.IsActive,
+        IsIncome = row.IsIncome,
         CreatedUtc = IsoDateTime.ParseUtc(row.CreatedUtc),
         ModifiedUtc = IsoDateTime.ParseUtc(row.ModifiedUtc),
     };
@@ -471,6 +480,7 @@ public sealed class RecurringExpenseRepository
         public string? EndDate { get; set; }
         public string? GeneratedThrough { get; set; }
         public bool IsActive { get; set; }
+        public bool IsIncome { get; set; }
         public string CreatedUtc { get; set; } = string.Empty;
         public string ModifiedUtc { get; set; } = string.Empty;
     }

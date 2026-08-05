@@ -37,6 +37,14 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
     public bool BetragFehlerSichtbar => !string.IsNullOrEmpty(BetragFehler);
 
+    /// <summary>
+    /// Ob dieser Betrag eine allgemeine Einnahme ist statt einer Ausgabe
+    /// (siehe Entities.Expense.IsIncome) - mindert die Summen in Liste und
+    /// Auswertung, statt sie zu erhoehen.
+    /// </summary>
+    [ObservableProperty]
+    private bool _istEinnahme;
+
     // ObservableCollection statt einmalig geladener Liste, damit in der
     // Verwaltung angelegte/umbenannte/archivierte Kategorien sichtbar
     // werden, ohne die Anwendung neu zu starten (siehe
@@ -183,6 +191,18 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         DatumRueckfrageText = null;
     }
 
+    // Beim Ankreuzen auf die Ich-Person vorbelegen, sofern gerade ein
+    // fremder Zahler gewaehlt ist - das Zahler-Feld bleibt trotzdem
+    // bestehen und aenderbar, eine Einnahme ist nicht zwingend an "ich"
+    // gebunden.
+    partial void OnIstEinnahmeChanged(bool value)
+    {
+        if (value && !AusgewaehlterZahler.IsSelf)
+        {
+            AusgewaehlterZahler = ZahlerOptionen.First(p => p.IsSelf);
+        }
+    }
+
     /// <summary>Der Anwender bestaetigt das ungewoehnliche Datum.</summary>
     [RelayCommand]
     private void DatumBestaetigen()
@@ -205,6 +225,7 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         var pruefung = ExpenseValidator.Validate(new ExpenseInput
         {
             AmountText = BetragText,
+            IsIncome = IstEinnahme,
             CategoryId = AusgewaehlteKategorie?.Id,
             PayerId = AusgewaehlterZahler.Id,
             DateText = DatumText,
@@ -239,7 +260,8 @@ public sealed partial class ErfassenViewModel : ViewModelBase
                 pruefung.AmountCents,
                 pruefung.Date,
                 AusgewaehlterZahler.Id,
-                note: string.IsNullOrWhiteSpace(Bemerkung) ? null : Bemerkung));
+                note: string.IsNullOrWhiteSpace(Bemerkung) ? null : Bemerkung,
+                isIncome: IstEinnahme));
 
         if (SpeicherFehlerText is not null)
         {
@@ -249,10 +271,15 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         _datumBestaetigt = false;
 
         // Datum und Zahler bleiben absichtlich stehen (naechste Ausgabe
-        // ist haeufig am selben Tag vom selben Zahler).
+        // ist haeufig am selben Tag vom selben Zahler). IstEinnahme wird
+        // dagegen wie Betrag und Kategorie geraeumt: die naechste Buchung
+        // ist im Regelfall wieder eine normale Ausgabe, und ein stehen
+        // gebliebenes Haekchen wuerde sie sonst unbemerkt zur Einnahme
+        // machen.
         BetragText = string.Empty;
         AusgewaehlteKategorie = null;
         Bemerkung = null;
+        IstEinnahme = false;
 
         LadeLetzteAusgaben();
         FokusBetragAngefordert?.Invoke(this, EventArgs.Empty);

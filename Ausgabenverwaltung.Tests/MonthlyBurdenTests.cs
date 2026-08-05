@@ -115,6 +115,18 @@ public class MonthlyBurdenTests
         Assert.Equal(0, MonthlyBurden.TotalPerMonthCents([], Heute));
     }
 
+    [Fact]
+    public void Einnahme_Vorlage_mindert_die_Belastung_statt_sie_zu_erhoehen()
+    {
+        // 500 EUR Ausgabe, 200 EUR Einnahme im Monat -> Belastung 300 EUR,
+        // nicht 700 EUR (siehe RecurringExpense.IsIncome).
+        var ausgabe = Vorlage(500_00, "month", 1);
+        var einnahme = Vorlage(200_00, "month", 1);
+        einnahme.IsIncome = true;
+
+        Assert.Equal(300_00, MonthlyBurden.TotalPerMonthCents([ausgabe, einnahme], Heute));
+    }
+
     private static RecurringExpense Vorlage(long amountCents, string intervalUnit, int intervalCount) => new()
     {
         Id = 1,

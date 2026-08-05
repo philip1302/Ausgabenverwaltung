@@ -117,6 +117,34 @@ public class RecurringExpenseRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Create_ohne_IsIncome_ist_eine_gewoehnliche_Vorlage()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1,
+            new DateOnly(2026, 1, 1), null);
+
+        Assert.False(template.IsIncome);
+        Assert.False(_repository.GetById(template.Id)!.IsIncome);
+    }
+
+    [Fact]
+    public void Create_und_Update_speichern_IsIncome()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 300000, "Gehalt", "month", 1, 1,
+            new DateOnly(2026, 1, 1), null, isIncome: true);
+
+        Assert.True(template.IsIncome);
+        Assert.True(_repository.GetById(template.Id)!.IsIncome);
+
+        _repository.Update(
+            template.Id, _categoryId, _payerId, 300000, "Gehalt", "month", 1, 1,
+            new DateOnly(2026, 1, 1), null, note: null, isIncome: false);
+
+        Assert.False(_repository.GetById(template.Id)!.IsIncome);
+    }
+
+    [Fact]
     public void GetAllActive_liefert_nur_aktive_Vorlagen_alphabetisch_sortiert()
     {
         _repository.Create(_categoryId, _payerId, 1000, "Bernd-Abo", "month", 1, 1, new DateOnly(2026, 1, 1), null);
@@ -156,6 +184,28 @@ public class RecurringExpenseRepositoryTests : IDisposable
         Assert.Equal("Familientarif", erste.Note);
         Assert.Equal(_payerId, erste.PayerId);
         Assert.Equal(template.Id, erste.RecurringExpenseId);
+    }
+
+    [Fact]
+    public void GenerateDueOccurrences_kopiert_IsIncome_aus_der_Vorlage_Regel_6()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 300000, "Gehalt", "month", 1, 1,
+            new DateOnly(2026, 1, 1), null, isIncome: true);
+
+        var created = _repository.GenerateDueOccurrences(new DateOnly(2026, 1, 1));
+
+        var erzeugteBuchung = Assert.Single(created);
+        Assert.True(erzeugteBuchung.IsIncome);
+        Assert.True(_expenseRepository.GetById(erzeugteBuchung.Id)!.IsIncome);
+
+        // Regel 6: eine spaetere Aenderung an der Vorlage darf die bereits
+        // erzeugte Buchung nicht rueckwirkend veraendern.
+        _repository.Update(
+            template.Id, _categoryId, _payerId, 300000, "Gehalt", "month", 1, 1,
+            new DateOnly(2026, 1, 1), null, note: null, isIncome: false);
+
+        Assert.True(_expenseRepository.GetById(erzeugteBuchung.Id)!.IsIncome);
     }
 
     [Fact]

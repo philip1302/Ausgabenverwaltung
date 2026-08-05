@@ -31,17 +31,18 @@ public sealed class ExpenseRepository
         int payerId,
         string? note = null,
         DateOnly? settledDate = null,
-        int? recurringExpenseId = null)
+        int? recurringExpenseId = null,
+        bool isIncome = false)
     {
         var nowUtc = DateTime.UtcNow;
 
         const string insertSql = """
             INSERT INTO Expense
                 (CategoryId, AmountCents, ExpenseDate, Note, PayerId,
-                 SettledDate, RecurringExpenseId, CreatedUtc, ModifiedUtc)
+                 SettledDate, RecurringExpenseId, IsIncome, CreatedUtc, ModifiedUtc)
             VALUES
                 (@CategoryId, @AmountCents, @ExpenseDateText, @Note, @PayerId,
-                 @SettledDateText, @RecurringExpenseId, @NowUtcText, @NowUtcText)
+                 @SettledDateText, @RecurringExpenseId, @IsIncome, @NowUtcText, @NowUtcText)
             """;
 
         _connection.Execute(insertSql, new
@@ -53,6 +54,7 @@ public sealed class ExpenseRepository
             PayerId = payerId,
             SettledDateText = settledDate is DateOnly settled ? IsoDate.ToDateText(settled) : null,
             RecurringExpenseId = recurringExpenseId,
+            IsIncome = isIncome,
             NowUtcText = IsoDateTime.ToUtcText(nowUtc),
         });
 
@@ -68,6 +70,7 @@ public sealed class ExpenseRepository
             PayerId = payerId,
             SettledDate = settledDate,
             RecurringExpenseId = recurringExpenseId,
+            IsIncome = isIncome,
             CreatedUtc = nowUtc,
             ModifiedUtc = nowUtc,
         };
@@ -80,7 +83,8 @@ public sealed class ExpenseRepository
         DateOnly expenseDate,
         int payerId,
         string? note,
-        DateOnly? settledDate)
+        DateOnly? settledDate,
+        bool isIncome = false)
     {
         const string sql = """
             UPDATE Expense
@@ -90,6 +94,7 @@ public sealed class ExpenseRepository
                 Note = @Note,
                 PayerId = @PayerId,
                 SettledDate = @SettledDateText,
+                IsIncome = @IsIncome,
                 ModifiedUtc = @NowUtcText
             WHERE Id = @Id
             """;
@@ -103,6 +108,7 @@ public sealed class ExpenseRepository
             Note = note,
             PayerId = payerId,
             SettledDateText = settledDate is DateOnly settled ? IsoDate.ToDateText(settled) : null,
+            IsIncome = isIncome,
             NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow),
         });
     }
@@ -133,7 +139,7 @@ public sealed class ExpenseRepository
     {
         const string sql = """
             SELECT Id, CategoryId, AmountCents, ExpenseDate, Note, PayerId,
-                   SettledDate, RecurringExpenseId, CreatedUtc, ModifiedUtc
+                   SettledDate, RecurringExpenseId, IsIncome, CreatedUtc, ModifiedUtc
             FROM Expense
             WHERE Id = @Id
             """;
@@ -152,7 +158,7 @@ public sealed class ExpenseRepository
     {
         const string sql = """
             SELECT e.Id, e.ExpenseDate, e.AmountCents, c.Name AS CategoryName,
-                   p.Name AS PayerName, e.Note
+                   p.Name AS PayerName, e.Note, e.IsIncome
             FROM   Expense e
             JOIN   Category c ON c.Id = e.CategoryId
             JOIN   Person   p ON p.Id = e.PayerId
@@ -170,6 +176,7 @@ public sealed class ExpenseRepository
             CategoryName = row.CategoryName,
             PayerName = row.PayerName,
             Note = row.Note,
+            IsIncome = row.IsIncome,
         }).ToList();
     }
 
@@ -196,6 +203,7 @@ public sealed class ExpenseRepository
             CategoryId = row.CategoryId,
             CategoryFullPath = row.CategoryFullPath,
             AmountCents = row.AmountCents,
+            IsIncome = row.IsIncome,
             PayerId = row.PayerId,
             PayerName = row.PayerName,
             PayerIsSelf = row.PayerIsSelf,
@@ -214,9 +222,16 @@ public sealed class ExpenseRepository
     /// </summary>
     public ExpenseListSummary Summarize(ReportFilter filter)
     {
+        // Eine Einnahme mindert die Summe statt sie zu erhoehen - deshalb
+        // hier per CASE das Vorzeichen kippen statt einfach zu addieren
+        // (siehe Entities.Expense.IsIncome).
         const string sql = """
-            SELECT COUNT(*)                        AS Anzahl,
-                   COALESCE(SUM(e.AmountCents), 0) AS SummeCents
+            SELECT COUNT(*)                                       AS Anzahl,
+                   COALESCE(SUM(
+                       CASE WHEN e.IsIncome = 1
+                            THEN -e.AmountCents
+                            ELSE  e.AmountCents
+                       END), 0)                                    AS SummeCents
             FROM   Expense e
             JOIN   Person  p ON p.Id = e.PayerId
             WHERE
@@ -244,7 +259,7 @@ public sealed class ExpenseRepository
         SELECT
             e.Id, e.ExpenseDate, e.CategoryId,
             pfad.FullPath      AS CategoryFullPath,
-            e.AmountCents, e.PayerId,
+            e.AmountCents, e.IsIncome, e.PayerId,
             p.Name             AS PayerName,
             p.IsSelf           AS PayerIsSelf,
             e.SettledDate, e.Note, e.RecurringExpenseId,
@@ -300,6 +315,7 @@ public sealed class ExpenseRepository
         PayerId = row.PayerId,
         SettledDate = row.SettledDate is null ? null : IsoDate.ParseDate(row.SettledDate),
         RecurringExpenseId = row.RecurringExpenseId,
+        IsIncome = row.IsIncome,
         CreatedUtc = IsoDateTime.ParseUtc(row.CreatedUtc),
         ModifiedUtc = IsoDateTime.ParseUtc(row.ModifiedUtc),
     };
@@ -317,6 +333,7 @@ public sealed class ExpenseRepository
         public int PayerId { get; set; }
         public string? SettledDate { get; set; }
         public int? RecurringExpenseId { get; set; }
+        public bool IsIncome { get; set; }
         public string CreatedUtc { get; set; } = string.Empty;
         public string ModifiedUtc { get; set; } = string.Empty;
     }
@@ -329,6 +346,7 @@ public sealed class ExpenseRepository
         public string CategoryName { get; set; } = string.Empty;
         public string PayerName { get; set; } = string.Empty;
         public string? Note { get; set; }
+        public bool IsIncome { get; set; }
     }
 
     private sealed class ExpenseListRow
@@ -338,6 +356,7 @@ public sealed class ExpenseRepository
         public int CategoryId { get; set; }
         public string CategoryFullPath { get; set; } = string.Empty;
         public long AmountCents { get; set; }
+        public bool IsIncome { get; set; }
         public int PayerId { get; set; }
         public string PayerName { get; set; } = string.Empty;
         public bool PayerIsSelf { get; set; }

@@ -171,6 +171,7 @@
                                                     <TextBlock Grid.Column="5" Text="{Binding BetragText}"
                                                                Classes="tabellenzelle zahl"
                                                                Classes.erstattung="{Binding IstErstattung}"
+                                                               Classes.einnahme="{Binding IstEinnahme}"
                                                                Classes.beglichen="{Binding IstBeglichen}" />
                                                     <anzeige:Textzelle Grid.Column="7" Inhalt="{Binding Note}"
                                                                        Classes="tabellenzelle"

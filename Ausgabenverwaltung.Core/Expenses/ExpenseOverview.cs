@@ -13,4 +13,7 @@ public sealed class ExpenseOverview
     public required string CategoryName { get; init; }
     public required string PayerName { get; init; }
     public string? Note { get; init; }
+
+    /// <summary>Ob dieser Betrag eine Einnahme ist (siehe Entities.Expense.IsIncome).</summary>
+    public required bool IsIncome { get; init; }
 }

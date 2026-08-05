@@ -34,13 +34,18 @@ public static class MonthlyBurden
     /// tatsaechlich laufen: inaktive und bereits abgelaufene zaehlen nicht.
     /// Eine Vorlage, deren Startdatum noch in der Zukunft liegt, zaehlt
     /// dagegen mit - sie ist eine kommende, aber beschlossene Belastung.
+    ///
+    /// Eine Einnahme-Vorlage (siehe RecurringExpense.IsIncome, z. B. ein
+    /// monatliches Gehalt) MINDERT die Belastung statt sie zu erhoehen -
+    /// dieselbe Vorzeichen-Regel wie bei ExpenseRepository.Summarize und
+    /// ReportRepository.
     /// </summary>
     public static long TotalPerMonthCents(IEnumerable<RecurringExpense> templates, DateOnly asOf)
     {
         var summeEuro = templates
             .Where(template => template.IsActive)
             .Where(template => template.EndDate is null || template.EndDate >= asOf)
-            .Sum(PerMonthEuro);
+            .Sum(template => template.IsIncome ? -PerMonthEuro(template) : PerMonthEuro(template));
 
         return Money.ToCents(summeEuro);
     }

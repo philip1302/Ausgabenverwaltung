@@ -34,7 +34,7 @@ public sealed class OpenItemsRepository
                 JOIN   Pfad ON c.ParentId = Pfad.Id
             )
             SELECT
-                e.Id, e.ExpenseDate, e.AmountCents, e.Note, e.SettledDate,
+                e.Id, e.ExpenseDate, e.AmountCents, e.IsIncome, e.Note, e.SettledDate,
                 e.PayerId, p.Name AS PayerName,
                 pfad.FullPath     AS CategoryFullPath,
                 CAST(julianday('now') - julianday(e.ExpenseDate) AS INTEGER) AS TageOffen
@@ -67,7 +67,7 @@ public sealed class OpenItemsRepository
                 JOIN   Pfad ON c.ParentId = Pfad.Id
             )
             SELECT
-                e.Id, e.ExpenseDate, e.AmountCents, e.Note, e.SettledDate,
+                e.Id, e.ExpenseDate, e.AmountCents, e.IsIncome, e.Note, e.SettledDate,
                 e.PayerId, p.Name AS PayerName,
                 pfad.FullPath     AS CategoryFullPath,
                 CAST(julianday(e.SettledDate) - julianday(e.ExpenseDate) AS INTEGER) AS TageOffen
@@ -112,8 +112,15 @@ public sealed class OpenItemsRepository
     /// </summary>
     public IReadOnlyDictionary<int, long> GetOpenSumsByPayer()
     {
+        // Eine Einnahme mindert die Summe statt sie zu erhoehen (siehe
+        // Entities.Expense.IsIncome) - auch hier, falls einer Einnahme
+        // ausnahmsweise ein fremder Zahler zugeordnet wurde.
         const string sql = """
-            SELECT e.PayerId, SUM(e.AmountCents) AS SummeCents
+            SELECT e.PayerId,
+                   SUM(CASE WHEN e.IsIncome = 1
+                            THEN -e.AmountCents
+                            ELSE  e.AmountCents
+                       END) AS SummeCents
             FROM   Expense e
             JOIN   Person  p ON p.Id = e.PayerId
             WHERE  e.SettledDate IS NULL
@@ -130,6 +137,7 @@ public sealed class OpenItemsRepository
         Id = row.Id,
         ExpenseDate = IsoDate.ParseDate(row.ExpenseDate),
         AmountCents = row.AmountCents,
+        IsIncome = row.IsIncome,
         Note = row.Note,
         SettledDate = row.SettledDate is null ? null : IsoDate.ParseDate(row.SettledDate),
         PayerId = row.PayerId,
@@ -146,6 +154,7 @@ public sealed class OpenItemsRepository
         public int Id { get; set; }
         public string ExpenseDate { get; set; } = string.Empty;
         public long AmountCents { get; set; }
+        public bool IsIncome { get; set; }
         public string? Note { get; set; }
         public string? SettledDate { get; set; }
         public int PayerId { get; set; }

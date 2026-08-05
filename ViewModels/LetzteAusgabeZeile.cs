@@ -16,8 +16,9 @@ public sealed class LetzteAusgabeZeile
     {
         VorText = GermanDateInput.ToText(expense.ExpenseDate) + "  ·  ";
 
-        BetragText = EuroText.Format(expense.AmountCents);
+        BetragText = EuroText.Format(expense.AmountCents, expense.IsIncome);
         IstErstattung = EuroText.IsNegative(expense.AmountCents);
+        IstEinnahme = expense.IsIncome;
 
         NachText = $"  ·  {expense.CategoryName}  ·  {expense.PayerName}"
             + (string.IsNullOrWhiteSpace(expense.Note) ? string.Empty : $"  ·  {expense.Note}");
@@ -29,6 +30,9 @@ public sealed class LetzteAusgabeZeile
     public string BetragText { get; }
 
     public bool IstErstattung { get; }
+
+    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben.</summary>
+    public bool IstEinnahme { get; }
 
     /// <summary>Alles nach dem Betrag: Kategorie, Zahler, Bemerkung.</summary>
     public string NachText { get; }

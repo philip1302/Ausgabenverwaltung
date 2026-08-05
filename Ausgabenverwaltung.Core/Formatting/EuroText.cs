@@ -31,9 +31,20 @@ public static class EuroText
     /// Die Anzeigeform ueberall dort, wo ein Betrag gelesen wird:
     /// Punkt als Tausender-, Komma als Dezimaltrennzeichen, Zeichen
     /// hinten - "4.200,00 €", negativ "-120,00 €".
+    ///
+    /// <paramref name="isIncome"/> stellt einem positiven Betrag ein "+"
+    /// voran ("+120,00 €") - das eigentliche, auch ohne Farbwahrnehmung
+    /// lesbare Kennzeichen einer Einnahme (Regel 10). Die gruene
+    /// Hervorhebung in der Oberflaeche (Classes.einnahme) ist nur der
+    /// Zusatz dazu, genau wie das Minuszeichen bei einer Erstattung durch
+    /// die rote Hervorhebung ergaenzt wird. Default false, damit
+    /// bestehende Aufrufstellen unveraendert bleiben.
     /// </summary>
-    public static string Format(long cents) =>
-        Money.ToDecimal(cents).ToString("N2", DeDe) + NonBreakingSpace + Symbol;
+    public static string Format(long cents, bool isIncome = false)
+    {
+        var vorzeichen = isIncome && cents > 0 ? "+" : string.Empty;
+        return vorzeichen + Money.ToDecimal(cents).ToString("N2", DeDe) + NonBreakingSpace + Symbol;
+    }
 
     /// <summary>
     /// Die reine Zahl ohne Zeichen und OHNE Tausendertrennzeichen, fuer

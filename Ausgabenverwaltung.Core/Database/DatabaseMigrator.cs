@@ -27,6 +27,7 @@ public static class DatabaseMigrator
     [
         (1, "migration_v1_to_v2.sql"),
         (2, "migration_v2_to_v3.sql"),
+        (3, "migration_v3_to_v4.sql"),
     ];
 
     /// <summary>

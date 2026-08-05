@@ -461,7 +461,8 @@ public sealed partial class VorlagenViewModel : ViewModelBase
             _recurringExpenseRepository.Update(
                 bestehendeId, categoryId, payerId, geprueft.AmountCents, formular.Titel.Trim(),
                 intervalUnit, geprueft.IntervalCount, geprueft.AnchorDay,
-                geprueft.StartDate, geprueft.EndDate, formular.BemerkungOderNull);
+                geprueft.StartDate, geprueft.EndDate, formular.BemerkungOderNull,
+                formular.IstEinnahme);
 
             id = bestehendeId;
         }
@@ -470,7 +471,8 @@ public sealed partial class VorlagenViewModel : ViewModelBase
             var erstellt = _recurringExpenseRepository.Create(
                 categoryId, payerId, geprueft.AmountCents, formular.Titel.Trim(),
                 intervalUnit, geprueft.IntervalCount, geprueft.AnchorDay,
-                geprueft.StartDate, geprueft.EndDate, formular.BemerkungOderNull);
+                geprueft.StartDate, geprueft.EndDate, formular.BemerkungOderNull,
+                formular.IstEinnahme);
 
             id = erstellt.Id;
         }

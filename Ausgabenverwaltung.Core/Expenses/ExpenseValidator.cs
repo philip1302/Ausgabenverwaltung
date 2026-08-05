@@ -15,7 +15,7 @@ public static class ExpenseValidator
 {
     public static ExpenseValidation Validate(ExpenseInput input)
     {
-        var (amountCents, amountError) = PruefeBetrag(input.AmountText);
+        var (amountCents, amountError) = PruefeBetrag(input.AmountText, input.IsIncome);
         var (date, dateError, dateConfirmation) = PruefeDatum(input.DateText, input.Today);
 
         return new ExpenseValidation
@@ -38,7 +38,7 @@ public static class ExpenseValidator
         };
     }
 
-    private static (long Cents, string? Fehler) PruefeBetrag(string? amountText)
+    private static (long Cents, string? Fehler) PruefeBetrag(string? amountText, bool isIncome)
     {
         if (string.IsNullOrWhiteSpace(amountText))
         {
@@ -57,10 +57,19 @@ public static class ExpenseValidator
         //
         // Negative Betraege bleiben ausdruecklich erlaubt - so werden
         // Erstattungen erfasst (siehe die Darstellung als "Erstattung" in
-        // der Ausgabenliste).
+        // der Ausgabenliste). Bei einer Einnahme waere ein negativer
+        // Betrag aber zweideutig (mindert er die Summe zusaetzlich, oder
+        // hebt er sich mit dem Einnahme-Attribut gerade auf?) - deshalb
+        // hier ausdruecklich abgelehnt, statt die beiden Vorzeichen-
+        // Konzepte miteinander zu vermischen.
         if (cents == 0)
         {
             return (0, "Der Betrag darf nicht null sein.");
+        }
+
+        if (isIncome && cents < 0)
+        {
+            return (0, "Eine Einnahme darf keinen negativen Betrag haben.");
         }
 
         return (cents, null);

@@ -100,6 +100,13 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
     [ObservableProperty]
     private string? _bemerkung;
 
+    /// <summary>
+    /// Ob die aus dieser Vorlage erzeugten Buchungen Einnahmen statt
+    /// Ausgaben sind (siehe Entities.RecurringExpense.IsIncome).
+    /// </summary>
+    [ObservableProperty]
+    private bool _istEinnahme;
+
     // ---------------- Rhythmus ----------------
 
     [ObservableProperty]
@@ -258,6 +265,7 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
             // abgelehnt (siehe Money.TryParseEuroText).
             _betragText = EuroText.Plain(vorlage.AmountCents);
             _bemerkung = vorlage.Note;
+            _istEinnahme = vorlage.IsIncome;
 
             _ausgewaehlteKategorie = KategorieVorschlaege
                 .FirstOrDefault(option => option.Id == vorlage.CategoryId);
@@ -320,6 +328,17 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
     partial void OnEndDatumTextChanged(string value) => AktualisiereVorschau();
     partial void OnIstAktivChanged(bool value) => AktualisiereVorschau();
 
+    // Beim Ankreuzen auf die Ich-Person vorbelegen, sofern gerade ein
+    // fremder Zahler gewaehlt ist - dasselbe Verhalten wie in der
+    // Erfassungsmaske (siehe ErfassenViewModel.OnIstEinnahmeChanged).
+    partial void OnIstEinnahmeChanged(bool value)
+    {
+        if (value && AusgewaehlterZahler is { IsSelf: false })
+        {
+            AusgewaehlterZahler = ZahlerOptionen.FirstOrDefault(person => person.IsSelf);
+        }
+    }
+
     /// <summary>
     /// Prueft alle Felder ueber Core und verteilt die Meldungen. Liefert
     /// das Ergebnis, damit der Aufrufer die geparsten Werte bekommt.
@@ -369,6 +388,7 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
         CategoryId = AusgewaehlteKategorie?.Id,
         PayerId = AusgewaehlterZahler?.Id,
         AmountText = BetragText,
+        IsIncome = IstEinnahme,
         IntervalUnit = AusgewaehlteIntervallEinheit.Wert,
         IntervalCountText = IntervallAnzahlText,
         AnchorDayText = AnkertagText,

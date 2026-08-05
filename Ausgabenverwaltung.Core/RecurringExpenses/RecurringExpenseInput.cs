@@ -26,6 +26,12 @@ public sealed record RecurringExpenseInput
 
     public required string AmountText { get; init; }
 
+    /// <summary>
+    /// Ob der Betrag als Einnahme gilt (siehe Expenses.ExpenseInput.IsIncome
+    /// - dieselbe Pruefung, dieselbe Begruendung).
+    /// </summary>
+    public bool IsIncome { get; init; }
+
     /// <summary>'day' | 'week' | 'month' | 'year'.</summary>
     public required string IntervalUnit { get; init; }
 

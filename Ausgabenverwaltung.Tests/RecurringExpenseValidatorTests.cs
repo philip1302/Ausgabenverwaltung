@@ -164,6 +164,26 @@ public class RecurringExpenseValidatorTests
     }
 
     [Fact]
+    public void Eine_Einnahme_mit_positivem_Betrag_ist_gueltig()
+    {
+        var ergebnis = RecurringExpenseValidator.Validate(
+            Eingabe() with { AmountText = "3000,00", IsIncome = true });
+
+        Assert.True(ergebnis.IsValid);
+        Assert.Equal(300_000, ergebnis.AmountCents);
+    }
+
+    [Fact]
+    public void Eine_Einnahme_mit_negativem_Betrag_wird_abgelehnt()
+    {
+        var ergebnis = RecurringExpenseValidator.Validate(
+            Eingabe() with { AmountText = "-15,00", IsIncome = true });
+
+        Assert.False(ergebnis.IsValid);
+        Assert.Equal("Eine Einnahme darf keinen negativen Betrag haben.", ergebnis.AmountError);
+    }
+
+    [Fact]
     public void Betrag_mit_Tausendertrennzeichen_wird_abgelehnt()
     {
         // Money.TryParseEuroText lehnt den Punkt bewusst ab, damit "12.50"
