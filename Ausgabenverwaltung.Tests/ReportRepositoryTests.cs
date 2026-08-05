@@ -203,4 +203,31 @@ public class ReportRepositoryTests : IDisposable
         Assert.Equal(2500, Assert.Single(offene).SumCents);
         Assert.Equal(700, Assert.Single(beglichene).SumCents);
     }
+
+    // PayerScope.SelfAndOpen mischt bewusst Zahler und Status: eigene
+    // Ausgaben zaehlen immer, fremde nur, solange sie noch offen sind.
+    [Fact]
+    public void PayerScope_SelfAndOpen_zaehlt_eigene_und_offene_fremde_Ausgaben_zusammen()
+    {
+        var kategorie = _categories.Create("Sonstiges", null);
+        _expenses.Create(kategorie.Id, 1000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(kategorie.Id, 2500, new DateOnly(2026, 3, 2), _otherId);
+        _expenses.Create(
+            kategorie.Id, 700, new DateOnly(2026, 3, 3), _otherId,
+            settledDate: new DateOnly(2026, 3, 9));
+
+        var result = _repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            PayerScope = PayerScope.SelfAndOpen,
+            Grouping = ReportGrouping.Year,
+        });
+
+        // 1000 (eigene) + 2500 (fremd, offen) - die beglichenen 700 fallen
+        // heraus.
+        var group = Assert.Single(result);
+        Assert.Equal(3500, group.SumCents);
+        Assert.Equal(2, group.Count);
+    }
 }

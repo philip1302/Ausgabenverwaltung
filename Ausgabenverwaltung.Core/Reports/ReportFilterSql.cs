@@ -23,10 +23,17 @@ public static class ReportFilterSql
               e.ExpenseDate >= @FromText
         AND   e.ExpenseDate <  @ToText
 
-        -- @PayerScope: 'self' | 'others' | 'all'
+        -- @PayerScope: 'self' | 'others' | 'all' | 'self_or_open'
+        -- Der letzte Wert mischt bewusst Zahler und Status (Regel 4):
+        -- eigene Ausgaben zaehlen immer, fremde nur, solange sie noch
+        -- offen sind - beglichene fremde Ausgaben fallen heraus.
         AND  (@PayerScope = 'all'
               OR (@PayerScope = 'self'   AND p.IsSelf = 1)
-              OR (@PayerScope = 'others' AND p.IsSelf = 0))
+              OR (@PayerScope = 'others' AND p.IsSelf = 0)
+              OR (@PayerScope = 'self_or_open' AND (
+                      p.IsSelf = 1
+                      OR (p.IsSelf = 0 AND e.SettledDate IS NULL)
+                  )))
 
         -- Einzelner Zahler, unabhaengig vom PayerScope waehlbar.
         AND  (@PayerId IS NULL OR e.PayerId = @PayerId)
@@ -83,6 +90,7 @@ public static class ReportFilterSql
         PayerScope.Self => "self",
         PayerScope.Others => "others",
         PayerScope.All => "all",
+        PayerScope.SelfAndOpen => "self_or_open",
         _ => throw new ArgumentOutOfRangeException(nameof(scope)),
     };
 
