@@ -4,6 +4,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Symbol der Windows-EXE. Fuer macOS gibt es kein Aequivalent in
+         der csproj - dort baut publish.ps1 Assets\AppIcon.icns direkt
+         ins App-Bundle (Contents\Resources). Beide Dateien stammen aus
+         derselben Quellzeichnung, siehe tools\New-AppIcon.ps1. -->
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <!-- Die Version steht im Protokoll bei jedem Programmstart und im
          aufklappbaren Bereich jedes Fehlerdialogs. Ohne sie laesst sich
          zu einem gemeldeten Fehler nicht sagen, welcher Stand ihn
