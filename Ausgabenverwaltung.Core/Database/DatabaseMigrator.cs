@@ -26,6 +26,7 @@ public static class DatabaseMigrator
     private static readonly (int FromVersion, string ScriptFileName)[] Migrations =
     [
         (1, "migration_v1_to_v2.sql"),
+        (2, "migration_v2_to_v3.sql"),
     ];
 
     /// <summary>

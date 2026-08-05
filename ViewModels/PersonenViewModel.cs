@@ -8,9 +8,10 @@ using CommunityToolkit.Mvvm.Input;
 namespace Ausgabenverwaltung.ViewModels;
 
 /// <summary>
-/// Bereich "Verwaltung -> Personen": Liste mit Anlegen, Umbenennen und
-/// Archivieren/Wiederherstellen. Die eigentliche Fachlogik (Duplikat-
-/// Pruefung, "hoechstens ein IsSelf") steckt komplett in
+/// Bereich "Verwaltung -> Personen": Liste mit Anlegen, Umbenennen,
+/// Archivieren/Wiederherstellen und Verschieben in der Reihenfolge (Pfeil
+/// nach oben/unten). Die eigentliche Fachlogik (Duplikat-Pruefung,
+/// "hoechstens ein IsSelf", Vertauschen der SortOrder) steckt komplett in
 /// <see cref="PersonRepository"/> bzw. den DB-Constraints (Regel 7) - hier
 /// wird nur die DB-Liste in UI-Zeilen (<see cref="PersonZeile"/>) uebersetzt
 /// und auf Anwenderaktionen reagiert.
@@ -162,6 +163,36 @@ public sealed partial class PersonenViewModel : ViewModelBase
         SchreibFehlerText = Schreibvorgang.Versuche(
             "Beim Wiederherstellen einer Person",
             () => _personRepository.Restore(id));
+
+        LadeListe();
+    }
+
+    [RelayCommand]
+    private void NachObenVerschieben(PersonZeile? zeile)
+    {
+        if (zeile?.Id is not int id)
+        {
+            return;
+        }
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Verschieben einer Person nach oben",
+            () => _personRepository.MoveUp(id));
+
+        LadeListe();
+    }
+
+    [RelayCommand]
+    private void NachUntenVerschieben(PersonZeile? zeile)
+    {
+        if (zeile?.Id is not int id)
+        {
+            return;
+        }
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Verschieben einer Person nach unten",
+            () => _personRepository.MoveDown(id));
 
         LadeListe();
     }

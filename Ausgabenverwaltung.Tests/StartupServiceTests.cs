@@ -139,7 +139,7 @@ public class StartupServiceTests : IDisposable
         Assert.NotEmpty(Directory.GetFiles(BackupFolder, "*.zip"));
 
         using var connection = SqliteConnectionFactory.OpenConnection($"Data Source={dbPath}");
-        Assert.Equal(2, DatabaseInitializer.GetSchemaVersion(connection));
+        Assert.Equal(DatabaseInitializer.ExpectedSchemaVersion, DatabaseInitializer.GetSchemaVersion(connection));
         Assert.Equal(4711L, connection.ExecuteScalar<long>(
             "SELECT AmountCents FROM Expense WHERE Id = 1"));
         Assert.Equal(

@@ -16,13 +16,15 @@
   <ItemGroup>
     <!-- Massgebliches DB-Schema aus docs/ einbetten, damit die
          Initialisierung unabhaengig vom Arbeitsverzeichnis funktioniert.
-         schema_v1.sql bleibt eingebettet, obwohl neue Datenbanken nach
-         schema_v2.sql entstehen: die Tests legen damit eine Datenbank im
-         alten Stand an und pruefen die Migration gegen das echte alte
-         Schema statt gegen eine Nachbildung. -->
+         Aeltere schema_vN.sql bleiben eingebettet, obwohl neue Datenbanken
+         nach schema_v3.sql entstehen: die Tests legen damit Datenbanken in
+         alten Staenden an und pruefen die Migration gegen die echten
+         alten Schemata statt gegen Nachbildungen. -->
     <EmbeddedResource Include="..\docs\schema_v1.sql" Link="schema_v1.sql" />
     <EmbeddedResource Include="..\docs\schema_v2.sql" Link="schema_v2.sql" />
+    <EmbeddedResource Include="..\docs\schema_v3.sql" Link="schema_v3.sql" />
     <EmbeddedResource Include="..\docs\migration_v1_to_v2.sql" Link="migration_v1_to_v2.sql" />
+    <EmbeddedResource Include="..\docs\migration_v2_to_v3.sql" Link="migration_v2_to_v3.sql" />
   </ItemGroup>
 
 </Project>
