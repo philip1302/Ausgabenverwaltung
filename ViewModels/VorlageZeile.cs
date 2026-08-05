@@ -30,8 +30,9 @@ public sealed class VorlageZeile
         PayerName = payerName;
         ErzeugteAnzahl = erzeugteAnzahl;
 
-        BetragText = EuroText.Format(vorlage.AmountCents);
+        BetragText = EuroText.Format(vorlage.AmountCents, vorlage.IsIncome);
         IstErstattung = EuroText.IsNegative(vorlage.AmountCents);
+        IstEinnahme = vorlage.IsIncome;
 
         RhythmusText = RecurrenceText.Describe(
             vorlage.IntervalUnit, vorlage.IntervalCount, vorlage.AnchorDay, vorlage.StartDate);
@@ -71,6 +72,9 @@ public sealed class VorlageZeile
 
     /// <summary>Erstattung (negativer Betrag) - wird gedaempft rot hervorgehoben.</summary>
     public bool IstErstattung { get; }
+
+    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben.</summary>
+    public bool IstEinnahme { get; }
 
     public string RhythmusText { get; }
     public string NaechsteFaelligkeitText { get; }

@@ -20,7 +20,7 @@ public static class RecurringExpenseValidator
                 nameof(input), input.IntervalUnit, "Unbekannte IntervalUnit.");
         }
 
-        var (amountCents, betragFehler) = PruefeBetrag(input.AmountText);
+        var (amountCents, betragFehler) = PruefeBetrag(input.AmountText, input.IsIncome);
 
         var anzahlGueltig =
             int.TryParse(
@@ -71,7 +71,7 @@ public static class RecurringExpenseValidator
     // Dieselbe Regel wie bei einer einzelnen Ausgabe (siehe
     // Expenses.ExpenseValidator): eine Vorlage ueber 0,00 € erzeugt Monat
     // fuer Monat Buchungen, die nichts aussagen.
-    private static (long Cents, string? Fehler) PruefeBetrag(string? amountText)
+    private static (long Cents, string? Fehler) PruefeBetrag(string? amountText, bool isIncome)
     {
         if (string.IsNullOrWhiteSpace(amountText))
         {
@@ -86,6 +86,14 @@ public static class RecurringExpenseValidator
         if (cents == 0)
         {
             return (0, "Der Betrag darf nicht null sein.");
+        }
+
+        // Dieselbe Begruendung wie bei einer einzelnen Ausgabe (siehe
+        // Expenses.ExpenseValidator.PruefeBetrag): die beiden Vorzeichen-
+        // Konzepte (Erstattung vs. Einnahme) sollen sich nie vermischen.
+        if (isIncome && cents < 0)
+        {
+            return (0, "Eine Einnahme darf keinen negativen Betrag haben.");
         }
 
         return (cents, null);

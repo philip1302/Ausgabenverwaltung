@@ -73,7 +73,7 @@ public sealed partial class StartupNoticeViewModel : ViewModelBase
         GeneratedExpenseDescriptions = erzeugte
             .Select(expense =>
                 $"{IsoDate.ToDateText(expense.ExpenseDate)} - " +
-                $"{EuroText.Format(expense.AmountCents)}" +
+                $"{EuroText.Format(expense.AmountCents, expense.IsIncome)}" +
                 (string.IsNullOrEmpty(expense.Note) ? string.Empty : $" ({expense.Note})"))
             .ToList();
 

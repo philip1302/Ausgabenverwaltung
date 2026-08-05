@@ -5,7 +5,7 @@ using Dapper;
 namespace Ausgabenverwaltung.Core.Database;
 
 /// <summary>
-/// Legt neue Datenbanken nach dem massgeblichen Schema an (docs/schema_v3.sql)
+/// Legt neue Datenbanken nach dem massgeblichen Schema an (docs/schema_v4.sql)
 /// und liest den Stand einer vorhandenen. Bestehende Datenbanken aelterer
 /// Staende zieht <see cref="DatabaseMigrator"/> hoch.
 /// </summary>
@@ -17,11 +17,11 @@ public static class DatabaseInitializer
     private const string ExampleQueriesMarker = "-- ABFRAGE 1";
 
     /// <summary>Schema-Datei, aus der neue Datenbanken entstehen.</summary>
-    public const string CurrentSchemaFileName = "schema_v3.sql";
+    public const string CurrentSchemaFileName = "schema_v4.sql";
 
     // Stand, den dieser Programmcode erwartet. Steigt mit jeder Migration,
     // die er beherrscht (siehe DatabaseMigrator.Migrations).
-    public const int ExpectedSchemaVersion = 3;
+    public const int ExpectedSchemaVersion = 4;
 
     public static void Initialize(IDbConnection connection)
     {

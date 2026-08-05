@@ -39,7 +39,7 @@ public class DatabaseInitializerTests
         DatabaseInitializer.Initialize(connection);
 
         var version = connection.ExecuteScalar<long>("SELECT Version FROM SchemaVersion");
-        Assert.Equal(3, version);
+        Assert.Equal(4, version);
         Assert.Equal(DatabaseInitializer.ExpectedSchemaVersion, (int)version);
     }
 

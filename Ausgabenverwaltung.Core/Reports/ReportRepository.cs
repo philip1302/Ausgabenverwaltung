@@ -27,7 +27,8 @@ public sealed class ReportRepository
             SELECT
             """ + GroupKeySql + """
                                    AS GroupKey,
-                SUM(e.AmountCents) AS SumCents,
+            """ + SumCentsSql + """
+                                   AS SumCents,
                 COUNT(*)           AS Count
             FROM   Expense e
             JOIN   Person  p ON p.Id = e.PayerId
@@ -85,7 +86,8 @@ public sealed class ReportRepository
                 a.AncestorId       AS CategoryId,
             """ + GroupKeySql + """
                                    AS GroupKey,
-                SUM(e.AmountCents) AS SumCents,
+            """ + SumCentsSql + """
+                                   AS SumCents,
                 COUNT(*)           AS Count
             FROM   Expense  e
             JOIN   Person   p ON p.Id = e.PayerId
@@ -124,6 +126,17 @@ public sealed class ReportRepository
                         strftime('%Y', e.ExpenseDate) || '-Q' ||
                         ((CAST(strftime('%m', e.ExpenseDate) AS INTEGER) - 1) / 3 + 1)
                 END
+        """;
+
+    // Eine Einnahme mindert die Summe statt sie zu erhoehen - deshalb hier
+    // per CASE das Vorzeichen kippen statt einfach zu addieren (siehe
+    // Entities.Expense.IsIncome). Eigene Konstante wie GroupKeySql, weil
+    // Evaluate und EvaluateMatrix dieselbe Rechenregel brauchen.
+    private const string SumCentsSql = """
+                SUM(CASE WHEN e.IsIncome = 1
+                         THEN -e.AmountCents
+                         ELSE  e.AmountCents
+                    END)
         """;
 
     private static string GroupUnitText(ReportGrouping grouping) => grouping switch

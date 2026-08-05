@@ -18,6 +18,9 @@ public sealed class ExpenseListItem
     /// <summary>Betrag in Cent. Negative Werte = Erstattung.</summary>
     public required long AmountCents { get; init; }
 
+    /// <summary>Ob dieser Betrag eine Einnahme ist (siehe Entities.Expense.IsIncome).</summary>
+    public required bool IsIncome { get; init; }
+
     public required int PayerId { get; init; }
     public required string PayerName { get; init; }
 

@@ -230,4 +230,47 @@ public class ReportRepositoryTests : IDisposable
         Assert.Equal(3500, group.SumCents);
         Assert.Equal(2, group.Count);
     }
+
+    [Fact]
+    public void Evaluate_zieht_Einnahmen_von_der_Summe_ab_statt_sie_zu_addieren()
+    {
+        var kategorie = _categories.Create("Sonstiges", null);
+
+        // 500,00 € Ausgabe, 200,00 € Einnahme -> Summe 300,00 €, nicht
+        // 700,00 € (siehe Entities.Expense.IsIncome).
+        _expenses.Create(kategorie.Id, 50000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(
+            kategorie.Id, 20000, new DateOnly(2026, 3, 2), _selfId, isIncome: true);
+
+        var result = _repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Grouping = ReportGrouping.Year,
+        });
+
+        var group = Assert.Single(result);
+        Assert.Equal(30000, group.SumCents);
+        Assert.Equal(2, group.Count);
+    }
+
+    [Fact]
+    public void EvaluateMatrix_zieht_Einnahmen_von_der_Summe_ab_statt_sie_zu_addieren()
+    {
+        var kategorie = _categories.Create("Sonstiges", null);
+        _expenses.Create(kategorie.Id, 50000, new DateOnly(2026, 3, 1), _selfId, isIncome: false);
+        _expenses.Create(kategorie.Id, 20000, new DateOnly(2026, 3, 2), _selfId, isIncome: true);
+
+        var cells = _repository.EvaluateMatrix(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Grouping = ReportGrouping.Year,
+        });
+
+        var cell = Assert.Single(cells);
+        Assert.Equal(kategorie.Id, cell.CategoryId);
+        Assert.Equal(30000, cell.SumCents);
+        Assert.Equal(2, cell.Count);
+    }
 }

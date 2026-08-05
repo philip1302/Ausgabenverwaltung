@@ -2,6 +2,7 @@ using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.People;
+using Ausgabenverwaltung.Core.Reports;
 
 namespace Ausgabenverwaltung.Tests;
 
@@ -154,5 +155,63 @@ public class ExpenseRepositoryTests : IDisposable
         Assert.Equal("Mitbewohner", item.PayerName);
         Assert.Equal("Miete", item.Note);
         Assert.Equal(4200, item.AmountCents);
+    }
+
+    [Fact]
+    public void Create_ohne_IsIncome_ist_eine_gewoehnliche_Ausgabe()
+    {
+        var expense = _repository.Create(
+            _categoryId, 4200, new DateOnly(2026, 3, 5), _selfId);
+
+        Assert.False(expense.IsIncome);
+        Assert.False(_repository.GetById(expense.Id)!.IsIncome);
+    }
+
+    [Fact]
+    public void Create_mit_IsIncome_speichert_die_Einnahme()
+    {
+        var expense = _repository.Create(
+            _categoryId, 300000, new DateOnly(2026, 3, 5), _selfId,
+            isIncome: true);
+
+        Assert.True(expense.IsIncome);
+        Assert.True(_repository.GetById(expense.Id)!.IsIncome);
+    }
+
+    [Fact]
+    public void Update_kann_eine_Ausgabe_zur_Einnahme_machen_und_zurueck()
+    {
+        var expense = _repository.Create(
+            _categoryId, 1000, new DateOnly(2026, 3, 5), _selfId);
+
+        _repository.Update(
+            expense.Id, _categoryId, 1000, new DateOnly(2026, 3, 5), _selfId,
+            note: null, settledDate: null, isIncome: true);
+        Assert.True(_repository.GetById(expense.Id)!.IsIncome);
+
+        _repository.Update(
+            expense.Id, _categoryId, 1000, new DateOnly(2026, 3, 5), _selfId,
+            note: null, settledDate: null, isIncome: false);
+        Assert.False(_repository.GetById(expense.Id)!.IsIncome);
+    }
+
+    [Fact]
+    public void Summarize_zieht_Einnahmen_von_der_Summe_ab_statt_sie_zu_addieren()
+    {
+        // 500,00 € Ausgabe, 200,00 € Einnahme -> Summe 300,00 €, nicht 700,00 €.
+        _repository.Create(_categoryId, 50000, new DateOnly(2026, 3, 1), _selfId);
+        _repository.Create(
+            _categoryId, 20000, new DateOnly(2026, 3, 2), _selfId, isIncome: true);
+
+        var filter = new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2026, 12, 31),
+        };
+
+        var summary = _repository.Summarize(filter);
+
+        Assert.Equal(2, summary.Count);
+        Assert.Equal(30000, summary.SumCents);
     }
 }

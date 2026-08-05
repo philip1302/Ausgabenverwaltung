@@ -139,6 +139,46 @@ public class DatabaseMigratorTests : IDisposable
     }
 
     [Fact]
+    public void Migration_v3_zu_v4_fuegt_IsIncome_hinzu_und_belaesst_bestehende_Buchungen_als_Ausgabe()
+    {
+        // Stand der Version 3 - vor Einfuehrung von IsIncome gab es nur
+        // Ausgaben. ALTER TABLE ... ADD COLUMN ... DEFAULT 0 muss deshalb
+        // jede bestehende Zeile unveraendert als Ausgabe stehen lassen.
+        _connection.Execute(DatabaseInitializer.LoadScript("schema_v3.sql"));
+        _connection.Execute("""
+            INSERT INTO Person (Id, Name, IsSelf, IsArchived, CreatedUtc, SortOrder)
+            VALUES (1, 'Ich', 1, 0, '2026-01-01T00:00:00Z', 0);
+
+            INSERT INTO Category (Id, ParentId, Name, SortOrder, IsArchived, CreatedUtc)
+            VALUES (1, NULL, 'Pferde', 0, 0, '2026-01-01T00:00:00Z');
+
+            INSERT INTO RecurringExpense
+                (Id, CategoryId, PayerId, AmountCents, Title, IntervalUnit,
+                 IntervalCount, AnchorDay, StartDate, GeneratedThrough,
+                 IsActive, CreatedUtc, ModifiedUtc)
+            VALUES (1, 1, 1, 12000, 'Stallmiete', 'month', 1, 1,
+                    '2026-01-01', '2026-02-01', 1,
+                    '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+
+            INSERT INTO Expense
+                (Id, CategoryId, AmountCents, ExpenseDate, Note, PayerId,
+                 SettledDate, RecurringExpenseId, CreatedUtc, ModifiedUtc)
+            VALUES (1, 1, 12000, '2026-01-01', 'Beschlag', 1,
+                    NULL, 1, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+            """);
+
+        DatabaseMigrator.MigrateToLatest(_connection);
+
+        Assert.Contains("IsIncome", Spaltennamen(_connection, "Expense"));
+        Assert.Contains("IsIncome", Spaltennamen(_connection, "RecurringExpense"));
+
+        Assert.Equal(0, _connection.ExecuteScalar<int>(
+            "SELECT IsIncome FROM Expense WHERE Id = 1"));
+        Assert.Equal(0, _connection.ExecuteScalar<int>(
+            "SELECT IsIncome FROM RecurringExpense WHERE Id = 1"));
+    }
+
+    [Fact]
     public void Migrierte_und_neu_angelegte_Datenbank_haben_dieselben_Spalten()
     {
         LegeVersion1An();

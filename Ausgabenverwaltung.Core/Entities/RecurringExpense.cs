@@ -21,6 +21,15 @@ public sealed class RecurringExpense
     /// <summary>Faelligkeitstag im Monat (1..31), nur bei month/year relevant.</summary>
     public int? AnchorDay { get; set; }
 
+    /// <summary>
+    /// Ob die aus dieser Vorlage erzeugten Buchungen Einnahmen statt
+    /// Ausgaben sind (siehe Expense.IsIncome). Wird beim Erzeugen einer
+    /// Buchung kopiert wie AmountCents (Regel 6) - nachtraeglich am
+    /// erzeugten Vorkommen zu aendern wirkt sich nicht auf die Vorlage
+    /// aus und umgekehrt.
+    /// </summary>
+    public bool IsIncome { get; set; }
+
     public DateOnly StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
 

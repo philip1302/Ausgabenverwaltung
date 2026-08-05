@@ -18,16 +18,16 @@ namespace Ausgabenverwaltung.ViewModels;
 /// <see cref="GermanDateInput.TryParse"/> liegen in Core, hier wird nur
 /// gebunden und die Fehlermeldung gesetzt (Regel 7).
 ///
-/// SettledDate ist absichtlich KEIN Feld: die Erfassungsmaske hat es auch
-/// nicht, und das Abhaken bleibt Aufgabe des Bereichs "Offene Posten".
-/// Der bestehende Wert wird beim Speichern unveraendert durchgereicht.
+/// SettledDate ("bezahlt am") ist hier bewusst ENGER gefasst als im
+/// Bereich "Offene Posten": es gibt kein "heute abhaken" - das bleibt
+/// dort. Bei einem fremden Zahler laesst sich das Datum aber direkt
+/// korrigieren (<see cref="BezahltAmSichtbar"/>, Regel 4: nur relevant,
+/// wenn der Zahler nicht die eigene Person ist), etwa wenn es beim
+/// Abhaken falsch eingetragen wurde.
 /// </summary>
 public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
 {
     public int ExpenseId { get; }
-
-    /// <summary>Unveraendert durchzureichender Begleichungsstand (Regel 4).</summary>
-    public DateOnly? SettledDate { get; }
 
     /// <summary>
     /// Hinweis fuer aus einer Vorlage erzeugte Buchungen: die Aenderung
@@ -71,8 +71,33 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
     [ObservableProperty]
     private string? _bemerkung;
 
+    /// <summary>
+    /// Ob dieser Betrag eine allgemeine Einnahme ist statt einer Ausgabe
+    /// (siehe Entities.Expense.IsIncome) - mindert die Summen in Liste
+    /// und Auswertung, statt sie zu erhoehen.
+    /// </summary>
     [ObservableProperty]
+    private bool _istEinnahme;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BezahltAmSichtbar))]
     private Person _ausgewaehlterZahler;
+
+    /// <summary>
+    /// "Bezahlt am" ist nur bei einem fremden Zahler ueberhaupt gemeint
+    /// (Regel 4) - bei der eigenen Person bleibt das Feld unsichtbar und
+    /// SettledDate unangetastet.
+    /// </summary>
+    public bool BezahltAmSichtbar => !AusgewaehlterZahler.IsSelf;
+
+    [ObservableProperty]
+    private string _bezahltAmText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BezahltAmFehlerSichtbar))]
+    private string? _bezahltAmFehler;
+
+    public bool BezahltAmFehlerSichtbar => !string.IsNullOrEmpty(BezahltAmFehler);
 
     public AusgabeBearbeitenViewModel(
         AusgabeZeile zeile,
@@ -80,9 +105,9 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
         IReadOnlyList<Person> zahler)
     {
         ExpenseId = zeile.Id;
-        SettledDate = zeile.SettledDate;
         IstAusVorlage = zeile.IstAusVorlage;
         VorlageHinweis = zeile.VorlageHinweis;
+        IstEinnahme = zeile.IstEinnahme;
 
         // Ist die Kategorie der Buchung inzwischen archiviert oder keine
         // Blattkategorie mehr, fehlt sie in den waehlbaren Kategorien. Sie
@@ -132,6 +157,15 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
         _betragText = EuroText.Plain(zeile.AmountCents);
         _datumText = GermanDateInput.ToText(zeile.ExpenseDate);
         _bemerkung = zeile.Note;
+
+        // Leer = noch offen, sonst dasselbe Textformat wie beim
+        // Buchungsdatum. Nur bei fremdem Zahler ueberhaupt aussagekraeftig
+        // (siehe BezahltAmSichtbar), wird aber unabhaengig davon befuellt -
+        // ein spaeterer Zahlerwechsel zurueck zu "fremd" soll den Wert
+        // nicht verloren haben.
+        _bezahltAmText = zeile.SettledDate is DateOnly bezahlt
+            ? GermanDateInput.ToText(bezahlt)
+            : string.Empty;
     }
 
     /// <summary>
@@ -164,6 +198,17 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
         DatumRueckfrageText = null;
     }
 
+    // Beim Ankreuzen auf die Ich-Person vorbelegen, sofern gerade ein
+    // fremder Zahler gewaehlt ist - dasselbe Verhalten wie in der
+    // Erfassungsmaske (siehe ErfassenViewModel.OnIstEinnahmeChanged).
+    partial void OnIstEinnahmeChanged(bool value)
+    {
+        if (value && !AusgewaehlterZahler.IsSelf)
+        {
+            AusgewaehlterZahler = ZahlerOptionen.First(person => person.IsSelf);
+        }
+    }
+
     /// <summary>Der Anwender bestaetigt das ungewoehnliche Datum.</summary>
     [RelayCommand]
     private void DatumBestaetigen()
@@ -184,12 +229,13 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
     /// Datum ist dann in Ordnung, aber ungewoehnlich, und der Anwender
     /// soll es einmal bestaetigen.
     /// </summary>
-    public bool TryLeseWerte(out long amountCents, out DateOnly expenseDate)
+    public bool TryLeseWerte(out long amountCents, out DateOnly expenseDate, out DateOnly? settledDate)
     {
         // Dieselbe Pruefung wie in der Erfassungsmaske, aus Core (Regel 7).
         var pruefung = ExpenseValidator.Validate(new ExpenseInput
         {
             AmountText = BetragText,
+            IsIncome = IstEinnahme,
             CategoryId = AusgewaehlteKategorie?.Id,
             PayerId = AusgewaehlterZahler.Id,
             DateText = DatumText,
@@ -198,10 +244,19 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
 
         amountCents = pruefung.AmountCents;
         expenseDate = pruefung.Date;
+        settledDate = null;
 
         BetragFehler = pruefung.AmountError;
         KategorieFehler = pruefung.CategoryError;
         DatumFehler = pruefung.DateError;
+
+        // Bei der eigenen Person wird SettledDate nie ausgewertet
+        // (Regel 4) - das Feld bleibt dann unsichtbar, und was auch immer
+        // noch darin steht, wird ignoriert statt geprueft.
+        if (BezahltAmSichtbar && !TryLeseBezahltAm(out settledDate))
+        {
+            return false;
+        }
 
         if (!pruefung.IsValid)
         {
@@ -214,6 +269,39 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
             return false;
         }
 
+        return true;
+    }
+
+    /// <summary>
+    /// Leer bedeutet weiterhin offen (NULL) - kein Fehler. Dieselbe
+    /// Pruefung wie beim abweichenden Datum in der Offene-Posten-Liste
+    /// (siehe OffenePostenViewModel.AbweichendesDatumUebernehmen), nur
+    /// ohne Rueckfrage: das Feld steht direkt im Formular und ist in
+    /// einem Zug wieder geaendert.
+    /// </summary>
+    private bool TryLeseBezahltAm(out DateOnly? settledDate)
+    {
+        settledDate = null;
+        BezahltAmFehler = null;
+
+        if (string.IsNullOrWhiteSpace(BezahltAmText))
+        {
+            return true;
+        }
+
+        if (!GermanDateInput.TryParse(BezahltAmText, out var datum))
+        {
+            BezahltAmFehler = "Das ist kein gültiges Datum. Beispiel: 05.03.2026";
+            return false;
+        }
+
+        if (DatePlausibility.Error(datum) is string jahresFehler)
+        {
+            BezahltAmFehler = jahresFehler;
+            return false;
+        }
+
+        settledDate = datum;
         return true;
     }
 

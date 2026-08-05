@@ -195,6 +195,7 @@
                                     <TextBlock Grid.Column="4" Text="{Binding BetragText}"
                                                Classes="tabellenzelle zahl"
                                                Classes.erstattung="{Binding IstErstattung}"
+                                               Classes.einnahme="{Binding IstEinnahme}"
                                                Classes.archiviert="{Binding !IstAktiv}" />
                                     <anzeige:Textzelle Grid.Column="6" Inhalt="{Binding RhythmusText}"
                                                        Classes="tabellenzelle"
@@ -346,6 +347,13 @@
                             <TextBox Text="{Binding BetragText}" PlaceholderText="0,00" />
                             <TextBlock Text="{Binding BetragFehler}"
                                        IsVisible="{Binding BetragFehlerSichtbar}" Foreground="Red" />
+
+                            <!-- Einnahme statt Ausgabe: mindert die
+                                 Summen in Liste und Auswertung, statt
+                                 sie zu erhoehen. Gilt fuer alle aus
+                                 dieser Vorlage erzeugten Buchungen. -->
+                            <CheckBox Content="Einnahme"
+                                      IsChecked="{Binding IstEinnahme}" />
 
                             <TextBlock Text="Kategorie" Classes="formularbeschriftung" />
                             <AutoCompleteBox ItemsSource="{Binding KategorieVorschlaege}"

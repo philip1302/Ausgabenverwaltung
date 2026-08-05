@@ -31,6 +31,13 @@
              Minuszeichen steht ohnehin davor und traegt die Angabe auch
              ohne Farbwahrnehmung. -->
         <SolidColorBrush x:Key="ErstattungFarbe">#A03A30</SolidColorBrush>
+
+        <!-- Die Farbe von Einnahmen - gedaempftes Gruen als Gegenstueck zum
+             gedaempften Rot der Erstattungen, ebenso kein Signalton. Auch
+             hier ist die Farbe ein ZUSATZ: das vorangestellte "+" (siehe
+             EuroText.Format) traegt die Angabe bereits ohne
+             Farbwahrnehmung (Regel 10). -->
+        <SolidColorBrush x:Key="EinnahmeFarbe">#2E7D32</SolidColorBrush>
     </Application.Resources>
 
     <!-- Wiederverwendbare Tabellen-Styles fuer alle Listen-/Tabellenansichten
@@ -142,6 +149,17 @@
         </Style>
         <Style Selector="Button.erstattung /template/ ContentPresenter">
             <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
+        </Style>
+
+        <!-- Einnahmen - dasselbe Muster wie .erstattung oben, nur gruen.
+             IsIncome und ein negativer Betrag schliessen sich laut
+             ExpenseValidator gegenseitig aus, eine Zeile traegt also nie
+             beide Klassen gleichzeitig. -->
+        <Style Selector=":is(TextBlock).einnahme">
+            <Setter Property="Foreground" Value="{DynamicResource EinnahmeFarbe}" />
+        </Style>
+        <Style Selector="Button.einnahme /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource EinnahmeFarbe}" />
         </Style>
 
         <Style Selector=":is(TextBlock).archiviert">

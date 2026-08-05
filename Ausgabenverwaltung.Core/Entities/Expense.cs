@@ -25,6 +25,17 @@ public sealed class Expense
     /// <summary>NULL = von Hand erfasst, sonst aus dieser Vorlage automatisch erzeugt.</summary>
     public int? RecurringExpenseId { get; set; }
 
+    /// <summary>
+    /// Ob dieser Betrag eine allgemeine Einnahme ist statt einer Ausgabe
+    /// (z. B. ein Gehaltseingang, der vorher nicht als Ausgabe gebucht
+    /// war). Eine Einnahme MINDERT die Summen in Liste und Auswertung,
+    /// statt sie zu erhoehen - unabhaengig vom Vorzeichen von
+    /// AmountCents, das weiterhin ausschliesslich "Erstattung" bedeutet.
+    /// Beide Konzepte schliessen sich aus: ExpenseValidator lehnt einen
+    /// negativen Betrag bei IsIncome = true ab.
+    /// </summary>
+    public bool IsIncome { get; set; }
+
     public DateTime CreatedUtc { get; set; }
     public DateTime ModifiedUtc { get; set; }
 }

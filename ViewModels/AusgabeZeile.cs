@@ -29,6 +29,9 @@ public sealed partial class AusgabeZeile : ObservableObject
     /// Angabe auch ohne Farbwahrnehmung traegt.
     /// </summary>
     public bool IstErstattung { get; }
+
+    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben und mindert die Summen.</summary>
+    public bool IstEinnahme { get; }
     public int PayerId { get; }
     public string PayerName { get; }
     public bool PayerIsSelf { get; }
@@ -83,8 +86,9 @@ public sealed partial class AusgabeZeile : ObservableObject
         CategoryId = item.CategoryId;
         CategoryFullPath = item.CategoryFullPath;
         AmountCents = item.AmountCents;
-        BetragText = EuroText.Format(item.AmountCents);
+        BetragText = EuroText.Format(item.AmountCents, item.IsIncome);
         IstErstattung = EuroText.IsNegative(item.AmountCents);
+        IstEinnahme = item.IsIncome;
         PayerId = item.PayerId;
         PayerName = item.PayerName;
         PayerIsSelf = item.PayerIsSelf;

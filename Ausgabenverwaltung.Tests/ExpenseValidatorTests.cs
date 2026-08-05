@@ -69,6 +69,28 @@ public class ExpenseValidatorTests
         Assert.Equal(-1500L, ergebnis.AmountCents);
     }
 
+    [Fact]
+    public void Eine_Einnahme_mit_positivem_Betrag_ist_gueltig()
+    {
+        var ergebnis = ExpenseValidator.Validate(
+            Eingabe() with { AmountText = "300,00", IsIncome = true });
+
+        Assert.True(ergebnis.IsValid);
+        Assert.Equal(30000L, ergebnis.AmountCents);
+    }
+
+    [Fact]
+    public void Eine_Einnahme_mit_negativem_Betrag_wird_abgelehnt()
+    {
+        // Die beiden Vorzeichen-Konzepte (Erstattung vs. Einnahme) duerfen
+        // sich nicht vermischen.
+        var ergebnis = ExpenseValidator.Validate(
+            Eingabe() with { AmountText = "-15,00", IsIncome = true });
+
+        Assert.False(ergebnis.IsValid);
+        Assert.Equal("Eine Einnahme darf keinen negativen Betrag haben.", ergebnis.AmountError);
+    }
+
     // ================= Pflichtfelder =================
 
     [Fact]

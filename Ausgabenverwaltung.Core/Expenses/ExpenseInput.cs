@@ -14,6 +14,14 @@ public sealed record ExpenseInput
 {
     public required string AmountText { get; init; }
 
+    /// <summary>
+    /// Ob der Betrag als Einnahme gilt. Steuert nur die Pruefung hier
+    /// (ein negativer Betrag ist bei einer Einnahme kein gueltiger Wert -
+    /// siehe ExpenseValidator.PruefeBetrag); das eigentliche Attribut
+    /// steht auf Entities.Expense.
+    /// </summary>
+    public bool IsIncome { get; init; }
+
     /// <summary>NULL, solange keine Kategorie gewaehlt ist.</summary>
     public int? CategoryId { get; init; }
 

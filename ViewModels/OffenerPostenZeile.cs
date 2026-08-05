@@ -21,6 +21,9 @@ public sealed partial class OffenerPostenZeile : ObservableObject
 
     /// <summary>Erstattung (negativer Betrag) - wird gedaempft rot hervorgehoben.</summary>
     public bool IstErstattung { get; }
+
+    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben und mindert die Zwischensumme.</summary>
+    public bool IstEinnahme { get; }
     public string CategoryFullPath { get; }
     public string? Note { get; }
     public int TageOffen { get; }
@@ -55,8 +58,9 @@ public sealed partial class OffenerPostenZeile : ObservableObject
         ExpenseDate = item.ExpenseDate;
         DatumText = GermanDateInput.ToText(item.ExpenseDate);
         AmountCents = item.AmountCents;
-        BetragText = EuroText.Format(item.AmountCents);
+        BetragText = EuroText.Format(item.AmountCents, item.IsIncome);
         IstErstattung = EuroText.IsNegative(item.AmountCents);
+        IstEinnahme = item.IsIncome;
         CategoryFullPath = item.CategoryFullPath;
         Note = item.Note;
         TageOffen = item.TageOffen;
