@@ -183,7 +183,8 @@
                             <TextBlock Text="Zahler" Classes="filterbeschriftung" />
                             <ComboBox ItemsSource="{Binding ZahlerBereichOptionen}"
                                       SelectedItem="{Binding AusgewaehlterZahlerBereich}"
-                                      Width="{anzeige:Breite 130}">
+                                      Width="{anzeige:Breite 200}"
+                                      ToolTip.Tip="„Ich + offene Posten“ zählt eigene Ausgaben und alle noch nicht beglichenen Ausgaben anderer im Zeitraum zusammen.">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:ZahlerBereichOption">
                                         <TextBlock Text="{Binding Bezeichnung}" />

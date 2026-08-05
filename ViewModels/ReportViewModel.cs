@@ -73,6 +73,7 @@ public sealed partial class ReportViewModel : ViewModelBase
         new ZahlerBereichOption("alle", PayerScope.All),
         new ZahlerBereichOption("nur ich", PayerScope.Self),
         new ZahlerBereichOption("nur andere", PayerScope.Others),
+        new ZahlerBereichOption("ich + offene Posten", PayerScope.SelfAndOpen),
     };
 
     // ---------------- Filter ----------------
