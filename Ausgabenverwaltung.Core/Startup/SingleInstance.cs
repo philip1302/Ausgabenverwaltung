@@ -216,51 +216,90 @@ public sealed class SingleInstance : IDisposable
 
     private void Listen(Action onActivate, CancellationToken abbruch)
     {
-        while (!abbruch.IsCancellationRequested)
+        // Die Pipe wird EINMAL angelegt und ueber die ganze Laufzeit
+        // behalten; zwischen zwei Nachrichten macht Disconnect sie wieder
+        // aufnahmebereit.
+        //
+        // Frueher entstand je Nachricht eine neue Pipe. Unter Windows ging
+        // das gut, unter Unix nicht: dort bildet .NET benannte Pipes auf
+        // Unix-Domain-Sockets ab. Verbindet sich der naechste Start,
+        // waehrend die vorige Nachricht noch verarbeitet wird, wartet er
+        // in der Annahmeschlange des ALTEN Sockets - und die wird beim
+        // Neuanlegen verworfen. Die Nachricht war weg, ohne dass es jemand
+        // bemerkte: SignalExistingInstance meldete trotzdem Erfolg. Der
+        // dritte Start holte das Fenster damit nicht mehr nach vorn.
+        //
+        // Behaelt man dieselbe Pipe, bleibt die Annahmeschlange bestehen
+        // und die wartende Verbindung wird im naechsten Durchlauf bedient.
+        NamedPipeServerStream? server = null;
+
+        try
         {
-            try
+            while (!abbruch.IsCancellationRequested)
             {
-                using var server = new NamedPipeServerStream(
-                    _pipeName, PipeDirection.In, maxNumberOfServerInstances: 1,
-                    PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                try
+                {
+                    // Beim ersten Durchlauf - und nach einem Fehler, der
+                    // die Pipe unbrauchbar gemacht haben koennte.
+                    server ??= new NamedPipeServerStream(
+                        _pipeName, PipeDirection.In, maxNumberOfServerInstances: 1,
+                        PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 
-                server.WaitForConnectionAsync(abbruch).GetAwaiter().GetResult();
+                    server.WaitForConnectionAsync(abbruch).GetAwaiter().GetResult();
 
-                if (abbruch.IsCancellationRequested)
+                    if (abbruch.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    server.ReadByte();
+
+                    // Erst trennen, dann melden: onActivate holt ein
+                    // Fenster nach vorn und braucht dafuer merklich Zeit.
+                    // Waehrenddessen muss die Pipe schon wieder
+                    // aufnahmebereit sein, sonst geht genau die Nachricht
+                    // verloren, die in dieser Zeit eintrifft.
+                    server.Disconnect();
+
+                    AppLog.Current.Info(LogEvents.SecondInstanceRejected());
+                    onActivate();
+                }
+                catch (OperationCanceledException)
                 {
                     return;
                 }
-
-                server.ReadByte();
-
-                AppLog.Current.Info(LogEvents.SecondInstanceRejected());
-                onActivate();
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-            catch (ObjectDisposedException)
-            {
-                // Beim Beenden geraeumt, waehrend hier noch gewartet
-                // wurde. Kein Fehler, sondern das Ende.
-                return;
-            }
-            catch (Exception ex)
-            {
-                // Diese Schleife laeuft neben allem anderen her. Sie darf
-                // die Anwendung unter keinen Umstaenden mitreissen - ein
-                // nicht nach vorn geholtes Fenster ist ein Aergernis, ein
-                // Absturz deswegen waere absurd.
-                AppLog.Current.Exception("Im Horcher fuer weitere Programmstarts", ex);
-
-                // Kurz durchatmen, damit ein dauerhafter Fehler nicht in
-                // eine Endlosschleife mit voller Last laeuft.
-                if (abbruch.WaitHandle.WaitOne(TimeSpan.FromSeconds(1)))
+                catch (ObjectDisposedException)
                 {
+                    // Beim Beenden geraeumt, waehrend hier noch gewartet
+                    // wurde. Kein Fehler, sondern das Ende.
                     return;
                 }
+                catch (Exception ex)
+                {
+                    // Diese Schleife laeuft neben allem anderen her. Sie darf
+                    // die Anwendung unter keinen Umstaenden mitreissen - ein
+                    // nicht nach vorn geholtes Fenster ist ein Aergernis, ein
+                    // Absturz deswegen waere absurd.
+                    AppLog.Current.Exception("Im Horcher fuer weitere Programmstarts", ex);
+
+                    // In welchem Zustand die Pipe nach dem Fehler ist,
+                    // laesst sich nicht sagen - deshalb wegwerfen und im
+                    // naechsten Durchlauf neu anlegen.
+                    server?.Dispose();
+                    server = null;
+
+                    // Kurz durchatmen, damit ein dauerhafter Fehler nicht in
+                    // eine Endlosschleife mit voller Last laeuft.
+                    if (abbruch.WaitHandle.WaitOne(TimeSpan.FromSeconds(1)))
+                    {
+                        return;
+                    }
+                }
             }
+        }
+        finally
+        {
+            server?.Dispose();
         }
     }
 

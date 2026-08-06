@@ -57,12 +57,16 @@ public class DatenbankFehlerTests : IDisposable
         Assert.Equal(StorageProblem.DatabaseLocked, StorageProblems.Classify(ausnahme));
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public void Eine_von_aussen_exklusiv_gesperrte_Datei_gilt_als_gesperrt_nicht_als_verschwunden()
     {
         // SQLite meldet beides als SQLITE_CANTOPEN. Ohne den Blick ins
         // Dateisystem bekaeme der Anwender "Der Datenträger wurde
         // abgezogen" zu lesen, waehrend die Datei direkt vor ihm liegt.
+        //
+        // Nur unter Windows pruefbar: dort ist die Sperre unten
+        // verbindlich, unter Linux/macOS nur beratend - siehe
+        // WindowsOnlyFactAttribute.
         Starte();
         SqliteConnection.ClearAllPools();
 
