@@ -84,6 +84,20 @@ public static class GlobaleFehlerbehandlung
 
             AppLog.Current.Exception("In einer nicht abgewarteten Hintergrundaufgabe", ausnahme);
 
+            if (IstDBusPlattformEinstellungenFehler(ausnahme))
+            {
+                // Avalonia fragt beim Start unaufgefordert per D-Bus das
+                // System-Theme ab. Fehlt der Session-Bus komplett (z.B. in
+                // einem Container ohne Desktop-Umgebung), wirft Avalonia
+                // dabei eine NullReferenceException statt sauber zu
+                // scheitern - ein Fehler in Avalonia selbst, nicht in
+                // dieser Anwendung. Ein echter Linux-Desktop hat immer
+                // einen laufenden Session-Bus, dort greift dieser Fall
+                // nie. Geloggt ist die Ausnahme oben schon; ein Dialog
+                // dafuer haette dem Anwender nichts zu sagen.
+                return;
+            }
+
             // Der Dialog kommt auf den Oberflaechen-Thread: dieses
             // Ereignis wird vom Finalizer-Thread ausgeloest, und von dort
             // laesst sich kein Fenster oeffnen.
@@ -223,6 +237,14 @@ public static class GlobaleFehlerbehandlung
             AppLog.Current.Exception("Beim Anzeigen des letzten Fehlerdialogs", dialogFehler);
         }
     }
+
+    // Erkennt den Avalonia-Fehler beim D-Bus-Zugriff auf das System-Theme
+    // (siehe Kommentar oben bei TaskScheduler.UnobservedTaskException)
+    // anhand seines Ursprungs im Aufrufstapel - unabhaengig vom Text, der
+    // sich mit Avalonia-Versionen aendern kann.
+    private static bool IstDBusPlattformEinstellungenFehler(Exception ausnahme)
+        => ausnahme.StackTrace?.Contains(
+            "Avalonia.FreeDesktop.DBusPlatformSettings", StringComparison.Ordinal) == true;
 
     private static Window? HauptfensterOderNull()
     {
