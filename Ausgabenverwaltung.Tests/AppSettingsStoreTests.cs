@@ -138,4 +138,58 @@ public class AppSettingsStoreTests : IDisposable
         Assert.Equal(1.4, gelesen.FontScale);
         Assert.Equal(300, gelesen.CategoryColumnWidth);
     }
+
+    /// <summary>
+    /// Die Suche nach neuen Fassungen ist der einzige Netzzugriff dieser
+    /// Anwendung. Dass sich das abschalten laesst UND abgeschaltet bleibt,
+    /// ist deshalb kein beliebiger Einstellungswert.
+    /// </summary>
+    [Fact]
+    public void Die_abgeschaltete_Aktualisierungssuche_bleibt_abgeschaltet()
+    {
+        var speicher = new AppSettingsStore(SettingsPath);
+        speicher.Save(new AppSettings { AutoUpdate = false });
+
+        Assert.False(speicher.Load().AutoUpdate);
+    }
+
+    [Fact]
+    public void Die_Aktualisierungssuche_ist_ohne_Angabe_eingeschaltet()
+    {
+        Assert.True(new AppSettingsStore(SettingsPath).Load().AutoUpdate);
+    }
+
+    /// <summary>
+    /// Eine Einstellungsdatei aus einer Fassung vor dieser Funktion kennt
+    /// das Feld nicht. Sie darf deshalb nicht als "abgeschaltet" gelesen
+    /// werden - sonst bekaeme ausgerechnet der Bestand nie ein Update.
+    /// </summary>
+    [Fact]
+    public void Eine_aeltere_Datei_ohne_das_Feld_gilt_als_eingeschaltet()
+    {
+        File.WriteAllText(SettingsPath, """
+            {
+              "ExternalFolderPath": null,
+              "FontScale": 1,
+              "ThemeMode": "Dark"
+            }
+            """);
+
+        var gelesen = new AppSettingsStore(SettingsPath).Load();
+
+        Assert.True(gelesen.AutoUpdate);
+        Assert.Null(gelesen.LastUpdateCheckUtc);
+        Assert.Equal(ThemeMode.Dark, gelesen.ThemeMode);
+    }
+
+    [Fact]
+    public void Der_Zeitpunkt_der_letzten_Suche_kommt_unveraendert_zurueck()
+    {
+        var speicher = new AppSettingsStore(SettingsPath);
+        var zuletzt = new DateTime(2026, 8, 6, 10, 36, 22, DateTimeKind.Utc);
+
+        speicher.Save(new AppSettings { LastUpdateCheckUtc = zuletzt });
+
+        Assert.Equal(zuletzt, speicher.Load().LastUpdateCheckUtc);
+    }
 }

@@ -96,6 +96,21 @@
                 </StackPanel>
             </Border>
 
+            <!-- Selbstaktualisierung. Der Text am Kaestchen sagt, was
+                 tatsaechlich passiert - ein blosses "Automatische
+                 Updates" liesse offen, ob dabei etwas gesendet wird. -->
+            <Border Classes="karte">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Aktualisierung" Classes="ueberschrift" />
+                    <CheckBox Content="Beim Programmstart nach einer neuen Fassung sehen"
+                              IsChecked="{Binding AktualisierungAutomatisch, Mode=TwoWay}" />
+                    <TextBlock Classes="klein"
+                               Foreground="{DynamicResource TextTertiaerFarbe}"
+                               TextWrapping="Wrap"
+                               Text="Dabei wird die Veröffentlichungsseite des Projekts abgerufen. Eine gefundene Fassung wird geladen und beim nächsten Start übernommen; Buchungen und Sicherungen bleiben davon unberührt." />
+                </StackPanel>
+            </Border>
+
             <!-- Probezeile: zeigt alle drei Groessen der Oberflaeche
                  nebeneinander, damit die Wirkung ohne Bereichswechsel
                  sichtbar ist. -->

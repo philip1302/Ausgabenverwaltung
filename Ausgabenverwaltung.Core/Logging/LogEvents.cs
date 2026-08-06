@@ -196,4 +196,69 @@ public static class LogEvents
             ? $"1 Buchung aus wiederkehrender Ausgabe Id {templateId} erzeugt (Stichtag {tag})."
             : $"{count} Buchungen aus wiederkehrender Ausgabe Id {templateId} erzeugt (Stichtag {tag}).";
     }
+
+    // ================= Selbstaktualisierung =================
+    //
+    // Hier stehen Versionsangaben, Groessen und Dateinamen - also
+    // dasselbe, was Regel 11 ohnehin erlaubt. Ein Update sagt nichts
+    // ueber die Daten des Anwenders aus, deshalb ist an diesen Eintraegen
+    // nichts zu schwaerzen.
+
+    public static string UpdateAbgeschaltet()
+        => "Suche nach neuer Fassung uebersprungen - in den Einstellungen abgeschaltet.";
+
+    public static string UpdateOrdnerSchreibgeschuetzt(string ordnerPfad)
+        => $"Suche nach neuer Fassung uebersprungen - der Programmordner ist "
+           + $"schreibgeschuetzt: {ordnerPfad}";
+
+    public static string UpdateAktuell(string version)
+        => $"Nach neuer Fassung gesehen: {version} ist der neueste Stand.";
+
+    public static string UpdateGefunden(string version)
+        => $"Neue Fassung gefunden: {version}.";
+
+    public static string UpdateNichtGefunden(UpdateGrundText grund)
+        => $"Nach neuer Fassung gesehen, ohne Ergebnis: {Beschreibe(grund)}";
+
+    public static string UpdateBereitgelegt(string version, long groesseBytes)
+        => $"Fassung {version} geladen und bereitgelegt "
+           + $"({groesseBytes / (1024 * 1024)} MB) - wird beim naechsten Start uebernommen.";
+
+    public static string UpdatePruefsummeAbweichend(string version)
+        => $"Fassung {version} verworfen: die Pruefsumme der geladenen Datei weicht "
+           + "von der angegebenen ab.";
+
+    public static string UpdateVerworfen(string version)
+        => $"Vorbereitete Fassung {version} verworfen - sie hielt der Pruefung "
+           + "unmittelbar vor dem Austausch nicht stand.";
+
+    public static string UpdateUebernommen(string version)
+        => $"Fassung {version} uebernommen, die Anwendung startet neu.";
+
+    /// <summary>
+    /// Warum nichts gefunden wurde - als eigener Aufzaehlungstyp, damit
+    /// der Protokolltext nicht aus dem Aufrufer hereingereicht wird und
+    /// hier an einer Stelle nachlesbar bleibt, was das Protokoll
+    /// preisgibt (Regel 11).
+    /// </summary>
+    public enum UpdateGrundText
+    {
+        NichtsGefunden,
+        KeinPassendesAsset,
+        OhnePruefsumme,
+        PlattformOhneVeroeffentlichung,
+    }
+
+    private static string Beschreibe(UpdateGrundText grund) => grund switch
+    {
+        UpdateGrundText.NichtsGefunden =>
+            "die Liste der Veroeffentlichungen war nicht abzurufen oder leer.",
+        UpdateGrundText.KeinPassendesAsset =>
+            "die neuere Veroeffentlichung bringt keine Datei fuer diese Plattform mit.",
+        UpdateGrundText.OhnePruefsumme =>
+            "die Datei traegt keine Pruefsumme; ohne sie wird nicht ausgetauscht.",
+        UpdateGrundText.PlattformOhneVeroeffentlichung =>
+            "fuer diese Plattform wird nichts veroeffentlicht.",
+        _ => "Grund unbekannt.",
+    };
 }
