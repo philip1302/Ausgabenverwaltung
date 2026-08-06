@@ -91,4 +91,109 @@ public static class LogEvents
     public static string SecondInstanceRejected()
         => "Zweiter Programmstart bei laufender Instanz - die vorhandene wurde "
            + "in den Vordergrund geholt, dieser Start endet hier.";
+
+    // ================= Schreibende Datenbankzugriffe =================
+    //
+    // Jede erfolgreiche Erstellung/Aenderung/Loeschung bekommt hier einen
+    // Eintrag - ausschliesslich Ids und Anzahlen, nie Betraege, Namen oder
+    // Bemerkungen (Regel 11). Lesende Zugriffe (Listen laden, Reports,
+    // Filter) werden bewusst NICHT protokolliert: die passieren bei jedem
+    // Bildschirmwechsel und wuerden das Protokoll unlesbar aufblaehen -
+    // das widerspraeche "das Protokoll ist teilbar" (Regel 11).
+
+    // ---------------- Kategorien ----------------
+    public static string CategoryCreated(int id, int? parentId)
+        => parentId is int p
+            ? $"Kategorie angelegt (Id {id}, Unterkategorie von Id {p})."
+            : $"Kategorie angelegt (Id {id}, Oberkategorie).";
+
+    public static string CategoryRenamed(int id)
+        => $"Kategorie umbenannt (Id {id}).";
+
+    public static string CategoryArchived(int id, int descendantCount)
+        => descendantCount > 0
+            ? $"Kategorie archiviert (Id {id}, inkl. {descendantCount} Unterkategorien)."
+            : $"Kategorie archiviert (Id {id}).";
+
+    public static string CategoryRestored(int id)
+        => $"Kategorie wiederhergestellt (Id {id}).";
+
+    public static string CategoryDeleted(int id)
+        => $"Kategorie geloescht (Id {id}).";
+
+    public static string CategoryMerged(int sourceId, int targetId, int expenseCount, int recurringExpenseCount)
+        => $"Kategorien zusammengefuehrt: Id {sourceId} -> Id {targetId} "
+           + $"({expenseCount} Ausgabe(n), {recurringExpenseCount} Vorlage(n) umgehaengt).";
+
+    public static string CategoryColorChanged(int id)
+        => $"Kategoriefarbe geaendert (Id {id}).";
+
+    public static string CategoryMoved(int id, int delta)
+        => $"Kategorie verschoben (Id {id}, {(delta < 0 ? "nach oben" : "nach unten")}).";
+
+    // ---------------- Ausgaben ----------------
+    public static string ExpenseCreated(int id, bool isIncome)
+        => $"{(isIncome ? "Einnahme" : "Ausgabe")} erfasst (Id {id}).";
+
+    public static string ExpenseUpdated(int id)
+        => $"Ausgabe geaendert (Id {id}).";
+
+    public static string ExpenseDeleted(int id)
+        => $"Ausgabe geloescht (Id {id}).";
+
+    public static string ExpensesDeleted(int count)
+        => count == 1 ? "1 Ausgabe geloescht." : $"{count} Ausgaben geloescht.";
+
+    // ---------------- Offene Posten ----------------
+    public static string OpenItemSettled(int id, bool settled)
+        => settled
+            ? $"Posten als beglichen markiert (Id {id})."
+            : $"Begleichung eines Postens zurueckgenommen (Id {id}).";
+
+    // ---------------- Personen ----------------
+    public static string PersonCreated(int id)
+        => $"Person angelegt (Id {id}).";
+
+    public static string PersonRenamed(int id)
+        => $"Person umbenannt (Id {id}).";
+
+    public static string PersonArchived(int id)
+        => $"Person archiviert (Id {id}).";
+
+    public static string PersonRestored(int id)
+        => $"Person wiederhergestellt (Id {id}).";
+
+    public static string PersonMoved(int id, int delta)
+        => $"Person verschoben (Id {id}, {(delta < 0 ? "nach oben" : "nach unten")}).";
+
+    // ---------------- Wiederkehrende Ausgaben ----------------
+    public static string RecurringExpenseCreated(int id)
+        => $"Wiederkehrende Ausgabe angelegt (Id {id}).";
+
+    public static string RecurringExpenseUpdated(int id)
+        => $"Wiederkehrende Ausgabe geaendert (Id {id}).";
+
+    public static string RecurringExpenseDeactivated(int id)
+        => $"Wiederkehrende Ausgabe deaktiviert (Id {id}).";
+
+    public static string RecurringExpenseActivated(int id)
+        => $"Wiederkehrende Ausgabe aktiviert (Id {id}).";
+
+    public static string RecurringExpenseDeleted(int id)
+        => $"Wiederkehrende Ausgabe geloescht (Id {id}).";
+
+    public static string RecurringExpenseGeneratedThroughSet(int id, DateOnly through)
+        => $"Wiederkehrende Ausgabe (Id {id}): Stand ohne Erzeugung auf "
+           + $"{through.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)} gesetzt.";
+
+    /// <summary>Wie <see cref="RecurringGenerated"/>, aber fuer den Lauf EINER
+    /// einzelnen Vorlage (Anlegen, Aendern, "Jetzt erzeugen" je Zeile).</summary>
+    public static string RecurringGeneratedForTemplate(int templateId, int count, DateOnly asOf)
+    {
+        var tag = asOf.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        return count == 1
+            ? $"1 Buchung aus wiederkehrender Ausgabe Id {templateId} erzeugt (Stichtag {tag})."
+            : $"{count} Buchungen aus wiederkehrender Ausgabe Id {templateId} erzeugt (Stichtag {tag}).";
+    }
 }
