@@ -76,10 +76,7 @@
 
     <Panel Margin="32,24">
         <DockPanel>
-            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20">
-                <TextBlock Classes="seitentitel" Text="Report" />
-                <TextBlock Classes="seitenuntertitel" Text="Ausgaben und Einnahmen als Kreuztabelle nach Kategorie und Zeitraum" />
-            </StackPanel>
+            <TextBlock DockPanel.Dock="Top" Classes="seitentitel" Text="Report" Margin="0,0,0,20" />
 
             <!-- ============ Filterleiste ============
                  Eigene Karte statt einer reinen Trennlinie (UI/UX-Redesign,

@@ -20,10 +20,7 @@
          Feldbeschriftungen als kleine Versalien ueber dem Feld
          (Classes="feldbeschriftung"), Meldungen im neuen Banner-Stil. -->
     <DockPanel Margin="32,24">
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20">
-            <TextBlock Classes="seitentitel" Text="Erfassen" />
-            <TextBlock Classes="seitenuntertitel" Text="Neue Ausgabe oder Einnahme aufnehmen" />
-        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Classes="seitentitel" Text="Erfassen" Margin="0,0,0,20" />
 
         <Grid ColumnDefinitions="Auto,16,*">
             <!-- ============ Formular ============ -->

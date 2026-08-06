@@ -335,14 +335,14 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
         </Style>
 
-        <!-- ==== Seitentitel/-untertitel (UIUIXDESIGN.md, 4/5) ==== -->
+        <!-- ==== Seitentitel (UIUIXDESIGN.md, 4/5) ====
+             Bewusst OHNE Untertitel/Kurzbeschreibung: eine dauerhaft
+             sichtbare Erklaerung unter dem Titel wurde nach Sichtpruefung
+             wieder verworfen - im Bild stehen nur Hinweise/Fehler, die
+             tatsaechlich einen Zustand melden, keine feste Beschriftung. -->
         <Style Selector="TextBlock.seitentitel">
             <Setter Property="FontSize" Value="{DynamicResource SchriftSeitentitel}" />
             <Setter Property="FontWeight" Value="Bold" />
-        </Style>
-        <Style Selector="TextBlock.seitenuntertitel">
-            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
-            <Setter Property="Margin" Value="0,2,0,0" />
         </Style>
 
         <!-- ==== KPI-Kachel (neu, Startseite) ==== -->

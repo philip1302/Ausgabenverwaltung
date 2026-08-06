@@ -27,11 +27,7 @@
     </UserControl.Styles>
 
     <DockPanel Margin="32,24">
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
-            <TextBlock Classes="seitentitel" Text="Verwaltung" />
-            <TextBlock Classes="seitenuntertitel"
-                       Text="Kategorien, Personen, wiederkehrende Ausgaben, Sicherung und Darstellung an einem Ort" />
-        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Classes="seitentitel" Text="Verwaltung" Margin="0,0,0,16" />
 
         <TabControl SelectedIndex="{Binding AusgewaehlterTabIndex}">
             <TabItem Header="Kategorien">

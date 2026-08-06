@@ -48,10 +48,7 @@
              Prominent oben rechts statt unten in der Werkzeugleiste
              (UI/UX-Redesign, Abschnitt 5.2). -->
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
-            <StackPanel Grid.Column="0">
-                <TextBlock Classes="seitentitel" Text="Offene Posten" />
-                <TextBlock Classes="seitenuntertitel" Text="Von anderen bezahlte Ausgaben, die noch beglichen werden müssen" />
-            </StackPanel>
+            <TextBlock Grid.Column="0" Classes="seitentitel" Text="Offene Posten" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" HorizontalAlignment="Right">
                 <TextBlock Text="Gesamt offen" Classes="klein" HorizontalAlignment="Right"
                            Foreground="{DynamicResource TextTertiaerFarbe}" />

@@ -105,10 +105,7 @@
 
     <Panel Margin="32,24">
         <DockPanel>
-            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20">
-                <TextBlock Classes="seitentitel" Text="Ausgabenliste" />
-                <TextBlock Classes="seitenuntertitel" Text="Alle Buchungen, sortierbar und filterbar" />
-            </StackPanel>
+            <TextBlock DockPanel.Dock="Top" Classes="seitentitel" Text="Ausgabenliste" Margin="0,0,0,20" />
 
             <!-- ============ Filterleiste ============
                  Eigene Karte statt einer reinen Trennlinie (UI/UX-Redesign,

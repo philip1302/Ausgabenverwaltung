@@ -197,13 +197,12 @@
             </StackPanel>
         </Border>
 
-        <!-- Hinweis zu Loeschen/Zusammenfuehren/automatischer Sicherung
-             (Regel 8) bleibt permanent unter der Liste stehen, nicht nur
-             im Bearbeiten-Dialog (UI/UX-Redesign, Abschnitt 5.5). -->
-        <Border DockPanel.Dock="Bottom" Classes="banner hinweis" Margin="0,12,0,0">
-            <TextBlock TextWrapping="Wrap"
-                       Text="Eine Kategorie mit Ausgaben lässt sich nicht löschen — nur archivieren oder in eine andere zusammenführen. Vor dem Zusammenführen wird automatisch gesichert." />
-        </Border>
+        <!-- Kein dauerhaftes Hinweisband mehr an dieser Stelle (Regel 8
+             gilt weiterhin, erklaert wird sie aber nur noch dort, wo sie
+             gerade zutrifft): der Löschen-Knopf jeder Zeile traegt die
+             Kurzfassung als Tooltip, und LoeschHindernisAktiv erklaert den
+             vollen Sachverhalt erst, wenn das Löschen tatsächlich
+             fehlschlägt. -->
 
         <!-- ============ Kategorienliste als Karte ============
              UI/UX-Redesign, Abschnitt 2.7/5.5: Baumstruktur mit Einzug
@@ -218,7 +217,7 @@
                           KeyDown="Baum_KeyDown">
                     <TreeView.ItemTemplate>
                         <TreeDataTemplate x:DataType="vm:KategorieKnoten" ItemsSource="{Binding Children}">
-                            <Grid ColumnDefinitions="*,140,Auto" MinHeight="{anzeige:Breite 34}">
+                            <Grid anzeige:Raster.Spalten="*,140,Auto" MinHeight="{anzeige:Breite 34}">
                                 <!-- Farbpunkt vor dem Namen: er zeigt die geltende
                                      Farbe (eigene oder geerbte) und ergaenzt den
                                      Namen, der unveraendert daneben steht. -->
