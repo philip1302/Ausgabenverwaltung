@@ -194,7 +194,7 @@ public class BarChartTests
     // ================= Nettoansicht =================
 
     [Fact]
-    public void Ein_positives_Netto_haengt_ueber_der_Nulllinie()
+    public void Ein_positives_Netto_steht_ueber_der_Nulllinie()
     {
         var layout = BarChart.Net(
             new[] { Wert(eigene: 20000, einnahmen: 100000) }, Breite, Hoehe);
@@ -210,8 +210,14 @@ public class BarChartTests
         Assert.Equal(nullLinie.Y, balken.Y + balken.Height, precision: 6);
     }
 
+    /// <summary>
+    /// Ein negatives Netto zeichnet - genau wie in der Detailansicht -
+    /// ebenfalls nach oben von der Nulllinie aus. Nur die Farbe
+    /// (<see cref="BarKind.NetNegative"/>) unterscheidet es vom
+    /// Ueberschuss, nicht die Richtung des Balkens.
+    /// </summary>
     [Fact]
-    public void Ein_negatives_Netto_haengt_unter_der_Nulllinie()
+    public void Ein_negatives_Netto_steht_ebenfalls_ueber_der_Nulllinie()
     {
         var layout = BarChart.Net(
             new[] { Wert(eigene: 120000, einnahmen: 20000) }, Breite, Hoehe);
@@ -222,8 +228,30 @@ public class BarChartTests
         Assert.Equal(BarKind.NetNegative, balken.Kind);
         Assert.Equal(-100000, balken.ValueCents);
 
-        Assert.Equal(nullLinie.Y, balken.Y, precision: 6);
-        Assert.True(balken.Y + balken.Height > nullLinie.Y);
+        Assert.True(balken.Y < nullLinie.Y);
+        Assert.Equal(nullLinie.Y, balken.Y + balken.Height, precision: 6);
+    }
+
+    /// <summary>
+    /// Ein positiver und ein gleich grosser negativer Monat muessen
+    /// gleich hoch sein - die Achse misst den Betrag, nicht das
+    /// Vorzeichen.
+    /// </summary>
+    [Fact]
+    public void Gleich_grosse_positive_und_negative_Nettobetraege_sind_gleich_hoch()
+    {
+        var layout = BarChart.Net(
+            new[]
+            {
+                Wert("2026-01", eigene: 20000, einnahmen: 100000),
+                Wert("2026-02", eigene: 180000, einnahmen: 100000),
+            },
+            Breite, Hoehe);
+
+        var positiv = layout.Bars.Single(b => b.Kind == BarKind.NetPositive);
+        var negativ = layout.Bars.Single(b => b.Kind == BarKind.NetNegative);
+
+        Assert.Equal(positiv.Height, negativ.Height, precision: 6);
     }
 
     [Fact]

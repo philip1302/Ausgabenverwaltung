@@ -185,8 +185,13 @@ public static class BarChart
     }
 
     /// <summary>
-    /// Die Netto-Ansicht: ein Balken je Abschnitt, nach oben bei
-    /// Ueberschuss, nach unten bei Ausgabenueberhang.
+    /// Die Netto-Ansicht: ein Balken je Abschnitt, immer nach oben von
+    /// der Nulllinie aus gezeichnet - wie die Detailansicht. Ob es sich
+    /// um Ueberschuss oder Ausgabenueberhang handelt, zeigt allein die
+    /// Farbkodierung (<see cref="BarKind.NetPositive"/> /
+    /// <see cref="BarKind.NetNegative"/>), nicht die Richtung des
+    /// Balkens (Regel 10: Farbe ist Zusatz, hier aber bewusst der
+    /// einzige Unterschied in der Geometrie).
     /// </summary>
     public static ChartLayout Net(
         IReadOnlyList<PeriodValue> values, double width, double height)
@@ -196,7 +201,10 @@ public static class BarChart
             return Empty();
         }
 
-        var scale = NiceScale.Compute(values.Select(v => v.NetCents).ToList());
+        // Die Achse spannt sich ueber den Betrag, nicht das Vorzeichen -
+        // sonst braeuchte ein negativer Monat Platz unterhalb der
+        // Nulllinie, den es beim Zeichnen nach oben nicht mehr gibt.
+        var scale = NiceScale.Compute(values.Select(v => Math.Abs(v.NetCents)).ToList());
         var bars = new List<ChartBar>();
 
         var slotWidth = width / values.Count;
@@ -212,15 +220,10 @@ public static class BarChart
             }
 
             var left = slotWidth * i + (slotWidth - barWidth) / 2;
-            var valueY = ToY(value.NetCents, scale, height);
-
-            // Der Balken spannt zwischen Nulllinie und Wert - je nach
-            // Vorzeichen liegt die eine oder die andere Kante oben.
-            var top = Math.Min(zeroY, valueY);
-            var barHeight = Math.Abs(valueY - zeroY);
+            var barHeight = LengthOf(value.NetCents, scale, height);
 
             bars.Add(new ChartBar(
-                value.Key, left, top, barWidth, barHeight,
+                value.Key, left, zeroY - barHeight, barWidth, barHeight,
                 value.NetCents >= 0 ? BarKind.NetPositive : BarKind.NetNegative,
                 value.NetCents));
         }
@@ -290,7 +293,10 @@ public static class BarChart
             return;
         }
 
-        lines.Add(new ChartLine(ToY(average, scale, height), average, kind));
+        // Die Linie liegt wie jeder Balken oberhalb der Nulllinie
+        // (Betrag, nicht Vorzeichen) - angezeigt wird trotzdem der
+        // vorzeichenbehaftete Durchschnitt.
+        lines.Add(new ChartLine(ToY(Math.Abs(average), scale, height), average, kind));
     }
 
     private static List<AxisTick> TicksOf(AxisScale scale, double height)
