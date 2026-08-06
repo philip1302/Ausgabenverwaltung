@@ -58,6 +58,16 @@ public partial class App : Application
         var settings = settingsStore.Load();
         Skalierung.Aktuell.Setze(settings.FontScale);
 
+        // Ebenso das gespeicherte Thema (UI/UX-Redesign, Verwaltung ▸
+        // Darstellung) - "System" entspricht unveraendert der bisherigen
+        // Vorgabe "Default" aus App.axaml.
+        RequestedThemeVariant = settings.ThemeMode switch
+        {
+            Core.Display.ThemeMode.Light => Avalonia.Styling.ThemeVariant.Light,
+            Core.Display.ThemeMode.Dark => Avalonia.Styling.ThemeVariant.Dark,
+            _ => Avalonia.Styling.ThemeVariant.Default,
+        };
+
         // Dieselbe Datei traegt die zuletzt gezogene Breite der
         // Kategoriespalte. Geschrieben wird sie erst beim Loslassen des
         // Spaltengriffs, und immer mit "with" auf dem gerade gelesenen
@@ -231,6 +241,7 @@ public partial class App : Application
         services.AddSingleton(startupResult);
         services.AddSingleton<StartupNoticeViewModel>();
 
+        services.AddSingleton<StartseiteViewModel>();
         services.AddSingleton<ErfassenViewModel>();
         services.AddSingleton<OffenePostenViewModel>();
         services.AddSingleton<ReportViewModel>();

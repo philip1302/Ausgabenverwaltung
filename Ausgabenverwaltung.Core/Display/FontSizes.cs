@@ -11,11 +11,15 @@ public static class FontSizes
     public const double SmallBase = 11;
     public const double NormalBase = 14;
     public const double HeadingBase = 16;
+    public const double PageTitleBase = 26;
+    public const double KpiBase = 30;
 
     public static FontSizeSet For(double factor) => new(
         Scale(SmallBase, factor),
         Scale(NormalBase, factor),
-        Scale(HeadingBase, factor));
+        Scale(HeadingBase, factor),
+        Scale(PageTitleBase, factor),
+        Scale(KpiBase, factor));
 
     // Auf eine Nachkommastelle gerundet: 0,875 * 11 waere sonst
     // 9,625 - eine Genauigkeit, die kein Bildschirm darstellt, die aber

@@ -70,11 +70,11 @@
             <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="ListBox.tabelle > ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#F5F5F5" />
+            <Setter Property="Background" Value="{DynamicResource CanvasFarbe}" />
         </Style>
 
         <Style Selector="TextBlock.vorlage">
-            <Setter Property="Foreground" Value="#7A5C00" />
+            <Setter Property="Foreground" Value="{DynamicResource WarnungText}" />
             <Setter Property="TextAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
@@ -90,7 +90,7 @@
 
         <Style Selector="TextBlock.filterbeschriftung">
             <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
-            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
             <Setter Property="Margin" Value="0,0,0,2" />
         </Style>
 
@@ -103,12 +103,17 @@
         </Style>
     </UserControl.Styles>
 
-    <Panel>
+    <Panel Margin="32,24">
         <DockPanel>
-            <!-- ============ Filterleiste ============ -->
-            <Border DockPanel.Dock="Top"
-                    BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"
-                    Padding="0,0,0,10" Margin="0,0,0,10">
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20">
+                <TextBlock Classes="seitentitel" Text="Ausgabenliste" />
+                <TextBlock Classes="seitenuntertitel" Text="Alle Buchungen, sortierbar und filterbar" />
+            </StackPanel>
+
+            <!-- ============ Filterleiste ============
+                 Eigene Karte statt einer reinen Trennlinie (UI/UX-Redesign,
+                 Abschnitt 5.4). -->
+            <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16">
                 <StackPanel Spacing="8">
                     <!-- Zeitraum -->
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -128,16 +133,20 @@
                         <StackPanel VerticalAlignment="Bottom">
                             <TextBlock Text="Schnellwahl" Classes="filterbeschriftung" />
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Dieser Monat"
+                                <Button Classes="secondary" Content="Dieser Monat"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=DieserMonat}"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="DieserMonat" />
-                                <Button Content="Dieses Jahr"
+                                <Button Classes="secondary" Content="Dieses Jahr"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=DiesesJahr}"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="DiesesJahr" />
-                                <Button Content="Letzte 12 Monate"
+                                <Button Classes="secondary" Content="Letzte 12 Monate"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=Letzte12Monate}"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="Letzte12Monate" />
-                                <Button Content="Alles"
+                                <Button Classes="secondary" Content="Alles"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=Alles}"
                                         ToolTip.Tip="Ohne zeitliche Einschränkung"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="Alles" />
@@ -228,7 +237,7 @@
                                      PlaceholderText="Volltext…" />
                         </StackPanel>
 
-                        <Button Content="Filter zurücksetzen"
+                        <Button Classes="ghost" Content="Filter zurücksetzen"
                                 Command="{Binding FilterZuruecksetzenCommand}"
                                 VerticalAlignment="Bottom" />
                     </StackPanel>
@@ -238,8 +247,8 @@
                          sichtbar sein - sonst waere unerklaerlich, warum
                          ploetzlich fast alle Buchungen fehlen. -->
                     <Border IsVisible="{Binding VorlageFilterAktiv}"
-                            Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                            CornerRadius="2" Padding="8,4"
+                            Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
+                            CornerRadius="8" Padding="8,4"
                             HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock Text="{Binding VorlageFilterText}"
@@ -255,11 +264,11 @@
             <!-- ============ Werkzeugleiste ============ -->
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12"
                         Margin="0,0,0,10">
-                <Button Content="Ausgewählte löschen"
+                <Button Classes="danger" Content="Ausgewählte löschen"
                         Command="{Binding AusgewaehlteLoeschenCommand}" />
                 <TextBlock Text="{Binding AnzahlAusgewaehlt, StringFormat='{}{0} ausgewählt'}"
                            IsVisible="{Binding HatAuswahl}"
-                           Foreground="Gray"
+                           Foreground="{DynamicResource TextTertiaerFarbe}"
                            VerticalAlignment="Center" />
             </StackPanel>
 
@@ -268,7 +277,7 @@
                   Margin="4,10,20,0">
                 <TextBlock Grid.Column="0"
                            Text="{Binding TrefferText}"
-                           Foreground="Gray"
+                           Foreground="{DynamicResource TextTertiaerFarbe}"
                            VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2"
                            FontWeight="Bold"
@@ -341,7 +350,7 @@
             <TextBlock Text="Keine Ausgaben für diesen Filter."
                        IsVisible="{Binding KeineTreffer}"
                        DockPanel.Dock="Top"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource TextTertiaerFarbe}"
                        FontStyle="Italic"
                        Margin="4,8" />
 
@@ -359,7 +368,7 @@
                      Padding="0">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:AusgabeZeile">
-                        <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
+                        <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
                             <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200">
                                 <!-- Farbe der Kategorie. Bewusst ein schmaler
                                      Balken am Rand und keine eingefaerbte
@@ -406,10 +415,10 @@
                                                    Classes="tabellenzelle" />
 
                                 <StackPanel Grid.Column="16" Orientation="Horizontal" Spacing="6">
-                                    <Button Content="Bearbeiten"
+                                    <Button Classes="secondary klein" Content="Bearbeiten"
                                             Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenOeffnenCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Content="Löschen"
+                                    <Button Classes="danger klein" Content="Löschen"
                                             Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).LoeschenCommand}"
                                             CommandParameter="{Binding}" />
                                 </StackPanel>
@@ -424,8 +433,8 @@
 
         <!-- ============ Overlay: Loesch-Sicherheitsabfrage ============ -->
         <Panel IsVisible="{Binding LoeschAnfrageAktiv}" Background="#60000000">
-            <Border Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                    CornerRadius="2" Padding="16" Margin="24"
+            <Border Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
+                    CornerRadius="8" Padding="16" Margin="24"
                     MaxWidth="{anzeige:Breite 520}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel Spacing="12">
@@ -435,14 +444,14 @@
                          bleibt offen, damit sich der Versuch ohne neue
                          Auswahl wiederholen lässt. -->
                     <Border IsVisible="{Binding SchreibFehlerSichtbar}"
-                            Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                            Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
                             Padding="8">
                         <TextBlock Text="{Binding SchreibFehlerText}" TextWrapping="Wrap" />
                     </Border>
 
                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                        <Button Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
-                        <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                        <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                        <Button Classes="danger" Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -456,8 +465,8 @@
                  Formular wird dann hoeher als das Fenster, und ohne ihn
                  waeren die unteren Felder samt Schaltflaechen nicht mehr
                  erreichbar. -->
-            <Border Background="White" BorderBrush="#C0C0C0" BorderThickness="1"
-                    CornerRadius="2" Padding="16" Margin="24"
+            <Border Background="{DynamicResource SurfaceRaisedFarbe}" BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="1"
+                    CornerRadius="8" Padding="16" Margin="24"
                     Width="{anzeige:Breite 460}"
                     HorizontalAlignment="Center" VerticalAlignment="Stretch">
                 <ScrollViewer>
@@ -469,7 +478,7 @@
 
                     <!-- Regel 6: die Vorlage bleibt unberuehrt -->
                     <Border IsVisible="{Binding IstAusVorlage}"
-                            Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                            Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                             Padding="8" Margin="0,0,0,10">
                         <StackPanel Spacing="4">
                             <TextBlock Text="{Binding VorlageHinweis}" TextWrapping="Wrap" />
@@ -484,7 +493,7 @@
                     <TextBox Text="{Binding BetragText}" PlaceholderText="0,00" />
                     <TextBlock Text="{Binding BetragFehler}"
                                IsVisible="{Binding BetragFehlerSichtbar}"
-                               Foreground="Red" />
+                               Foreground="{DynamicResource FehlerText}" />
 
                     <!-- Einnahme statt Ausgabe: mindert die Summen in
                          Liste und Auswertung, statt sie zu erhoehen. -->
@@ -510,18 +519,18 @@
                     </AutoCompleteBox>
                     <TextBlock Text="{Binding KategorieFehler}"
                                IsVisible="{Binding KategorieFehlerSichtbar}"
-                               Foreground="Red" />
+                               Foreground="{DynamicResource FehlerText}" />
 
                     <TextBlock Text="Datum" Margin="0,10,0,0" />
                     <TextBox Text="{Binding DatumText}" PlaceholderText="TT.MM.JJJJ" />
                     <TextBlock Text="{Binding DatumFehler}"
                                IsVisible="{Binding DatumFehlerSichtbar}"
-                               Foreground="Red" />
+                               Foreground="{DynamicResource FehlerText}" />
 
                     <!-- Rückfrage bei einem ungewöhnlichen Datum: kein
                          Verbot, sondern eine Bestätigung. -->
                     <Border IsVisible="{Binding DatumRueckfrageSichtbar}"
-                            Background="#FFF4CE" BorderBrush="#E0C36A" BorderThickness="1"
+                            Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                             Padding="8" Margin="0,6,0,0">
                         <StackPanel Spacing="8">
                             <TextBlock Text="{Binding DatumRueckfrageText}" TextWrapping="Wrap" />
@@ -549,7 +558,7 @@
                     </ComboBox>
                     <TextBlock Text="{Binding ZahlerFehler}"
                                IsVisible="{Binding ZahlerFehlerSichtbar}"
-                               Foreground="Red" />
+                               Foreground="{DynamicResource FehlerText}" />
 
                     <!-- Kein anderer Zahler vorhanden, um eine gerade
                          angekreuzte Einnahme zuzuordnen - das Haekchen
@@ -558,7 +567,7 @@
                     <TextBlock Text="{Binding EinnahmeHinweisText}"
                                IsVisible="{Binding EinnahmeHinweisSichtbar}"
                                TextWrapping="Wrap"
-                               Foreground="#B8860B"
+                               Foreground="{DynamicResource WarnungText}"
                                Margin="0,6,0,0" />
 
                     <!-- Nur bei fremdem Zahler ueberhaupt gemeint (Regel
@@ -574,23 +583,23 @@
                                  HorizontalAlignment="Left" />
                         <TextBlock Text="{Binding BezahltAmFehler}"
                                    IsVisible="{Binding BezahltAmFehlerSichtbar}"
-                                   Foreground="Red" />
+                                   Foreground="{DynamicResource FehlerText}" />
                     </StackPanel>
 
                     <!-- Schreibfehler: der Dialog bleibt offen und
                          gefüllt, damit keine Änderung verloren geht. -->
                     <Border IsVisible="{Binding SpeicherFehlerSichtbar}"
-                            Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                            Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
                             Padding="8" Margin="0,12,0,0">
                         <TextBlock Text="{Binding SpeicherFehlerText}" TextWrapping="Wrap" />
                     </Border>
 
                     <StackPanel Orientation="Horizontal" Spacing="8"
                                 HorizontalAlignment="Right" Margin="0,16,0,0">
-                        <Button Content="Speichern"
-                                Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenSpeichernCommand}" />
-                        <Button Content="Abbrechen"
+                        <Button Classes="ghost" Content="Abbrechen"
                                 Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenAbbrechenCommand}" />
+                        <Button Classes="primary" Content="Speichern"
+                                Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenSpeichernCommand}" />
                     </StackPanel>
                 </StackPanel>
                 </ScrollViewer>

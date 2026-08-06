@@ -9,4 +9,9 @@ namespace Ausgabenverwaltung.Core.Display;
 /// Fehlermeldungen, Marker.</param>
 /// <param name="Normal">Alles Uebrige - Tabellen, Formulare, Schaltflaechen.</param>
 /// <param name="Heading">Ueberschriften von Dialogen und Gruppen.</param>
-public sealed record FontSizeSet(double Small, double Normal, double Heading);
+/// <param name="PageTitle">Seitentitel im Kopf jedes Bereichs (UI/UX-Redesign,
+/// neu gegenueber den urspruenglichen drei Stufen).</param>
+/// <param name="Kpi">Reine Anzeigegroesse fuer KPI-Zahlen auf der Startseite,
+/// ohne eigene Bedeutungsebene - folgt derselben Skalierung wie die uebrigen
+/// Stufen.</param>
+public sealed record FontSizeSet(double Small, double Normal, double Heading, double PageTitle, double Kpi);

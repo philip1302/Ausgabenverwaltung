@@ -44,8 +44,8 @@
              geschrieben wurde, wird auch nicht angezeigt. -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding SchreibFehlerSichtbar}"
-                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
-                CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
+                CornerRadius="8" Padding="10" Margin="0,0,0,8">
             <Grid anzeige:Raster.Spalten="*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
                            TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -57,11 +57,11 @@
 
         <!-- Werkzeugleiste: alle Aktionen wirken auf AusgewaehlterKnoten -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <Button Content="Neue Oberkategorie" Command="{Binding NeueOberkategorieCommand}" />
-            <Button Content="Neue Unterkategorie"
+            <Button Classes="primary" Content="Neue Oberkategorie" Command="{Binding NeueOberkategorieCommand}" />
+            <Button Classes="secondary" Content="Neue Unterkategorie"
                     Command="{Binding NeueUnterkategorieCommand}"
                     IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
-            <Button Content="Umbenennen"
+            <Button Classes="secondary" Content="Umbenennen"
                     Command="{Binding BearbeitenStartenCommand}"
                     CommandParameter="{Binding AusgewaehlterKnoten}"
                     IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
@@ -69,7 +69,7 @@
             <!-- Farbe der ausgewaehlten Kategorie. Feste Palette statt
                  eines freien Farbwaehlers: so kann keine Kombination
                  entstehen, die niemand mehr lesen kann. -->
-            <Button x:Name="FarbAuswahl"
+            <Button x:Name="FarbAuswahl" Classes="secondary"
                     Content="Farbe…"
                     IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}"
                     Click="Farbwahl_Oeffnen"
@@ -83,7 +83,7 @@
                                  verschwunden, sobald dieses Fenster den
                                  Fokus hat. -->
                             <TextBlock Text="{Binding FarbwahlHinweis}"
-                                       Classes="klein" Foreground="Gray"
+                                       Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}"
                                        TextWrapping="Wrap" Margin="6,0,0,4" />
 
                             <!-- Fuenfzehn Eintraege werden bei den grossen
@@ -115,12 +115,12 @@
                     </Flyout>
                 </Button.Flyout>
             </Button>
-            <Button Content="Archivieren"
+            <Button Classes="secondary" Content="Archivieren"
                     Command="{Binding ArchivierenCommand}"
                     CommandParameter="{Binding AusgewaehlterKnoten}"
                     IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}"
                     IsVisible="{Binding !AusgewaehlterKnotenIstArchiviert}" />
-            <Button Content="Wiederherstellen"
+            <Button Classes="secondary" Content="Wiederherstellen"
                     Command="{Binding WiederherstellenCommand}"
                     CommandParameter="{Binding AusgewaehlterKnoten}"
                     IsVisible="{Binding AusgewaehlterKnotenIstArchiviert}" />
@@ -129,16 +129,16 @@
                  Stelle: archiviert wird der Normalfall, geloescht nur,
                  was nirgends verwendet wird (Regel 8). Was im Weg steht,
                  erklaert das Band darunter. -->
-            <Button Content="Löschen"
+            <Button Classes="danger" Content="Löschen"
                     Command="{Binding LoeschenCommand}"
                     CommandParameter="{Binding AusgewaehlterKnoten}"
                     IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}"
                     ToolTip.Tip="Endgültig löschen. Möglich nur, wenn die Kategorie weder Ausgaben noch Unterkategorien noch Vorlagen hat." />
-            <Button Content="▲" ToolTip.Tip="Nach oben verschieben"
+            <Button Classes="ghost" Content="▲" ToolTip.Tip="Nach oben verschieben"
                     Command="{Binding NachObenVerschiebenCommand}"
                     CommandParameter="{Binding AusgewaehlterKnoten}"
                     IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
-            <Button Content="▼" ToolTip.Tip="Nach unten verschieben"
+            <Button Classes="ghost" Content="▼" ToolTip.Tip="Nach unten verschieben"
                     Command="{Binding NachUntenVerschiebenCommand}"
                     CommandParameter="{Binding AusgewaehlterKnoten}"
                     IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
@@ -148,14 +148,14 @@
         <!-- Nachfrage, ob Unterkategorien beim Archivieren mitgenommen werden sollen -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding ArchivierungAnfrageAktiv}"
-                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                 Padding="8" Margin="0,0,0,8">
             <StackPanel Spacing="6">
                 <TextBlock Text="{Binding ArchivierungAnfrageText}" TextWrapping="Wrap" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Nur diese Kategorie" Command="{Binding ArchivierungNurDieseBestaetigenCommand}" />
-                    <Button Content="Mit Unterkategorien" Command="{Binding ArchivierungMitUnterkategorienBestaetigenCommand}" />
-                    <Button Content="Abbrechen" Command="{Binding ArchivierungAbbrechenCommand}" />
+                    <Button Classes="secondary" Content="Nur diese Kategorie" Command="{Binding ArchivierungNurDieseBestaetigenCommand}" />
+                    <Button Classes="secondary" Content="Mit Unterkategorien" Command="{Binding ArchivierungMitUnterkategorienBestaetigenCommand}" />
+                    <Button Classes="ghost" Content="Abbrechen" Command="{Binding ArchivierungAbbrechenCommand}" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -165,13 +165,13 @@
              verschwindet. -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding LoeschAnfrageAktiv}"
-                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                 Padding="8" Margin="0,0,0,8">
             <StackPanel Spacing="6">
                 <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
-                    <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                    <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                    <Button Classes="danger" Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -181,20 +181,20 @@
              ist der empfohlene. -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding LoeschHindernisAktiv}"
-                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                 Padding="8" Margin="0,0,0,8">
             <StackPanel Spacing="6">
                 <TextBlock Text="{Binding LoeschHindernisText}" TextWrapping="Wrap" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Archivieren (empfohlen)"
+                    <Button Classes="secondary" Content="Archivieren (empfohlen)"
                             Command="{Binding HindernisArchivierenCommand}" />
-                    <Button Content="Zusammenführen…"
+                    <Button Classes="secondary" Content="Zusammenführen…"
                             Command="{Binding ZusammenfuehrenStartenCommand}"
                             IsEnabled="{Binding ZusammenfuehrenMoeglich}"
                             ToolTip.Tip="Alle Ausgaben und Vorlagen in eine andere Kategorie umhängen und diese hier löschen." />
-                    <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                    <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
                 </StackPanel>
-                <TextBlock Classes="klein" Foreground="Gray" TextWrapping="Wrap"
+                <TextBlock Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}" TextWrapping="Wrap"
                            IsVisible="{Binding !ZusammenfuehrenMoeglich}"
                            Text="Zusammenführen geht nur ohne Unterkategorien — die müssen zuerst einzeln behandelt werden." />
             </StackPanel>
@@ -206,7 +206,7 @@
              nur Blattknoten. -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding ZusammenfuehrenAktiv}"
-                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                 Padding="8" Margin="0,0,0,8">
             <StackPanel Spacing="8">
                 <TextBlock Text="{Binding ZusammenfuehrenTitel}" Classes="ueberschrift" />
@@ -257,12 +257,20 @@
                            Classes="fehler" TextWrapping="Wrap" />
 
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Zusammenführen"
+                    <Button Classes="ghost" Content="Abbrechen" Command="{Binding ZusammenfuehrenAbbrechenCommand}" />
+                    <Button Classes="primary" Content="Zusammenführen"
                             Command="{Binding ZusammenfuehrenBestaetigenCommand}"
                             IsEnabled="{Binding ZusammenfuehrenBereit}" />
-                    <Button Content="Abbrechen" Command="{Binding ZusammenfuehrenAbbrechenCommand}" />
                 </StackPanel>
             </StackPanel>
+        </Border>
+
+        <!-- Hinweis zu Loeschen/Zusammenfuehren/automatischer Sicherung
+             (Regel 8) bleibt permanent unter der Liste stehen, nicht nur
+             im Bearbeiten-Dialog (UI/UX-Redesign, Abschnitt 5.5). -->
+        <Border DockPanel.Dock="Bottom" Classes="banner hinweis" Margin="0,8,0,0">
+            <TextBlock TextWrapping="Wrap"
+                       Text="Eine Kategorie mit Ausgaben lässt sich nicht löschen — nur archivieren oder in eine andere zusammenführen. Vor dem Zusammenführen wird automatisch gesichert." />
         </Border>
 
         <TreeView x:Name="Baum"

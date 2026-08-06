@@ -217,10 +217,37 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         LadeDaten();
     }
 
+    /// <summary>
+    /// Welcher Schnellwahl-Zeitraum zuletzt gewaehlt wurde (UI/UX-Redesign,
+    /// Abschnitt 5.4: sichtbarer aktiver Zustand der Schnellwahl-Buttons).
+    /// NULL, sobald Von/Bis von Hand veraendert werden.
+    /// </summary>
+    [ObservableProperty]
+    private string? _aktiverZeitraumSchluessel;
+
     // Jede Filteraenderung laedt neu - die Summe in der Fusszeile muss
-    // sich mit jedem Filter mitbewegen.
-    partial void OnVonTextChanged(string value) => LadeDaten();
-    partial void OnBisTextChanged(string value) => LadeDaten();
+    // sich mit jedem Filter mitbewegen. _ladenGesperrt unterscheidet eine
+    // Handeingabe (loescht die Schnellwahl-Markierung) von einer durch
+    // Schnellwahl() selbst gesetzten Aenderung.
+    partial void OnVonTextChanged(string value)
+    {
+        if (!_ladenGesperrt)
+        {
+            AktiverZeitraumSchluessel = null;
+        }
+
+        LadeDaten();
+    }
+
+    partial void OnBisTextChanged(string value)
+    {
+        if (!_ladenGesperrt)
+        {
+            AktiverZeitraumSchluessel = null;
+        }
+
+        LadeDaten();
+    }
     partial void OnAusgewaehlteFilterKategorieChanged(KategorieFilterKnoten? value) => LadeDaten();
     partial void OnAusgewaehlterZahlerChanged(ZahlerOption? value) => LadeDaten();
     partial void OnAusgewaehlterStatusChanged(StatusOption value) => LadeDaten();
@@ -229,6 +256,8 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     [RelayCommand]
     private void Schnellwahl(string? bereich)
     {
+        AktiverZeitraumSchluessel = bereich;
+
         var heute = DateOnly.FromDateTime(DateTime.Now);
 
         // "alles" laesst beide Felder leer - eine leere Grenze ist die
@@ -275,6 +304,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     private void FilterZuruecksetzen()
     {
         _ladenGesperrt = true;
+        AktiverZeitraumSchluessel = null;
         AusgewaehlteFilterKategorie = null;
         AusgewaehlterZahler = ZahlerOptionen[0];
         AusgewaehlterStatus = StatusOptionen[0];

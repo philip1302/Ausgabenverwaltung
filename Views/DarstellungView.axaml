@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -8,27 +9,63 @@
              x:DataType="vm:DarstellungViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Border.kasten">
-            <Setter Property="BorderBrush" Value="#E0E0E0" />
+        <!-- Eine Themen-Kachel: die aeussere Border traegt die Kastenoptik
+             (RadioButton selbst hat dafuer keine Border-Eigenschaften im
+             Standardtemplate), Akzentrahmen im ausgewaehlten Zustand -
+             dasselbe Muster wie mockups/10-verwaltung-darstellung.png. -->
+        <Style Selector="Border.thema-kachel">
+            <Setter Property="Padding" Value="16,12" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="2" />
-            <Setter Property="Padding" Value="12" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceFarbe}" />
+        </Style>
+        <Style Selector="Border.thema-kachel.aktiv">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFarbe}" />
+            <Setter Property="BorderThickness" Value="2" />
         </Style>
     </UserControl.Styles>
 
     <ScrollViewer>
         <StackPanel Spacing="16">
-            <Border Classes="kasten">
+            <Border Classes="karte">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Thema" Classes="ueberschrift" />
+                    <TextBlock Text="{Binding ThemaHinweis}" TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaerFarbe}" />
+
+                    <ItemsControl ItemsSource="{Binding ThemaOptionen}" Margin="0,8,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="12" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ThemaOption">
+                                <Border Classes="thema-kachel" Classes.aktiv="{Binding IstAusgewaehlt}"
+                                        Width="{anzeige:Breite 120}">
+                                    <RadioButton GroupName="Thema"
+                                                 HorizontalAlignment="Center"
+                                                 IsChecked="{Binding IstAusgewaehlt, Mode=TwoWay}">
+                                        <TextBlock Text="{Binding Bezeichnung}" />
+                                    </RadioButton>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="karte">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Schriftgröße" Classes="ueberschrift" />
 
-                    <TextBlock Text="{Binding Hinweis}" TextWrapping="Wrap" Foreground="Gray" />
+                    <TextBlock Text="{Binding Hinweis}" TextWrapping="Wrap" Foreground="{DynamicResource TextTertiaerFarbe}" />
 
                     <!-- Die Einstellung ließ sich nicht dauerhaft merken.
                          Ein Hinweis, kein Dialog: die Schriftgröße wirkt
                          ja bereits. -->
                     <Border IsVisible="{Binding SpeicherHinweisSichtbar}"
-                            Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                            Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                             Padding="8" Margin="0,8,0,0">
                         <TextBlock Text="{Binding SpeicherHinweis}" TextWrapping="Wrap" />
                     </Border>
@@ -49,7 +86,7 @@
                                                    VerticalAlignment="Center" />
                                         <TextBlock Text="{Binding FaktorText}"
                                                    Classes="klein"
-                                                   Foreground="Gray"
+                                                   Foreground="{DynamicResource TextTertiaerFarbe}"
                                                    VerticalAlignment="Center" />
                                     </StackPanel>
                                 </RadioButton>
@@ -62,12 +99,12 @@
             <!-- Probezeile: zeigt alle drei Groessen der Oberflaeche
                  nebeneinander, damit die Wirkung ohne Bereichswechsel
                  sichtbar ist. -->
-            <Border Classes="kasten">
+            <Border Classes="karte">
                 <StackPanel Spacing="6">
                     <TextBlock Text="So sieht es aus" Classes="ueberschrift" />
                     <TextBlock Text="Fließtext, Tabellen und Schaltflächen." />
                     <TextBlock Text="Kleine Nebentexte wie Feldbeschriftungen."
-                               Classes="klein" Foreground="Gray" />
+                               Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}" />
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
                         <Button Content="Schaltfläche" IsHitTestVisible="False" />
                         <TextBox Text="Eingabefeld" IsReadOnly="True" />

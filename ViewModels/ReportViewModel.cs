@@ -190,9 +190,37 @@ public sealed partial class ReportViewModel : ViewModelBase
         LadeDaten();
     }
 
-    // Jede Filteraenderung wertet neu aus.
-    partial void OnVonTextChanged(string value) => LadeDaten();
-    partial void OnBisTextChanged(string value) => LadeDaten();
+    /// <summary>
+    /// Welcher Schnellwahl-Zeitraum zuletzt gewaehlt wurde (UI/UX-Redesign,
+    /// Abschnitt 5.3: "sichtbarer aktiver Zustand" der Schnellwahl-Buttons).
+    /// NULL, sobald Von/Bis von Hand veraendert werden - dann passt keine
+    /// der Vorgaben mehr exakt.
+    /// </summary>
+    [ObservableProperty]
+    private string? _aktiverZeitraumSchluessel;
+
+    // Jede Filteraenderung wertet neu aus. _ladenGesperrt unterscheidet
+    // eine Handeingabe (loescht die Schnellwahl-Markierung) von einer
+    // durch Schnellwahl() selbst gesetzten Aenderung.
+    partial void OnVonTextChanged(string value)
+    {
+        if (!_ladenGesperrt)
+        {
+            AktiverZeitraumSchluessel = null;
+        }
+
+        LadeDaten();
+    }
+
+    partial void OnBisTextChanged(string value)
+    {
+        if (!_ladenGesperrt)
+        {
+            AktiverZeitraumSchluessel = null;
+        }
+
+        LadeDaten();
+    }
     partial void OnAusgewaehlteFilterKategorieChanged(KategorieFilterKnoten? value) => LadeDaten();
     partial void OnAusgewaehlteGruppierungChanged(GruppierungOption value) => LadeDaten();
     partial void OnAusgewaehlterZahlerBereichChanged(ZahlerBereichOption value) => LadeDaten();
@@ -204,6 +232,8 @@ public sealed partial class ReportViewModel : ViewModelBase
     [RelayCommand]
     private void Schnellwahl(string? bereich)
     {
+        AktiverZeitraumSchluessel = bereich;
+
         var heute = DateOnly.FromDateTime(DateTime.Now);
 
         // "alles" laesst beide Felder leer - eine leere Grenze ist die
@@ -253,6 +283,7 @@ public sealed partial class ReportViewModel : ViewModelBase
     private void FilterZuruecksetzen()
     {
         _ladenGesperrt = true;
+        AktiverZeitraumSchluessel = null;
         AusgewaehlteFilterKategorie = null;
         AusgewaehlteGruppierung = GruppierungOptionen[2];
         AusgewaehlterZahlerBereich = ZahlerBereichOptionen[0];

@@ -4,73 +4,162 @@
         xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="550"
+        mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
         x:Class="Ausgabenverwaltung.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        x:Name="Wurzel"
+        Icon="/Assets/AppIcon.ico"
         Title="Ausgabenverwaltung">
 
+    <!-- ============ Vorlage eines Navigationseintrags ============
+         Gemeinsam fuer alle vier Sidebar-Abschnitte (UI/UX-Redesign,
+         Abschnitt 3): Icon + Label, nie Icon allein (Barrierefreiheit-
+         Checkliste), 3px-Aktivbalken links, dezente Akzentflaeche.
+         Ein (nicht interaktiver) Button statt ListBoxItem, damit sich
+         Gruppen, Einrueckung und Badge frei zusammenbauen lassen -
+         Tastaturbedienbarkeit bleibt ueber die native Button-Semantik
+         erhalten. -->
+    <Window.Resources>
+        <DataTemplate x:Key="NavEintragVorlage" x:DataType="vm:NavigationItem">
+            <Grid ColumnDefinitions="3,*" Margin="0,1">
+                <Border Grid.Column="0" Classes="nav-aktiv-balken" IsVisible="{Binding IstAktiv}" />
+                <Button Grid.Column="1" Classes="nav-item" Classes.aktiv="{Binding IstAktiv}"
+                        Margin="4,0,0,0"
+                        Command="{Binding #Wurzel.((vm:MainViewModel)DataContext).WaehleCommand}"
+                        CommandParameter="{Binding}">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Path Grid.Column="0" Classes="nav-icon"
+                              Data="{Binding IconKey, Converter={x:Static anzeige:IconSchluesselZuGeometrie.Instanz}}"
+                              Width="{anzeige:Breite 18}" Height="{anzeige:Breite 18}"
+                              Stretch="Uniform" StrokeThickness="1.75"
+                              StrokeLineCap="Round" StrokeJoin="Round"
+                              Fill="Transparent" Margin="0,0,10,0" />
+                        <TextBlock Grid.Column="1" Text="{Binding Title}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <Border Grid.Column="2" Classes="badge neutral" IsVisible="{Binding BadgeSichtbar}"
+                                Margin="6,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding BadgeAnzahl}" />
+                        </Border>
+                    </Grid>
+                </Button>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+
     <DockPanel>
-        <!-- Gescheiterte Sicherung beim Start: melden, aber nicht
-             aufhalten. -->
+        <!-- ============ App-weite Hinweisbaender ============
+             Bleiben oben andockbar ueber der ganzen App, unabhaengig vom
+             gewaehlten Bereich (UI/UX-Redesign, Abschnitt 4) - jetzt im
+             einheitlichen Banner-Stil statt hart codierter Hex-Farben. -->
         <Border DockPanel.Dock="Top"
-                IsVisible="{Binding StartupNotice.BackupErrorVisible}"
-                Background="#FFE0E0"
-                BorderBrush="#D08080"
+                Classes="banner fehler"
+                CornerRadius="0"
                 BorderThickness="0,0,0,1"
-                Padding="12">
+                IsVisible="{Binding StartupNotice.BackupErrorVisible}">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0"
                            Text="{Binding StartupNotice.BackupErrorText}"
                            TextWrapping="Wrap"
                            VerticalAlignment="Center" />
-                <Button Grid.Column="1"
-                        Content="Schliessen"
+                <Button Grid.Column="1" Classes="ghost"
+                        Content="Schließen"
                         Command="{Binding StartupNotice.DismissBackupErrorCommand}" />
             </Grid>
         </Border>
 
         <Border DockPanel.Dock="Top"
-                IsVisible="{Binding StartupNotice.IsVisible}"
-                Background="#FFF4CE"
-                BorderBrush="#E0C36A"
+                Classes="banner hinweis"
+                CornerRadius="0"
                 BorderThickness="0,0,0,1"
-                Padding="12">
-            <StackPanel>
+                IsVisible="{Binding StartupNotice.IsVisible}">
+            <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Grid.Column="0"
                                Text="{Binding StartupNotice.SummaryText}"
                                VerticalAlignment="Center" />
-                    <Button Grid.Column="1"
-                            Content="Schliessen"
+                    <Button Grid.Column="1" Classes="ghost"
+                            Content="Schließen"
                             Command="{Binding StartupNotice.DismissCommand}" />
                 </Grid>
-                <Expander Header="Details anzeigen"
-                          Margin="0,8,0,0">
+                <Expander Header="Details anzeigen">
                     <ItemsControl ItemsSource="{Binding StartupNotice.GeneratedExpenseDescriptions}" />
                 </Expander>
             </StackPanel>
         </Border>
 
-        <!-- Die Bereichsleiste richtet sich nach ihrem laengsten Eintrag
-             statt nach einer festen Breite: so waechst sie mit der
-             eingestellten Schriftgroesse genau so weit mit, wie der Text
-             es braucht, und nimmt den Bereichen daneben bei "Sehr groß"
-             nicht mehrere hundert Pixel weg. -->
-        <Grid anzeige:Raster.Spalten="Auto,*">
-            <ListBox Grid.Column="0"
-                     MinWidth="{anzeige:Breite 160}"
-                     ItemsSource="{Binding NavigationItems}"
-                     SelectedItem="{Binding SelectedNavigationItem}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:NavigationItem">
-                        <TextBlock Text="{Binding Title}" />
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+        <!-- ============ Sidebar + Inhalt ============ -->
+        <Grid ColumnDefinitions="Auto,*">
+            <Border Grid.Column="0" Classes="sidebar"
+                    Width="{anzeige:Breite 240}"
+                    BorderThickness="0,0,1,0"
+                    Padding="12,16">
+                <DockPanel>
+                    <!-- Marke -->
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+                                Margin="4,0,4,20">
+                        <Border Classes="marken-icon" Width="{anzeige:Breite 28}" Height="{anzeige:Breite 28}">
+                            <TextBlock Classes="marken-buchstabe" Text="A" />
+                        </Border>
+                        <TextBlock Classes="marke" Text="Ausgabenverwaltung"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+
+                    <!-- Fusszeile: Thema und Schriftstufe auf einen Blick,
+                         ohne erst in die Verwaltung wechseln zu muessen
+                         (UI/UX-Redesign, Abschnitt 3). -->
+                    <Border DockPanel.Dock="Bottom" Classes="sidebar-fusszeile"
+                            BorderThickness="0,1,0,0" Padding="8,10,8,0" Margin="0,8,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Path Data="{DynamicResource IconDarstellung}"
+                                  Width="{anzeige:Breite 14}" Height="{anzeige:Breite 14}"
+                                  Stretch="Uniform" StrokeThickness="1.75"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}" />
+                            <TextBlock Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}"
+                                       Text="{Binding Darstellung.FusszeilenText}" />
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer>
+                        <StackPanel Margin="0,0,0,8">
+                            <!-- Startseite: ohne Kopfzeile, direkt ueber den Gruppen -->
+                            <ContentControl Content="{Binding StartseiteEintrag}"
+                                            ContentTemplate="{StaticResource NavEintragVorlage}" />
+
+                            <TextBlock Classes="nav-gruppe" Text="ERFASSEN &amp; VERWALTEN" Margin="8,16,8,4" />
+                            <ItemsControl ItemsSource="{Binding ErfassenUndVerwaltenEintraege}"
+                                          ItemTemplate="{StaticResource NavEintragVorlage}" />
+
+                            <TextBlock Classes="nav-gruppe" Text="AUSWERTUNG" Margin="8,16,8,4" />
+                            <ItemsControl ItemsSource="{Binding AuswertungEintraege}"
+                                          ItemTemplate="{StaticResource NavEintragVorlage}" />
+
+                            <TextBlock Classes="nav-gruppe" Text="EINSTELLUNGEN" Margin="8,16,8,4" />
+
+                            <!-- "Verwaltung": statischer Gruppenkopf mit
+                                 Zahnrad-Icon (UI/UX-Redesign, Abschnitt 3) -
+                                 die fuenf echten Sprungziele stehen darunter,
+                                 eingerueckt. -->
+                            <Grid ColumnDefinitions="Auto,*" Margin="8,4,8,2">
+                                <Path Grid.Column="0" Data="{DynamicResource IconVerwaltung}"
+                                      Width="{anzeige:Breite 18}" Height="{anzeige:Breite 18}"
+                                      Stretch="Uniform" StrokeThickness="1.75"
+                                      StrokeLineCap="Round" StrokeJoin="Round"
+                                      Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}"
+                                      Margin="0,0,10,0" />
+                                <TextBlock Grid.Column="1" Text="Verwaltung" FontWeight="Medium"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding EinstellungenEintraege}"
+                                          ItemTemplate="{StaticResource NavEintragVorlage}"
+                                          Margin="20,0,0,0" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
 
             <ContentControl Grid.Column="1"
-                             Margin="16"
+                             Background="{DynamicResource CanvasFarbe}"
                              Content="{Binding SelectedNavigationItem.ViewModel}" />
         </Grid>
     </DockPanel>

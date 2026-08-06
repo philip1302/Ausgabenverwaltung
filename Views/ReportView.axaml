@@ -38,12 +38,12 @@
             <Setter Property="HorizontalContentAlignment" Value="Right" />
         </Style>
         <Style Selector="Button.zelle:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#EAF1FB" />
+            <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
         </Style>
         <!-- Leere Zellen sind nicht anklickbar und treten zurueck. -->
         <Style Selector="Button.zelle:disabled /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#B0B0B0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
         </Style>
 
         <!-- Aufklapp-Pfeil vor dem Kategorienamen. -->
@@ -54,12 +54,12 @@
             <Setter Property="Width" Value="{anzeige:Breite 20}" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Foreground" Value="#606060" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
         </Style>
 
         <Style Selector="TextBlock.filterbeschriftung">
             <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
-            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
             <Setter Property="Margin" Value="0,0,0,2" />
         </Style>
 
@@ -74,12 +74,18 @@
         </Style>
     </UserControl.Styles>
 
-    <Panel>
+    <Panel Margin="32,24">
         <DockPanel>
-            <!-- ============ Filterleiste ============ -->
-            <Border DockPanel.Dock="Top"
-                    BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"
-                    Padding="0,0,0,10" Margin="0,0,0,10">
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20">
+                <TextBlock Classes="seitentitel" Text="Report" />
+                <TextBlock Classes="seitenuntertitel" Text="Ausgaben und Einnahmen als Kreuztabelle nach Kategorie und Zeitraum" />
+            </StackPanel>
+
+            <!-- ============ Filterleiste ============
+                 Eigene Karte statt einer reinen Trennlinie (UI/UX-Redesign,
+                 Abschnitt 2.7) - grenzt den Filterbereich klarer vom
+                 Inhalt ab. -->
+            <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16">
                 <StackPanel Spacing="8">
                     <!-- Zeitraum -->
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -98,21 +104,29 @@
 
                         <StackPanel VerticalAlignment="Bottom">
                             <TextBlock Text="Schnellwahl" Classes="filterbeschriftung" />
+                            <!-- Echte Button-Gruppe mit sichtbarem aktivem Zustand
+                                 (UI/UX-Redesign, Abschnitt 5.3) statt gewoehnlicher,
+                                 nicht unterscheidbarer Buttons. -->
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Dieses Jahr"
+                                <Button Classes="secondary" Content="Dieses Jahr"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=DiesesJahr}"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="DiesesJahr" />
-                                <Button Content="Letztes Jahr"
+                                <Button Classes="secondary" Content="Letztes Jahr"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=LetztesJahr}"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="LetztesJahr" />
-                                <Button Content="Letzte 12 Monate"
+                                <Button Classes="secondary" Content="Letzte 12 Monate"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=Letzte12Monate}"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="Letzte12Monate" />
-                                <Button Content="Letzte 3 Jahre"
+                                <Button Classes="secondary" Content="Letzte 3 Jahre"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=Letzte3Jahre}"
                                         ToolTip.Tip="Die letzten drei Kalenderjahre einschließlich des laufenden"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="Letzte3Jahre" />
-                                <Button Content="Alles"
+                                <Button Classes="secondary" Content="Alles"
+                                        Classes.aktiv="{Binding AktiverZeitraumSchluessel, Converter={x:Static anzeige:TextGleich.Instanz}, ConverterParameter=Alles}"
                                         ToolTip.Tip="Ohne zeitliche Einschränkung"
                                         Command="{Binding SchnellwahlCommand}"
                                         CommandParameter="Alles" />
@@ -200,7 +214,7 @@
                                      PlaceholderText="Volltext…" />
                         </StackPanel>
 
-                        <Button Content="Filter zurücksetzen"
+                        <Button Classes="ghost" Content="Filter zurücksetzen"
                                 Command="{Binding FilterZuruecksetzenCommand}"
                                 VerticalAlignment="Bottom" />
                     </StackPanel>
@@ -208,31 +222,39 @@
             </Border>
 
             <!-- ============ Werkzeugleiste ============ -->
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12"
-                        Margin="0,0,0,10">
-                <CheckBox Content="Kategorien ohne Ausgaben anzeigen"
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                <CheckBox Grid.Column="0" Content="Kategorien ohne Ausgaben anzeigen"
                           IsChecked="{Binding KategorienOhneAusgabenAnzeigen}" />
-                <Button Content="Als CSV exportieren"
-                        ToolTip.Tip="Die angezeigte Tabelle mit der aufgeklappten Struktur"
-                        Click="CsvExportieren_Click" />
-                <TextBlock Text="{Binding ExportHinweis}"
-                           IsVisible="{Binding ExportHinweis, Converter={x:Static ObjectConverters.IsNotNull}}"
-                           Foreground="Gray"
-                           VerticalAlignment="Center" />
-            </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="{Binding ExportHinweis}"
+                               IsVisible="{Binding ExportHinweis, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               Foreground="{DynamicResource TextTertiaerFarbe}"
+                               VerticalAlignment="Center" />
+                    <Button Classes="secondary" Content="Als CSV exportieren"
+                            ToolTip.Tip="Die angezeigte Tabelle mit der aufgeklappten Struktur"
+                            Click="CsvExportieren_Click" />
+                </StackPanel>
+            </Grid>
 
             <!-- ============ Fusszeile ============ -->
             <TextBlock DockPanel.Dock="Bottom"
                        Text="{Binding TrefferText}"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource TextTertiaerFarbe}"
                        Margin="4,10,0,0" />
 
-            <TextBlock Text="Keine Ausgaben für diesen Filter."
-                       IsVisible="{Binding KeineTreffer}"
-                       DockPanel.Dock="Top"
-                       Foreground="Gray"
-                       FontStyle="Italic"
-                       Margin="4,8" />
+            <!-- Leerer Zustand: Icon + Text statt des bisherigen grauen,
+                 kursiven Einzeilers (UI/UX-Redesign, Abschnitt 2.7). -->
+            <StackPanel DockPanel.Dock="Top" Spacing="8" HorizontalAlignment="Center"
+                        IsVisible="{Binding KeineTreffer}" Margin="0,32">
+                <Path Data="{DynamicResource IconReport}"
+                      Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}"
+                      Stretch="Uniform" StrokeThickness="1.5"
+                      StrokeLineCap="Round" StrokeJoin="Round"
+                      Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}"
+                      HorizontalAlignment="Center" />
+                <TextBlock Text="Keine Ausgaben für diesen Filter."
+                           Foreground="{DynamicResource TextSekundaerFarbe}" />
+            </StackPanel>
 
             <!-- ============ Kreuztabelle ============
                  Zwei ineinander liegende ScrollViewer: der aeussere
@@ -246,7 +268,7 @@
                 <DockPanel>
                     <!-- Kopfzeile -->
                     <Border DockPanel.Dock="Top"
-                            BorderBrush="#C0C0C0" BorderThickness="0,0,0,1"
+                            BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="0,0,0,1"
                             Padding="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Kategorie" Classes="tabellenkopf" Width="{anzeige:Breite 300}" />
@@ -282,7 +304,7 @@
                             <ItemsControl ItemsSource="{Binding Zeilen}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:ReportZeile">
-                                        <Border BorderBrush="#E8E8E8" BorderThickness="0,0,0,1"
+                                        <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1"
                                                 Padding="0,5">
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- DockPanel statt StackPanel, damit der
@@ -372,7 +394,7 @@
                             <ContentControl Content="{Binding SummenZeile}">
                                 <ContentControl.ContentTemplate>
                                     <DataTemplate x:DataType="vm:ReportZeile">
-                                        <Border BorderBrush="#C0C0C0" BorderThickness="0,1,0,0"
+                                        <Border BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="0,1,0,0"
                                                 Padding="0,6,0,0" Margin="0,2,0,0">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding Name}" Width="{anzeige:Breite 300}"
@@ -433,8 +455,8 @@
                  auf die gewuenschte Groesse: bei "Sehr groß" waere ein
                  fest 820 Pixel breiter Dialog breiter als der Bereich
                  dahinter und wuerde rechts abgeschnitten. -->
-            <Border Background="White" BorderBrush="#C0C0C0" BorderThickness="1"
-                    CornerRadius="2" Padding="16" Margin="24"
+            <Border Background="{DynamicResource SurfaceRaisedFarbe}" BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="1"
+                    CornerRadius="8" Padding="16" Margin="24"
                     MaxWidth="{anzeige:Breite 820}"
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <DockPanel>
@@ -451,7 +473,7 @@
                           Margin="0,10,0,0">
                         <TextBlock Grid.Column="0"
                                    Text="{Binding DetailTrefferText}"
-                                   Foreground="Gray"
+                                   Foreground="{DynamicResource TextTertiaerFarbe}"
                                    VerticalAlignment="Center" />
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
                             <TextBlock FontWeight="Bold"
@@ -486,7 +508,7 @@
                         </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:AusgabeZeile">
-                                <Border BorderBrush="#E8E8E8" BorderThickness="0,0,0,1"
+                                <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1"
                                         Padding="0,5">
                                     <!-- Dieselbe Behandlung wie in der Ausgabenliste:
                                          einzeilig, gekuerzt, Hilfetext nur wo noetig -

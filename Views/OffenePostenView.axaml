@@ -35,65 +35,79 @@
          gleich hoch bleiben. -->
     <UserControl.Styles>
         <!-- ":is(TextBlock)", weil die Klasse auch an den Textzellen der
-             Kategorie- und Bemerkungsspalte haengt (siehe App.axaml). -->
+             Kategorie- und Bemerkungsspalte haengt (siehe App.axaml).
+             Opacity statt reiner Graufaerbung (UI/UX-Redesign, Abschnitt
+             5.2) - deutlicher gedaempft, funktioniert in Hell UND Dunkel. -->
         <Style Selector=":is(TextBlock).beglichen">
-            <Setter Property="Foreground" Value="Gray" />
-            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="Opacity" Value="0.55" />
         </Style>
     </UserControl.Styles>
 
-    <DockPanel>
+    <DockPanel Margin="32,24">
+        <!-- ============ Kopfzeile mit Gesamtsumme ============
+             Prominent oben rechts statt unten in der Werkzeugleiste
+             (UI/UX-Redesign, Abschnitt 5.2). -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+            <StackPanel Grid.Column="0">
+                <TextBlock Classes="seitentitel" Text="Offene Posten" />
+                <TextBlock Classes="seitenuntertitel" Text="Von anderen bezahlte Ausgaben, die noch beglichen werden müssen" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                <TextBlock Text="Gesamt offen" Classes="klein" HorizontalAlignment="Right"
+                           Foreground="{DynamicResource TextTertiaerFarbe}" />
+                <TextBlock FontSize="{DynamicResource SchriftKpi}" FontWeight="Bold" HorizontalAlignment="Right"
+                           Classes.erstattung="{Binding GesamtsummeIstErstattung}"
+                           Text="{Binding GesamtsummeText}" />
+            </StackPanel>
+        </Grid>
+
         <!-- ============ Band: Schreibfehler ============
              Die Liste darunter zeigt danach den tatsächlichen Stand aus
              der Datenbank, nicht den erhofften. -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding SchreibFehlerSichtbar}"
-                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
-                CornerRadius="2" Padding="10" Margin="0,0,0,8">
+        <Border DockPanel.Dock="Top" Classes="banner fehler"
+                IsVisible="{Binding SchreibFehlerSichtbar}" Margin="0,0,0,8">
             <Grid anzeige:Raster.Spalten="*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
                            TextWrapping="Wrap" VerticalAlignment="Center" />
-                <Button Grid.Column="1" Content="Schließen"
+                <Button Grid.Column="1" Classes="ghost" Content="Schließen"
                         VerticalAlignment="Top"
                         Command="{Binding SchreibFehlerSchliessenCommand}" />
             </Grid>
         </Border>
 
         <!-- Rueckgaengig-Hinweis nach dem Abhaken -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding RueckgaengigSichtbar}"
-                Background="#DFF5DF"
-                BorderBrush="#8FCB8F"
-                BorderThickness="0,0,0,1"
-                Padding="8"
-                Margin="0,0,0,12">
+        <Border DockPanel.Dock="Top" Classes="banner erfolg"
+                IsVisible="{Binding RueckgaengigSichtbar}" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="{Binding RueckgaengigText}" VerticalAlignment="Center" />
-                <Button Content="Rückgängig" Command="{Binding RueckgaengigCommand}" />
+                <Button Classes="secondary" Content="Rückgängig" Command="{Binding RueckgaengigCommand}" />
             </StackPanel>
         </Border>
 
         <!-- Werkzeugleiste -->
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
-                <Button Content="Ausgewählte abhaken" Command="{Binding AusgewaehlteAbhakenCommand}" />
+        <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <Button Classes="secondary" Content="Ausgewählte abhaken" Command="{Binding AusgewaehlteAbhakenCommand}" />
                 <CheckBox Content="Beglichene der letzten 30 Tage anzeigen"
                           IsChecked="{Binding BeglicheneLetzte30TageAnzeigen}"
                           VerticalAlignment="Center" />
             </StackPanel>
-            <TextBlock Grid.Column="2"
-                       VerticalAlignment="Center"
-                       FontWeight="Bold"
-                       Classes.erstattung="{Binding GesamtsummeIstErstattung}"
-                       Text="{Binding GesamtsummeText, StringFormat='Gesamt offen: {0}'}" />
-        </Grid>
+        </Border>
 
-        <TextBlock DockPanel.Dock="Top"
-                    Text="Keine offenen Posten."
-                    IsVisible="{Binding KeineEintraege}"
-                    Foreground="Gray"
-                    FontStyle="Italic"
-                    Margin="0,8" />
+        <!-- Leerer Zustand: Icon + Text statt des bisherigen grauen,
+             kursiven Einzeilers (UI/UX-Redesign, Abschnitt 2.7). -->
+        <StackPanel DockPanel.Dock="Top" Classes="empty-state" Spacing="8"
+                    IsVisible="{Binding KeineEintraege}" Margin="0,32">
+            <Path Data="{DynamicResource IconOffenePosten}"
+                  Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}"
+                  Stretch="Uniform" StrokeThickness="1.5"
+                  StrokeLineCap="Round" StrokeJoin="Round"
+                  Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}"
+                  HorizontalAlignment="Center" />
+            <TextBlock Text="Keine offenen Posten."
+                       Foreground="{DynamicResource TextSekundaerFarbe}"
+                       HorizontalAlignment="Center" />
+        </StackPanel>
 
         <!-- ============ Kopfzeile und Tabelle ============
              Beides in einem waagerechten Bildlauf: bei den grossen
@@ -153,7 +167,7 @@
                             <ItemsControl ItemsSource="{Binding Zeilen}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:OffenerPostenZeile">
-                                        <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
+                                        <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
                                             <StackPanel>
                                                 <Grid anzeige:Raster.Spalten="32,90,16,Kategorie,16,110,24,*,16,100,24,270">
                                                     <CheckBox Grid.Column="0"
@@ -182,11 +196,11 @@
 
                                                     <StackPanel Grid.Column="11" Orientation="Horizontal" Spacing="6"
                                                                 IsVisible="{Binding !IstBeglichen}">
-                                                        <Button Content="{Binding AbhakenButtonText}"
+                                                        <Button Classes="secondary klein" Content="{Binding AbhakenButtonText}"
                                                                 ToolTip.Tip="{Binding AbhakenToolTip}"
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbhakenCommand}"
                                                                 CommandParameter="{Binding}" />
-                                                        <Button Content="Datum…"
+                                                        <Button Classes="ghost klein" Content="Datum…"
                                                                 ToolTip.Tip="Mit abweichendem Datum abhaken"
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumOeffnenCommand}"
                                                                 CommandParameter="{Binding}" />
@@ -198,9 +212,9 @@
                                                     <StackPanel Grid.Column="11" Orientation="Horizontal" Spacing="6"
                                                                 IsVisible="{Binding IstBeglichen}">
                                                         <TextBlock Text="{Binding BeglichenText}"
-                                                                   FontStyle="Italic" Foreground="Gray"
+                                                                   FontStyle="Italic" Foreground="{DynamicResource TextTertiaerFarbe}"
                                                                    VerticalAlignment="Center" />
-                                                        <Button Content="Rückgängig"
+                                                        <Button Classes="ghost klein" Content="Rückgängig"
                                                                 ToolTip.Tip="Begleichung rückgängig machen"
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).RueckgaengigZeileCommand}"
                                                                 CommandParameter="{Binding}" />
@@ -214,10 +228,10 @@
                                                     <TextBox Text="{Binding AbweichendesDatumText}"
                                                              Width="{anzeige:Breite 110}"
                                                              PlaceholderText="TT.MM.JJJJ" />
-                                                    <Button Content="Übernehmen"
+                                                    <Button Classes="secondary klein" Content="Übernehmen"
                                                             Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumUebernehmenCommand}"
                                                             CommandParameter="{Binding}" />
-                                                    <Button Content="Abbrechen"
+                                                    <Button Classes="ghost klein" Content="Abbrechen"
                                                             Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumAbbrechenCommand}"
                                                             CommandParameter="{Binding}" />
                                                     <TextBlock Text="{Binding AbweichendesDatumFehler}"

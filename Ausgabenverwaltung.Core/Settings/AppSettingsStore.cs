@@ -70,6 +70,13 @@ public sealed class AppSettingsStore
                 CategoryColumnWidth = document.CategoryColumnWidth is double breite
                     ? ColumnWidths.NormalizeCategory(breite)
                     : ColumnWidths.CategoryDefault,
+
+                // Ein unbekannter oder fehlender Text (aeltere Datei) faellt
+                // auf "System" zurueck - das bisherige, einzige Verhalten.
+                ThemeMode = document.ThemeMode is string modusText
+                    && Enum.TryParse<ThemeMode>(modusText, out var modus)
+                    ? modus
+                    : ThemeMode.System,
             };
         }
         catch (Exception)
@@ -88,6 +95,7 @@ public sealed class AppSettingsStore
                 : null,
             FontScale = settings.FontScale,
             CategoryColumnWidth = settings.CategoryColumnWidth,
+            ThemeMode = settings.ThemeMode.ToString(),
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -130,5 +138,6 @@ public sealed class AppSettingsStore
         public string? LastExternalBackupUtc { get; set; }
         public double? FontScale { get; set; }
         public double? CategoryColumnWidth { get; set; }
+        public string? ThemeMode { get; set; }
     }
 }

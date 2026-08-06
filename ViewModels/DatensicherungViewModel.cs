@@ -110,9 +110,13 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
     private string _ziel2Pfad = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExterneSicherungIstAktuell))]
+    [NotifyPropertyChangedFor(nameof(ExterneSicherungFehlt))]
+    [NotifyPropertyChangedFor(nameof(ExterneSicherungBannerText))]
     private bool _ziel2Eingerichtet;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExterneSicherungBannerText))]
     private string _ziel2StatusText = string.Empty;
 
     /// <summary>
@@ -120,7 +124,24 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
     /// von 14 Tagen steht in <see cref="ExternalBackupAge"/>.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExterneSicherungIstAktuell))]
+    [NotifyPropertyChangedFor(nameof(ExterneSicherungIstVeraltet))]
     private bool _ziel2Veraltet;
+
+    /// <summary>
+    /// Status der externen Sicherung als Banner ganz oben (UI/UX-Redesign,
+    /// Abschnitt 5.8): die wichtigste Information der Seite ("bin ich
+    /// gerade abgesichert?") ist damit die erste, die auffaellt - gruen
+    /// wenn aktuell, sonst Warnung bzw. Hinweis, statt einer separaten
+    /// Textzeile weiter unten.
+    /// </summary>
+    public bool ExterneSicherungIstAktuell => Ziel2Eingerichtet && !Ziel2Veraltet;
+    public bool ExterneSicherungIstVeraltet => Ziel2Eingerichtet && Ziel2Veraltet;
+    public bool ExterneSicherungFehlt => !Ziel2Eingerichtet;
+
+    public string ExterneSicherungBannerText => Ziel2Eingerichtet
+        ? Ziel2StatusText
+        : "Kein zweites Sicherungsziel eingerichtet — die Sicherungen liegen bislang nur auf diesem Rechner.";
 
     [ObservableProperty]
     private bool _keineSicherungen;

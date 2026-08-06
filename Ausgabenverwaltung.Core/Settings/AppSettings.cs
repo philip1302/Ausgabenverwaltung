@@ -41,4 +41,11 @@ public sealed record AppSettings
     /// Bereich gebracht.
     /// </summary>
     public double CategoryColumnWidth { get; init; } = ColumnWidths.CategoryDefault;
+
+    /// <summary>
+    /// Bewusst gewaehlte Themenvariante (UI/UX-Redesign, Verwaltung ▸
+    /// Darstellung). Vorgabe "System" entspricht dem bisherigen, einzigen
+    /// Verhalten der Anwendung (<c>RequestedThemeVariant="Default"</c>).
+    /// </summary>
+    public ThemeMode ThemeMode { get; init; } = ThemeMode.System;
 }
