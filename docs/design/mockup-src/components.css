@@ -1,0 +1,217 @@
+/* ============================================================
+   Komponenten-Bausteine — gemeinsam für alle Mockups.
+   Baut auf tokens.css auf. Jede Klasse hier bekommt im
+   Hauptdokument (UIUIXDESIGN.md, Abschnitt "Designsystem") eine
+   kurze Erklärung, was sie ersetzt bzw. neu einführt.
+   ============================================================ */
+
+/* ---------- Grundgerüst: Sidebar + Inhalt ---------- */
+.app {
+  display: flex;
+  width: 1440px;
+  height: 900px;
+  overflow: hidden;
+  background: var(--canvas);
+}
+
+.sidebar {
+  width: var(--sidebar-width-expanded);
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-3);
+}
+.sidebar.collapsed { width: var(--sidebar-width-collapsed); }
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-5);
+  font-weight: var(--weight-bold);
+  font-size: var(--font-ueberschrift);
+}
+.brand .mark {
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  background: var(--accent); color: var(--text-on-accent);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: var(--weight-bold); font-size: 14px;
+}
+
+.nav-section-label {
+  font-size: var(--font-klein);
+  font-weight: var(--weight-semibold);
+  color: var(--text-tertiary);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: var(--space-4) var(--space-2) var(--space-1);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+  font-size: var(--font-normal);
+  margin-bottom: 2px;
+  position: relative;
+}
+.nav-item .icon { color: var(--text-tertiary); }
+.nav-item.active {
+  background: var(--sidebar-active-bg);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+.nav-item.active .icon { color: var(--accent); }
+.nav-item.active::before {
+  content: "";
+  position: absolute; left: -12px; top: 6px; bottom: 6px; width: 3px;
+  background: var(--accent); border-radius: var(--radius-full);
+}
+.nav-group { margin-left: var(--space-6); }
+.nav-item.sub { padding-top: 6px; padding-bottom: 6px; font-size: var(--font-normal); }
+
+.sidebar-footer {
+  margin-top: auto;
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--font-klein);
+  color: var(--text-tertiary);
+}
+
+/* ---------- Inhaltsbereich ---------- */
+.content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-5) var(--space-8) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+.page-title { font-size: var(--font-seitentitel); font-weight: var(--weight-bold); line-height: var(--line-seitentitel); }
+.page-sub { font-size: var(--font-normal); color: var(--text-secondary); margin-top: 2px; }
+.content-scroll { flex: 1; overflow: auto; padding: var(--space-6) var(--space-8); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-family);
+  font-size: var(--font-normal); font-weight: var(--weight-medium);
+  padding: 9px var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: default;
+}
+.btn-primary { background: var(--accent); color: var(--text-on-accent); }
+.btn-secondary { background: var(--surface); color: var(--text-primary); border-color: var(--border-strong); }
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-danger { background: transparent; color: var(--danger-text); border-color: var(--danger-border); }
+.btn-sm { padding: 6px var(--space-3); font-size: var(--font-klein); }
+
+/* ---------- Karten ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+}
+
+/* ---------- KPI-Kachel (neu, für Startseite) ---------- */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+}
+.kpi-label { display: flex; align-items: center; gap: var(--space-2); color: var(--text-secondary); font-size: var(--font-normal); font-weight: var(--weight-medium); }
+.kpi-value { font-size: var(--font-kpi); font-weight: var(--weight-bold); margin-top: var(--space-2); }
+.kpi-hint { font-size: var(--font-klein); color: var(--text-tertiary); margin-top: 2px; }
+
+/* ---------- Status-Banner (ersetzt Inline-Hex je View) ---------- */
+.banner {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid; border-radius: var(--radius-md);
+  font-size: var(--font-normal);
+}
+.banner-success { background: var(--success-bg); border-color: var(--success-border); color: var(--success-text); }
+.banner-warning { background: var(--warning-bg); border-color: var(--warning-border); color: var(--warning-text); }
+.banner-danger  { background: var(--danger-bg);  border-color: var(--danger-border);  color: var(--danger-text); }
+.banner-info    { background: var(--info-bg);    border-color: var(--info-border);    color: var(--info-text); }
+.banner .banner-body { color: var(--text-primary); flex: 1; }
+.banner .banner-title { font-weight: var(--weight-semibold); margin-bottom: 2px; }
+
+/* ---------- Filterleiste ---------- */
+.filterbar {
+  display: flex; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: var(--font-klein); color: var(--text-tertiary); font-weight: var(--weight-medium); }
+.input, .select {
+  font-family: var(--font-family);
+  font-size: var(--font-normal);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px var(--space-3);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+/* ---------- Tabelle ---------- */
+.table { width: 100%; border-collapse: collapse; }
+.table thead th {
+  text-align: left; font-size: var(--font-klein); font-weight: var(--weight-semibold);
+  color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .03em;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky; top: 0; background: var(--surface);
+}
+.table th.num, .table td.num { text-align: right; }
+.table tbody td {
+  padding: var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--font-normal);
+}
+.table tbody tr:hover td { background: var(--accent-subtle-bg); }
+.pill { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: var(--radius-full); flex-shrink: 0; }
+.text-expense { color: var(--expense-text); font-weight: var(--weight-semibold); }
+.text-income { color: var(--income-text); font-weight: var(--weight-semibold); }
+.text-muted { color: var(--text-tertiary); }
+.text-secondary { color: var(--text-secondary); }
+
+/* ---------- Leerer Zustand ---------- */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: var(--space-3); padding: var(--space-10) var(--space-6); color: var(--text-secondary);
+}
+.empty-state .icon { width: 40px; height: 40px; color: var(--text-tertiary); }
+
+/* ---------- Tabs (für Verwaltung-Screens, sofern gezeigt) ---------- */
+.tabs { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-5); }
+.tab { padding: var(--space-2) var(--space-4); font-size: var(--font-normal); color: var(--text-secondary); border-bottom: 2px solid transparent; }
+.tab.active { color: var(--accent); border-color: var(--accent); font-weight: var(--weight-semibold); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--font-klein); font-weight: var(--weight-semibold);
+  padding: 2px var(--space-2); border-radius: var(--radius-full);
+}
+.badge-neutral { background: var(--border-subtle); color: var(--text-secondary); }

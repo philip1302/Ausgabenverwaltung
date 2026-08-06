@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Designsystem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  body { background: #EEF0F3; }
+  .sheet { width: 1440px; margin: 0 auto; padding: var(--space-8); background: var(--canvas); }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: var(--font-seitentitel); margin: var(--space-8) 0 var(--space-4); border-top: 1px solid var(--border-subtle); padding-top: var(--space-6); }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  .lead { color: var(--text-secondary); margin-bottom: var(--space-6); }
+  .swatch-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+  .swatch { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }
+  .swatch .fill { height: 56px; }
+  .swatch .meta { padding: var(--space-3); font-size: var(--font-klein); }
+  .swatch .meta .name { font-weight: 600; font-size: var(--font-normal); color: var(--text-primary); margin-bottom: 2px; }
+  .swatch .meta .hex { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--text-secondary); }
+  .swatch .meta .ratio { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: var(--radius-full); font-weight: 600; }
+  .ratio.pass { background: var(--success-bg); color: var(--success-text); }
+  .dark-block { background: #121212; border-radius: var(--radius-lg); padding: var(--space-6); }
+  .type-row { display: flex; align-items: baseline; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--border-subtle); }
+  .type-row .tag { width: 160px; color: var(--text-tertiary); font-size: var(--font-klein); }
+  .space-row { display: flex; align-items: center; gap: var(--space-4); padding: 6px 0; }
+  .space-bar { background: var(--accent); height: 14px; border-radius: 3px; }
+  .space-label { width: 90px; font-size: var(--font-klein); color: var(--text-secondary); }
+  .icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-4); }
+  .icon-card { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: var(--space-2); background: var(--surface); }
+  .icon-card svg { width: 24px; height: 24px; }
+  .icon-card span { font-size: var(--font-klein); color: var(--text-secondary); text-align: center; }
+  .row-flex { display: flex; gap: var(--space-4); align-items: flex-start; flex-wrap: wrap; }
+  .scale-card { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-4); background: var(--surface); }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1>Designsystem — Ausgabenverwaltung</h1>
+  <div class="lead">Alle Werte hier sind die einzige Quelle der Wahrheit für die Screen-Mockups 01–10 und für UIUIXDESIGN.md. Kontrastwerte real berechnet (WCAG-Relativluminanz), nicht geschätzt.</div>
+
+  <h2>Farben — Hell</h2>
+  <div class="swatch-grid">
+    <div class="swatch"><div class="fill" style="background:#F7F8FA"></div><div class="meta"><div class="name">Canvas</div><div class="hex">#F7F8FA</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#FFFFFF;border-bottom:1px solid #eee"></div><div class="meta"><div class="name">Surface</div><div class="hex">#FFFFFF</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#1D2433"></div><div class="meta"><div class="name">Text primär</div><div class="hex">#1D2433</div><span class="ratio pass">15.5:1</span></div></div>
+    <div class="swatch"><div class="fill" style="background:#5B6472"></div><div class="meta"><div class="name">Text sekundär</div><div class="hex">#5B6472</div><span class="ratio pass">5.98:1</span></div></div>
+    <div class="swatch"><div class="fill" style="background:#6B7280"></div><div class="meta"><div class="name">Text tertiär</div><div class="hex">#6B7280</div><span class="ratio pass">4.83:1</span></div></div>
+    <div class="swatch"><div class="fill" style="background:#E4E7EC"></div><div class="meta"><div class="name">Rahmen, dezent</div><div class="hex">#E4E7EC</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#7C8593"></div><div class="meta"><div class="name">Rahmen, stark (Felder)</div><div class="hex">#7C8593</div><span class="ratio pass">3.73:1</span></div></div>
+    <div class="swatch"><div class="fill" style="background:#2F5FD1"></div><div class="meta"><div class="name">Akzent</div><div class="hex">#2F5FD1</div><span class="ratio pass">5.71:1</span></div></div>
+    <div class="swatch"><div class="fill" style="background:#244DB0"></div><div class="meta"><div class="name">Akzent, Hover</div><div class="hex">#244DB0</div><span class="ratio pass">7.60:1</span></div></div>
+    <div class="swatch"><div class="fill" style="background:#EAF0FE"></div><div class="meta"><div class="name">Akzent, dezent (aktive Nav.)</div><div class="hex">#EAF0FE</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#A03A30"></div><div class="meta"><div class="name">Ausgabe (unverändert)</div><div class="hex">#A03A30</div><span class="ratio pass">6.68:1</span></div></div>
+    <div class="swatch"><div class="fill" style="background:#187A40"></div><div class="meta"><div class="name">Einnahme (korrigiert)</div><div class="hex">#187A40</div><span class="ratio pass">5.39:1</span></div></div>
+  </div>
+
+  <div style="margin-top:var(--space-5)" class="row-flex">
+    <div class="banner banner-success" style="flex:1;min-width:280px"><div class="banner-body"><div class="banner-title">Erfolg</div>#067647 auf #ECFDF3 — 5.40:1</div></div>
+    <div class="banner banner-warning" style="flex:1;min-width:280px"><div class="banner-body"><div class="banner-title">Warnung</div>#B54708 auf #FFFAEB — 5.20:1</div></div>
+    <div class="banner banner-danger" style="flex:1;min-width:280px"><div class="banner-body"><div class="banner-title">Fehler</div>#B42318 auf #FEF3F2 — 6.05:1</div></div>
+    <div class="banner banner-info" style="flex:1;min-width:280px"><div class="banner-body"><div class="banner-title">Hinweis</div>#175CD3 auf #EFF8FF — 5.57:1</div></div>
+  </div>
+  <div class="lead" style="margin-top:var(--space-3)">Ersetzen die bisher in jeder View einzeln hart codierten Banner-Hexwerte (<code>#FFE0E0</code>, <code>#DFF5DF</code>, <code>#FFF4CE</code> …) durch vier benannte, in Light UND Dark geprüfte Tokens.</div>
+
+  <h2>Farben — Dunkel</h2>
+  <div class="dark-block">
+    <div class="swatch-grid" data-theme="dark">
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#121212"></div><div class="meta" style="color:#EAECEF"><div class="name" style="color:#EAECEF">Canvas</div><div class="hex" style="color:#A6ADBB">#121212</div></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#1B1D22;border-bottom:1px solid #2A2D34"></div><div class="meta"><div class="name" style="color:#EAECEF">Surface</div><div class="hex" style="color:#A6ADBB">#1B1D22</div></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#EAECEF"></div><div class="meta"><div class="name" style="color:#EAECEF">Text primär</div><div class="hex" style="color:#A6ADBB">#EAECEF</div><span class="ratio pass">14.3:1</span></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#A6ADBB"></div><div class="meta"><div class="name" style="color:#EAECEF">Text sekundär</div><div class="hex" style="color:#A6ADBB">#A6ADBB</div><span class="ratio pass">7.48:1</span></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#7A8290"></div><div class="meta"><div class="name" style="color:#EAECEF">Text tertiär</div><div class="hex" style="color:#A6ADBB">#7A8290</div><span class="ratio pass">4.35:1</span></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#8AB0FF"></div><div class="meta"><div class="name" style="color:#EAECEF">Akzent</div><div class="hex" style="color:#A6ADBB">#8AB0FF</div><span class="ratio pass">7.82:1</span></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#0F2A1E;border-bottom:1px solid #1E5A3D"></div><div class="meta"><div class="name" style="color:#EAECEF">Erfolg-Fläche</div><div class="hex" style="color:#3DD68C">Text #3DD68C · 8.17:1</div></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#3A1418;border-bottom:1px solid #6B2530"></div><div class="meta"><div class="name" style="color:#EAECEF">Fehler-Fläche</div><div class="hex" style="color:#F296A0">Text #F296A0 · 7.46:1</div></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#F1A79E"></div><div class="meta"><div class="name" style="color:#EAECEF">Ausgabe (dunkel)</div><div class="hex" style="color:#A6ADBB">#F1A79E</div><span class="ratio pass">8.64:1</span></div></div>
+      <div class="swatch" style="background:#1B1D22;border-color:#2A2D34"><div class="fill" style="background:#4ADE80"></div><div class="meta"><div class="name" style="color:#EAECEF">Einnahme (dunkel)</div><div class="hex" style="color:#A6ADBB">#4ADE80</div><span class="ratio pass">9.68:1</span></div></div>
+    </div>
+    <div style="color:#A6ADBB;font-size:var(--font-klein);margin-top:var(--space-4)">Hintergrund #121212 statt reinem Schwarz — vermeidet Halation/Glow-Effekte auf dunklen Flächen. Rahmen „stark" (#7C8593) ist bewusst ein einziges Token für Hell UND Dunkel: funktioniert auf beiden Flächen über 3:1.</div>
+  </div>
+
+  <h2>Typografie</h2>
+  <div class="type-row"><span class="tag">Klein · 11px</span><span style="font-size:11px">Kleine Nebentexte, Feldbeschriftungen, Tabellen-Spaltenköpfe</span></div>
+  <div class="type-row"><span class="tag">Normal · 14px</span><span style="font-size:14px">Fließtext, Tabellenzellen, Eingabefelder, Buttons</span></div>
+  <div class="type-row"><span class="tag">Überschrift · 16px</span><span style="font-size:16px;font-weight:700">Kartentitel, Dialogüberschriften</span></div>
+  <div class="type-row"><span class="tag">Seitentitel · 26px (neu)</span><span style="font-size:26px;font-weight:700">Titel im Kopf jedes Bereichs</span></div>
+  <div class="type-row" style="border-bottom:none"><span class="tag">KPI-Zahl · 30px (neu)</span><span style="font-size:30px;font-weight:700">1.284,50 €</span></div>
+
+  <h2>Abstände — 4px-Raster</h2>
+  <div class="space-row"><span class="space-label">4px</span><div class="space-bar" style="width:4px"></div></div>
+  <div class="space-row"><span class="space-label">8px</span><div class="space-bar" style="width:8px"></div></div>
+  <div class="space-row"><span class="space-label">12px</span><div class="space-bar" style="width:12px"></div></div>
+  <div class="space-row"><span class="space-label">16px</span><div class="space-bar" style="width:16px"></div></div>
+  <div class="space-row"><span class="space-label">20px</span><div class="space-bar" style="width:20px"></div></div>
+  <div class="space-row"><span class="space-label">24px</span><div class="space-bar" style="width:24px"></div></div>
+  <div class="space-row"><span class="space-label">32px</span><div class="space-bar" style="width:32px"></div></div>
+
+  <h2>Icons — 20×20, Strichstärke 1,75px</h2>
+  <div class="icon-grid">
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10L10 4l7 6M5 9v7h10V9"/></svg><span>Startseite</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 7v6M7 10h6"/></svg><span>Erfassen</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="10" height="13" rx="1.5"/><path d="M8 4V3h4v1"/><path d="M7.5 10.3l1.8 1.8L13 8.6"/></svg><span>Offene Posten</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V10M9.5 16V4M15 16V8"/><path d="M3 16.5h14"/></svg><span>Report</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="6" r="1"/><path d="M7.5 6H16"/><circle cx="4" cy="10" r="1"/><path d="M7.5 10H16"/><circle cx="4" cy="14" r="1"/><path d="M7.5 14H13"/></svg><span>Ausgabenliste</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2M10 15v2M17 10h-2M5 10H3M15.1 4.9l-1.4 1.4M6.3 13.7l-1.4 1.4M15.1 15.1l-1.4-1.4M6.3 6.3L4.9 4.9"/></svg><span>Verwaltung</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3H16a1 1 0 011 1v5.5a1 1 0 01-.3.7l-7 7a1 1 0 01-1.4 0l-6-6a1 1 0 010-1.4l7-7a1 1 0 01.7-.3z"/><circle cx="13.3" cy="6.7" r="1"/></svg><span>Kategorien</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7" r="3"/><path d="M2.5 17c0-3 2.2-5 5-5s5 2 5 5"/><circle cx="15" cy="8.5" r="2.3"/><path d="M12.8 17c.3-2.1 1.7-3.6 3.2-3.9"/></svg><span>Personen</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 8a5.5 5.5 0 019.6-3.7M15.5 4v3.7h-3.7"/><path d="M15.5 12a5.5 5.5 0 01-9.6 3.7M4.5 16v-3.7h3.7"/></svg><span>Wiederkehrende Ausgaben</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l6 2.2v5c0 4-2.5 6.6-6 7.3-3.5-.7-6-3.3-6-7.3v-5l6-2.2z"/><path d="M7.3 10l1.8 1.8L13 8"/></svg><span>Datensicherung</span></div>
+    <div class="icon-card"><svg viewBox="0 0 20 20" stroke="#1D2433" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h12M4 10h12M4 14.5h12"/><circle cx="8" cy="5.5" r="1.6"/><circle cx="13" cy="10" r="1.6"/><circle cx="6.5" cy="14.5" r="1.6"/></svg><span>Darstellung</span></div>
+  </div>
+
+  <h2>Buttons, Karten, Tabellen</h2>
+  <div class="row-flex" style="margin-bottom:var(--space-5)">
+    <button class="btn btn-primary">Speichern</button>
+    <button class="btn btn-secondary">Abbrechen</button>
+    <button class="btn btn-ghost">Filter zurücksetzen</button>
+    <button class="btn btn-danger">Löschen</button>
+  </div>
+  <div class="row-flex">
+    <div class="kpi" style="width:220px">
+      <div class="kpi-label">Ausgaben, August</div>
+      <div class="kpi-value text-expense">1.284,50 €</div>
+      <div class="kpi-hint">17 Buchungen</div>
+    </div>
+    <div class="card" style="width:420px">
+      <table class="table">
+        <thead><tr><th>Kategorie</th><th class="num">Betrag</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill"><span class="dot" style="background:#2E9E5B"></span>Lebensmittel</span></td><td class="num text-expense">-64,20 €</td></tr>
+          <tr><td><span class="pill"><span class="dot" style="background:#34495E"></span>Gehalt</span></td><td class="num text-income">+2.100,00 €</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>Skalierungsprobe — dieselbe Karte bei allen 4 Schriftstufen</h2>
+  <div class="lead">Pflichtprüfung aus <code>Anzeige/Skalierung.cs</code>: Klein (80%) · Normal (100%) · Groß (140%) · Sehr groß (200%). Nichts darf abschneiden.</div>
+  <div class="row-flex">
+    <div class="scale-card" style="font-size:8.8px"><div style="font-weight:700;font-size:12.8px;margin-bottom:6px">Offene Posten</div><div>Tom · Werkstatt</div><div style="color:var(--expense-text);font-weight:600">-72,20 €</div></div>
+    <div class="scale-card" style="font-size:11px"><div style="font-weight:700;font-size:16px;margin-bottom:6px">Offene Posten</div><div>Tom · Werkstatt</div><div style="color:var(--expense-text);font-weight:600">-72,20 €</div></div>
+    <div class="scale-card" style="font-size:15.4px"><div style="font-weight:700;font-size:22.4px;margin-bottom:6px">Offene Posten</div><div>Tom · Werkstatt</div><div style="color:var(--expense-text);font-weight:600">-72,20 €</div></div>
+    <div class="scale-card" style="font-size:22px"><div style="font-weight:700;font-size:32px;margin-bottom:6px">Offene Posten</div><div>Tom · Werkstatt</div><div style="color:var(--expense-text);font-weight:600">-72,20 €</div></div>
+  </div>
+
+</div>
+</body>
+</html>

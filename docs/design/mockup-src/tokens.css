@@ -1,0 +1,145 @@
+/* ============================================================
+   Design-Tokens — Ausgabenverwaltung Redesign
+   Diese Datei ist die einzige Quelle für Farben, Typografie,
+   Abstände und Radien in allen Mockups. Jeder Wert hier landet
+   unverändert in UIUIXDESIGN.md.
+
+   Kontrastwerte wurden mit der WCAG-Formel real berechnet
+   (relative Luminanz), nicht geschätzt — siehe Abschnitt
+   "Barrierefreiheit" im Hauptdokument.
+   ============================================================ */
+
+:root,
+[data-theme="light"] {
+  /* ---- Flächen ---- */
+  --canvas: #F7F8FA;      /* Hintergrund des Inhaltsbereichs */
+  --surface: #FFFFFF;     /* Karten, Sidebar, Tabellenkopf */
+  --surface-raised: #FFFFFF; /* Dialoge, Overlays (+ Schatten) */
+  --sidebar-active-bg: #EAF0FE;
+
+  /* ---- Text ---- */
+  --text-primary: #1D2433;   /* 15.5:1 auf --surface */
+  --text-secondary: #5B6472; /* 5.98:1 auf --surface */
+  --text-tertiary: #6B7280;  /* 4.83:1 auf --surface — kleinste Hilfstexte */
+  --text-on-accent: #FFFFFF;
+
+  /* ---- Rahmen ---- */
+  --border-subtle: #E4E7EC;  /* Trennlinien, rein dekorativ */
+  --border-strong: #7C8593;  /* Feld-/Buttonrahmen, 3.73:1 — erfüllt WCAG-1.4.11 */
+
+  /* ---- Akzent (Marke, nie in der Kategorie-Palette verwendet) ---- */
+  --accent: #2F5FD1;         /* 5.71:1 auf Weiß */
+  --accent-hover: #244DB0;   /* 7.60:1 auf Weiß */
+  --accent-subtle-bg: #EAF0FE;
+  --accent-subtle-text: #2F5FD1; /* 5.00:1 auf --accent-subtle-bg */
+
+  /* ---- Status (ersetzen die bisher pro View hart codierten Hex-Bänder) ---- */
+  --success-text: #067647;  --success-bg: #ECFDF3;  --success-border: #ABEFC6;
+  --warning-text: #B54708;  --warning-bg: #FFFAEB;  --warning-border: #FEDF89;
+  --danger-text:  #B42318;  --danger-bg:  #FEF3F2;  --danger-border: #FECDCA;
+  --info-text:    #175CD3;  --info-bg:    #EFF8FF;  --info-border:  #B2DDFF;
+
+  /* ---- Buchungs-Vorzeichenfarben (Regel 10: immer Zusatz zum +/-) ----
+     Ausgabe unverändert aus der bestehenden App übernommen (6.68:1,
+     bereits konform). Einnahme ist NEU: das bisherige #66BB6A erreicht
+     nur 2.36:1 auf Weiß und verfehlt WCAG AA (4.5:1) klar — im
+     Redesign auf #187A40 (5.39:1) korrigiert, siehe Fundstelle im
+     Hauptdokument. */
+  --expense-text: #A03A30;   /* unverändert, 6.68:1 */
+  --income-text: #187A40;    /* korrigiert, 5.39:1 (bisher 2.36:1) */
+
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --shadow-dialog: 0 8px 24px rgba(16, 24, 40, 0.18);
+}
+
+[data-theme="dark"] {
+  --canvas: #121212;
+  --surface: #1B1D22;
+  --surface-raised: #22242B;
+  --sidebar-active-bg: #1E2A47;
+
+  --text-primary: #EAECEF;    /* 14.25:1 auf --surface */
+  --text-secondary: #A6ADBB;  /* 7.48:1 auf --surface */
+  --text-tertiary: #7A8290;   /* 4.35:1 auf --surface */
+  --text-on-accent: #0B1220;
+
+  --border-subtle: #2A2D34;
+  --border-strong: #7C8593;   /* 4.52:1 auf --surface — dasselbe Token wie hell */
+
+  --accent: #8AB0FF;          /* 7.82:1 auf --surface */
+  --accent-hover: #A9C6FF;
+  --accent-subtle-bg: #1E2A47;
+  --accent-subtle-text: #8AB0FF;
+
+  --success-text: #3DD68C;  --success-bg: #0F2A1E;  --success-border: #1E5A3D;
+  --warning-text: #F2B24A;  --warning-bg: #332108;  --warning-border: #6B4A16;
+  --danger-text:  #F296A0;  --danger-bg:  #3A1418;  --danger-border: #6B2530;
+  --info-text:    #8AB0FF;  --info-bg:    #101E36;  --info-border:  #274270;
+
+  --expense-text: #F1A79E;   /* 8.64:1 auf --surface */
+  --income-text: #4ADE80;    /* 9.68:1 auf --surface */
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+:root {
+  /* ---- Typografie ----
+     Klein/Normal/Ueberschrift entsprechen 1:1 den bestehenden
+     DynamicResource-Schlüsseln aus App.axaml (11/14/16px bei
+     Skalierungsstufe "Normal") — hier unverändert übernommen.
+     Seitentitel ist NEU: eine vierte Stufe für die große Überschrift
+     am Kopf jedes Bereichs (bisher hatte kein Screen einen echten
+     Titel). Alle vier Stufen skalieren im echten Code weiter über
+     Anzeige/Skalierung.cs (Faktor 0.8×/1.0×/1.4×/2.0×). */
+  --font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-klein: 11px;
+  --font-normal: 14px;
+  --font-ueberschrift: 16px;
+  --font-seitentitel: 26px;
+  --font-kpi: 30px;
+  --line-klein: 1.4;
+  --line-normal: 1.5;
+  --line-ueberschrift: 1.3;
+  --line-seitentitel: 1.25;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- Abstände: 4px-Basisraster (Fluent-2-Spacing-Ramp) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* ---- Radien ---- */
+  --radius-sm: 4px;   /* Buttons, Eingabefelder, Zellen-Badges */
+  --radius-md: 8px;   /* Karten, Banner */
+  --radius-lg: 12px;  /* Dialoge, Flyouts */
+  --radius-full: 999px; /* Farbpunkt, Pills, Avatare */
+
+  /* ---- Sidebar-Maße ----
+     240px expandiert / 64px eingeklappt liegen in der recherchierten
+     Praxisspanne (240–300 / 48–64px). Über {anzeige:Breite} skaliert,
+     wächst also mit der Schriftgröße mit wie jede andere feste Breite
+     in der App. */
+  --sidebar-width-expanded: 240px;
+  --sidebar-width-collapsed: 64px;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-normal);
+  line-height: var(--line-normal);
+  color: var(--text-primary);
+  background: var(--canvas);
+}
+svg.icon { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
