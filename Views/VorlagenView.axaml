@@ -46,7 +46,14 @@
     </UserControl.Styles>
 
     <Panel>
-        <DockPanel>
+        <!-- Seitenrand und Titel sitzen am DockPanel, nicht am aeusseren
+             Panel: das Panel traegt zusaetzlich den Bearbeiten-Dialog als
+             Overlay, und der soll die ganze Flaeche abdecken, nicht erst
+             innerhalb des Seitenrands beginnen. -->
+        <DockPanel Margin="32,24">
+            <TextBlock DockPanel.Dock="Top" Classes="seitentitel"
+                       Text="Wiederkehrende Ausgaben" Margin="0,0,0,20" />
+
             <!-- ============ Werkzeugleiste ============ -->
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
                         Margin="0,0,0,8">

@@ -3,20 +3,25 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace Ausgabenverwaltung.ViewModels;
 
 /// <summary>
-/// Bereich "Verwaltung" - Personen, Kategorien, Vorlagen fuer
-/// wiederkehrende Buchungen, Datensicherung und Darstellung pflegen.
-/// Alle fuenf Unterbereiche sind eigene ViewModels (siehe
-/// <see cref="PersonenViewModel"/>, <see cref="KategorienViewModel"/>,
-/// <see cref="VorlagenViewModel"/>, <see cref="DatensicherungViewModel"/>
-/// und <see cref="DarstellungViewModel"/>); hier findet nur die
+/// Bereich "Verwaltung" - Kategorien, Personen und Datensicherung
+/// pflegen. Alle Unterbereiche sind eigene ViewModels (siehe
+/// <see cref="PersonenViewModel"/>, <see cref="KategorienViewModel"/> und
+/// <see cref="DatensicherungViewModel"/>); hier findet nur die
 /// Verdrahtung statt.
 ///
 /// <see cref="AusgewaehlterTabIndex"/> ist neu (UI/UX-Redesign, Abschnitt
-/// 3): die Sidebar springt von den fuenf Unterpunkten der Gruppe
+/// 3): die Sidebar springt von den drei Unterpunkten der Gruppe
 /// "Verwaltung" direkt in den passenden Tab, statt immer bei Kategorien
 /// zu landen (siehe MainViewModel und Views/VerwaltungView.axaml). Die
 /// Tab-Leiste innerhalb der Seite bleibt zusaetzlich als Kontext-
 /// Umschalter erhalten.
+///
+/// <see cref="Vorlagen"/> und <see cref="Darstellung"/> stehen weiterhin
+/// hier, WERDEN ABER NICHT MEHR ALS TAB ANGEZEIGT: beide sind
+/// eigenstaendige Bereiche mit eigenem Navigationseintrag (siehe
+/// MainViewModel). Sie bleiben Eigentum dieser Klasse, weil sie ueber
+/// dieselbe DI-Instanz laufen und die Sidebar-Fusszeile den Zustand von
+/// <see cref="Darstellung"/> anzeigt.
 /// </summary>
 public sealed partial class VerwaltungViewModel : ViewModelBase
 {

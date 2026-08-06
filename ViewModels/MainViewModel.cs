@@ -15,17 +15,26 @@ namespace Ausgabenverwaltung.ViewModels;
 ///
 /// Die Navigation ist seit dem UI/UX-Redesign (Abschnitt 3) in Gruppen
 /// gegliedert (siehe <see cref="NavigationGruppe"/>) statt einer flachen
-/// Liste von fuenf Eintraegen. "Wiederkehrende Ausgaben" (Gruppe
-/// "Erfassen &amp; Verwalten") sowie die drei verbliebenen Unterpunkte von
-/// "Verwaltung" zeigen dabei alle auf dieselbe
-/// <see cref="VerwaltungViewModel"/>-Instanz, aktivieren aber jeweils einen
-/// anderen Tab (siehe <see cref="NavigationItem.VerwaltungsTabIndex"/>).
-/// "Darstellung" hat seit dem Reiter-Umbau keinen sichtbaren Sidebar-Platz
-/// mehr (Gruppe <see cref="NavigationGruppe.Keine"/>, wie die Startseite),
-/// bleibt aber ein normaler Navigationseintrag: die Fusszeile
-/// (Views/MainWindow.axaml) waehlt ihn ueber <see cref="OeffneDarstellungCommand"/>
-/// an und wechselt damit ganz normal den Hauptinhalt statt ein Flyout zu
-/// oeffnen.
+/// Liste von fuenf Eintraegen.
+///
+/// Nur noch die drei Unterpunkte von "Verwaltung" (Kategorien, Personen,
+/// Datensicherung) zeigen auf dieselbe
+/// <see cref="VerwaltungViewModel"/>-Instanz und aktivieren dort jeweils
+/// einen anderen Tab (siehe <see cref="NavigationItem.VerwaltungsTabIndex"/>).
+///
+/// "Wiederkehrende Ausgaben" und "Darstellung" sind dagegen eigenstaendige
+/// Bereiche: ihr Navigationseintrag zeigt direkt auf
+/// <see cref="VorlagenViewModel"/> bzw. <see cref="DarstellungViewModel"/>,
+/// nicht auf die Verwaltungsseite. Sie oeffnen deren Tab-Leiste damit gar
+/// nicht erst und bieten von sich aus auch keinen Weg zurueck in die
+/// anderen Verwaltungsbereiche - beides waere ein zweiter, ungewollter
+/// Zugang zu Seiten, die mit ihnen nichts zu tun haben.
+///
+/// "Darstellung" hat zusaetzlich keinen sichtbaren Sidebar-Platz (Gruppe
+/// <see cref="NavigationGruppe.Keine"/>, wie die Startseite): die Fusszeile
+/// (Views/MainWindow.axaml) waehlt den Eintrag ueber
+/// <see cref="OeffneDarstellungCommand"/> an und wechselt damit ganz normal
+/// den Hauptinhalt statt ein Flyout zu oeffnen.
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase
 {
@@ -100,16 +109,23 @@ public sealed partial class MainViewModel : ViewModelBase
 
             new("Erfassen", erfassen, "IconErfassen", NavigationGruppe.ErfassenUndVerwalten),
             new("Offene Posten", offenePosten, "IconOffenePosten", NavigationGruppe.ErfassenUndVerwalten),
-            new("Wiederkehrende Ausgaben", verwaltung, "IconVorlagen", NavigationGruppe.ErfassenUndVerwalten, verwaltungsTabIndex: 2),
+
+            // Zeigt auf VorlagenViewModel, NICHT auf VerwaltungViewModel:
+            // "Wiederkehrende Ausgaben" ist ein eigenstaendiger Bereich,
+            // der die Verwaltungsseite samt ihrer Tab-Leiste gar nicht
+            // erst oeffnet.
+            new("Wiederkehrende Ausgaben", verwaltung.Vorlagen, "IconVorlagen", NavigationGruppe.ErfassenUndVerwalten),
 
             new("Report", report, "IconReport", NavigationGruppe.Auswertung),
             new("Ausgabenliste", ausgabenliste, "IconAusgabenliste", NavigationGruppe.Auswertung),
 
             new("Kategorien", verwaltung, "IconKategorien", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 0),
             new("Personen", verwaltung, "IconPersonen", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 1),
-            new("Datensicherung", verwaltung, "IconDatensicherung", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 3),
+            new("Datensicherung", verwaltung, "IconDatensicherung", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 2),
 
-            new("Darstellung", verwaltung, "IconDarstellung", NavigationGruppe.Keine, verwaltungsTabIndex: 4),
+            // Ebenfalls eigenstaendig - nur ohne Sidebar-Platz, angewaehlt
+            // ueber die Fusszeile (OeffneDarstellungCommand).
+            new("Darstellung", verwaltung.Darstellung, "IconDarstellung", NavigationGruppe.Keine),
         };
 
         StartseiteEintrag = NavigationItems[0];
@@ -261,6 +277,14 @@ public sealed partial class MainViewModel : ViewModelBase
             _ausgabenliste.AktualisiereListe();
         }
 
+        // Eigenstaendiger Bereich, nicht mehr Teil der Verwaltungsseite:
+        // die Spalten "erzeugt" und "naechste Faelligkeit" veralten,
+        // sobald anderswo etwas erzeugt oder geloescht wurde.
+        if (ReferenceEquals(value.ViewModel, _verwaltung.Vorlagen))
+        {
+            _verwaltung.Vorlagen.AktualisiereListe();
+        }
+
         if (ReferenceEquals(value.ViewModel, _verwaltung))
         {
             // Ein Unterpunkt der Gruppe "Verwaltung" bringt seinen
@@ -271,10 +295,6 @@ public sealed partial class MainViewModel : ViewModelBase
             {
                 _verwaltung.AusgewaehlterTabIndex = tabIndex;
             }
-
-            // Die Spalten "erzeugt" und "naechste Faelligkeit" veralten,
-            // sobald anderswo etwas erzeugt oder geloescht wurde.
-            _verwaltung.Vorlagen.AktualisiereListe();
 
             // Das Alter der letzten externen Sicherung waechst waehrend
             // der Sitzung weiter, und im Sicherungsordner kann von aussen

@@ -26,8 +26,12 @@
         </Style>
     </UserControl.Styles>
 
-    <ScrollViewer>
-        <StackPanel Spacing="16">
+    <DockPanel Margin="32,24">
+        <TextBlock DockPanel.Dock="Top" Classes="seitentitel"
+                   Text="Darstellung" Margin="0,0,0,20" />
+
+        <ScrollViewer>
+            <StackPanel Spacing="16">
             <Border Classes="karte">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Thema" Classes="ueberschrift" />
@@ -126,6 +130,7 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
-        </StackPanel>
-    </ScrollViewer>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
 </UserControl>

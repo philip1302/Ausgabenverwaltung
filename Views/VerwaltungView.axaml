@@ -9,11 +9,18 @@
              x:DataType="vm:VerwaltungViewModel">
 
     <!-- UI/UX-Redesign, Abschnitt 3/5.5-5.9: "Verwaltung" wird von der
-         Sidebar aus direkt in einen der fuenf Unterbereiche angesprungen
+         Sidebar aus direkt in einen der drei Unterbereiche angesprungen
          (siehe NavigationItem.VerwaltungsTabIndex, MainViewModel). Die
          Tab-Leiste bleibt zusaetzlich als Kontext-Umschalter INNERHALB
          dieser Seite erhalten - deshalb SelectedIndex zweiseitig an
-         VerwaltungViewModel.AusgewaehlterTabIndex gebunden. -->
+         VerwaltungViewModel.AusgewaehlterTabIndex gebunden.
+
+         Hier stehen ausschliesslich die Bereiche, die auch in der Sidebar
+         unter "Verwaltung" haengen. "Wiederkehrende Ausgaben" und
+         "Darstellung" sind eigenstaendige Bereiche mit eigenem
+         Navigationseintrag und tauchen deshalb in dieser Leiste NICHT auf:
+         ein Tab hier waere ein zweiter Weg zu einem Bereich, der gar nicht
+         zu dieser Seite gehoert. -->
     <UserControl.Styles>
         <Style Selector="TabItem">
             <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
@@ -36,14 +43,8 @@
             <TabItem Header="Personen">
                 <views:PersonenView DataContext="{Binding Personen}" Margin="0,20,0,0" />
             </TabItem>
-            <TabItem Header="Wiederkehrende Ausgaben">
-                <views:VorlagenView DataContext="{Binding Vorlagen}" Margin="0,20,0,0" />
-            </TabItem>
             <TabItem Header="Datensicherung">
                 <views:DatensicherungView DataContext="{Binding Datensicherung}" Margin="0,20,0,0" />
-            </TabItem>
-            <TabItem Header="Darstellung">
-                <views:DarstellungView DataContext="{Binding Darstellung}" Margin="0,20,0,0" />
             </TabItem>
         </TabControl>
     </DockPanel>
