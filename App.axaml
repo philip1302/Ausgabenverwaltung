@@ -4,49 +4,165 @@
              xmlns:local="using:Ausgabenverwaltung"
              xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             <!-- "Default" ThemeVariant folgt der Systemvorgabe. Zur Laufzeit
+                  gewaehlt wird "Light"/"Dark"/"Default" ueber
+                  DarstellungViewModel (UI/UX Redesign, Verwaltung / Darstellung,
+                  Thema Umschalter), siehe App.axaml.cs. -->
 
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
 
-    <!-- ============ Zentrale Schriftgroessen ============
-         Die drei Groessen, aus denen die gesamte Oberflaeche besteht.
-         Einzelne Ansichten tragen KEINE eigenen Schriftgroessen mehr ein,
-         sondern beziehen sie hier ueber DynamicResource.
+    <!-- ====================================================
+         UI/UX-Redesign — Designsystem (docs/design/UIUIXDESIGN.md)
+         ====================================================
+         Farben stehen als ThemeDictionaries: Hell/Dunkel sind
+         gleichberechtigt und jeweils eigenstaendig auf WCAG-AA-Kontrast
+         geprueft (siehe Dokument, Abschnitt 2.1/2.2), keine Farbe ist
+         hier geraten. Schriftgroessen, Radien und Icons sind unabhaengig
+         vom Thema und stehen als normale Ressourcen daneben.
 
-         Die Werte hier gelten fuer die Stufe "Normal" und entsprechen
-         dem, was vorher fest in den Ansichten stand. Beim Start und bei
-         jeder Umstellung ueberschreibt Anzeige/Skalierung.cs sie mit den
-         skalierten Werten - weil die Ansichten sie dynamisch beziehen,
-         wirkt das sofort und ohne Neustart. -->
+         Die drei bestehenden Schriftgroessen-Schluessel
+         (SchriftKlein/Normal/Ueberschrift) UND die zwei neuen
+         (SchriftSeitentitel/SchriftKpi) werden von Anzeige/Skalierung.cs
+         beim Start und bei jeder Umstellung ueberschrieben - die Werte
+         hier gelten nur bis dahin bzw. als Ruecksicherung. -->
     <Application.Resources>
-        <x:Double x:Key="SchriftKlein">11</x:Double>
-        <x:Double x:Key="SchriftNormal">14</x:Double>
-        <x:Double x:Key="SchriftUeberschrift">16</x:Double>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
 
-        <!-- Die Farbe negativer Betraege in der (unveraendert gebliebenen)
-             Offene-Posten-Liste. Gedaempft und nicht signalrot: sie
-             warnt nicht, sie ergaenzt nur. Ausserhalb der Offene-Posten-
-             Liste steht dieselbe Bedeutung heute unter AusgabeFarbe -
-             siehe dort. -->
-        <SolidColorBrush x:Key="ErstattungFarbe">#A03A30</SolidColorBrush>
+                <!-- ==== Hell (docs/design/UIUIXDESIGN.md, 2.1) ==== -->
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="CanvasFarbe">#F7F8FA</SolidColorBrush>
+                    <SolidColorBrush x:Key="SurfaceFarbe">#FFFFFF</SolidColorBrush>
+                    <SolidColorBrush x:Key="SurfaceRaisedFarbe">#FFFFFF</SolidColorBrush>
 
-        <!-- Die Farbe von Ausgaben ausserhalb der Offene-Posten-Liste:
-             derselbe gedaempfte Rotton wie ErstattungFarbe, unter eigenem
-             Namen, weil er hier eine andere Bedeutung traegt (jede
-             Ausgabe, nicht nur ein negativer Betrag). Auch hier ist die
-             Farbe ein ZUSATZ - das Minuszeichen aus EuroText.FormatSigned
-             steht ohnehin davor und traegt die Angabe auch ohne
-             Farbwahrnehmung (Regel 10). -->
-        <SolidColorBrush x:Key="AusgabeFarbe">#A03A30</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextPrimaerFarbe">#1D2433</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextSekundaerFarbe">#5B6472</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextTertiaerFarbe">#6B7280</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextAufAccentFarbe">#FFFFFF</SolidColorBrush>
 
-        <!-- Die Farbe von Einnahmen - gedaempftes Hellgruen als
-             Gegenstueck zum gedaempften Rot der Ausgaben, ebenso kein
-             Signalton. Auch hier ist die Farbe ein ZUSATZ: das
-             vorangestellte "+" (siehe EuroText.FormatSigned) traegt die
-             Angabe bereits ohne Farbwahrnehmung (Regel 10). -->
-        <SolidColorBrush x:Key="EinnahmeFarbe">#66BB6A</SolidColorBrush>
+                    <SolidColorBrush x:Key="BorderDezentFarbe">#E4E7EC</SolidColorBrush>
+                    <SolidColorBrush x:Key="BorderStarkFarbe">#7C8593</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="AccentFarbe">#2F5FD1</SolidColorBrush>
+                    <SolidColorBrush x:Key="AccentHoverFarbe">#244DB0</SolidColorBrush>
+                    <SolidColorBrush x:Key="AccentDezentFlaeche">#EAF0FE</SolidColorBrush>
+                    <SolidColorBrush x:Key="AccentDezentText">#2F5FD1</SolidColorBrush>
+                    <SolidColorBrush x:Key="SidebarAktivFlaeche">#EAF0FE</SolidColorBrush>
+                    <Color x:Key="SystemAccentColor">#2F5FD1</Color>
+
+                    <SolidColorBrush x:Key="ErfolgText">#067647</SolidColorBrush>
+                    <SolidColorBrush x:Key="ErfolgFlaeche">#ECFDF3</SolidColorBrush>
+                    <SolidColorBrush x:Key="ErfolgRahmen">#ABEFC6</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="WarnungText">#B54708</SolidColorBrush>
+                    <SolidColorBrush x:Key="WarnungFlaeche">#FFFAEB</SolidColorBrush>
+                    <SolidColorBrush x:Key="WarnungRahmen">#FEDF89</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="FehlerText">#B42318</SolidColorBrush>
+                    <SolidColorBrush x:Key="FehlerFlaeche">#FEF3F2</SolidColorBrush>
+                    <SolidColorBrush x:Key="FehlerRahmen">#FECDCA</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="HinweisText">#175CD3</SolidColorBrush>
+                    <SolidColorBrush x:Key="HinweisFlaeche">#EFF8FF</SolidColorBrush>
+                    <SolidColorBrush x:Key="HinweisRahmen">#B2DDFF</SolidColorBrush>
+
+                    <!-- Ausgabe unveraendert aus der bisherigen AusgabeFarbe (6,68:1).
+                         Einnahme KORRIGIERT: das bisherige #66BB6A erreichte auf Weiss
+                         nur 2,36:1 und verfehlte WCAG AA - jetzt #187A40 (5,39:1), siehe
+                         UIUIXDESIGN.md Abschnitt 2.1, "Fund waehrend der Recherche". -->
+                    <SolidColorBrush x:Key="AusgabeFarbe">#A03A30</SolidColorBrush>
+                    <SolidColorBrush x:Key="EinnahmeFarbe">#187A40</SolidColorBrush>
+                    <SolidColorBrush x:Key="ErstattungFarbe">#A03A30</SolidColorBrush>
+                </ResourceDictionary>
+
+                <!-- ==== Dunkel (docs/design/UIUIXDESIGN.md, 2.2) ==== -->
+                <ResourceDictionary x:Key="Dark">
+                    <!-- #121212 statt reinem Schwarz vermeidet Halation (Leuchteffekt
+                         um hellen Text). -->
+                    <SolidColorBrush x:Key="CanvasFarbe">#121212</SolidColorBrush>
+                    <SolidColorBrush x:Key="SurfaceFarbe">#1B1D22</SolidColorBrush>
+                    <SolidColorBrush x:Key="SurfaceRaisedFarbe">#22242B</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="TextPrimaerFarbe">#EAECEF</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextSekundaerFarbe">#A6ADBB</SolidColorBrush>
+                    <!-- Nachgebessert (Praxis-Fund nach Sichtpruefung): #7A8290
+                         erreichte auf der Flaeche SurfaceFarbe nur 4,35:1,
+                         unter WCAG AA (4,5:1) fuer Fliesstext, und war in der
+                         Praxis bei kleiner Schrift (Spaltenkoepfe,
+                         Feldbeschriftungen, KPI-Hinweiszeile) kaum lesbar.
+                         #9AA3B2 erreicht 6,63:1. -->
+                    <SolidColorBrush x:Key="TextTertiaerFarbe">#9AA3B2</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextAufAccentFarbe">#0B1220</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="BorderDezentFarbe">#2A2D34</SolidColorBrush>
+                    <!-- Bewusst DASSELBE Token wie Hell: #7C8593 erreicht auf beiden
+                         Flaechen ueber 3:1 (3,73:1 hell / 4,52:1 dunkel). -->
+                    <SolidColorBrush x:Key="BorderStarkFarbe">#7C8593</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="AccentFarbe">#8AB0FF</SolidColorBrush>
+                    <SolidColorBrush x:Key="AccentHoverFarbe">#A9C6FF</SolidColorBrush>
+                    <SolidColorBrush x:Key="AccentDezentFlaeche">#1E2A47</SolidColorBrush>
+                    <SolidColorBrush x:Key="AccentDezentText">#8AB0FF</SolidColorBrush>
+                    <SolidColorBrush x:Key="SidebarAktivFlaeche">#1E2A47</SolidColorBrush>
+                    <Color x:Key="SystemAccentColor">#8AB0FF</Color>
+
+                    <SolidColorBrush x:Key="ErfolgText">#3DD68C</SolidColorBrush>
+                    <SolidColorBrush x:Key="ErfolgFlaeche">#0F2A1E</SolidColorBrush>
+                    <SolidColorBrush x:Key="ErfolgRahmen">#1E5A3D</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="WarnungText">#F2B24A</SolidColorBrush>
+                    <SolidColorBrush x:Key="WarnungFlaeche">#332108</SolidColorBrush>
+                    <SolidColorBrush x:Key="WarnungRahmen">#6B4A16</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="FehlerText">#F296A0</SolidColorBrush>
+                    <SolidColorBrush x:Key="FehlerFlaeche">#3A1418</SolidColorBrush>
+                    <SolidColorBrush x:Key="FehlerRahmen">#6B2530</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="HinweisText">#8AB0FF</SolidColorBrush>
+                    <SolidColorBrush x:Key="HinweisFlaeche">#101E36</SolidColorBrush>
+                    <SolidColorBrush x:Key="HinweisRahmen">#274270</SolidColorBrush>
+
+                    <SolidColorBrush x:Key="AusgabeFarbe">#F1A79E</SolidColorBrush>
+                    <SolidColorBrush x:Key="EinnahmeFarbe">#4ADE80</SolidColorBrush>
+                    <SolidColorBrush x:Key="ErstattungFarbe">#F1A79E</SolidColorBrush>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- ==== Schriftgroessen ====
+                 Vier bestehende plus die neue Seitentitel-/KPI-Stufe
+                 (UIUIXDESIGN.md, 2.3). Werte hier gelten fuer "Normal" und
+                 werden von Anzeige/Skalierung.cs sofort ueberschrieben. -->
+            <x:Double x:Key="SchriftKlein">11</x:Double>
+            <x:Double x:Key="SchriftNormal">14</x:Double>
+            <x:Double x:Key="SchriftUeberschrift">16</x:Double>
+            <x:Double x:Key="SchriftSeitentitel">26</x:Double>
+            <x:Double x:Key="SchriftKpi">30</x:Double>
+
+            <!-- ==== Iconset (UIUIXDESIGN.md, 2.6) ====
+                 Selbst gezeichnete 24x24-Strichsymbole (Strichstaerke ueber
+                 Path.StrokeThickness am Verwendungsort, siehe Sidebar-Styles
+                 unten). Kein externes Icon-Font, keine neue Abhaengigkeit. -->
+            <StreamGeometry x:Key="IconStartseite">M4,12 L12,5 L20,12 M6,10.5 V20 H11 V14 H15 V20 H20 V10.5</StreamGeometry>
+            <StreamGeometry x:Key="IconErfassen">M12,3 A9,9 0 1 1 11.99,3 Z M12,8 V16 M8,12 H16</StreamGeometry>
+            <StreamGeometry x:Key="IconOffenePosten">M9,4 H15 V6 H9 Z M6,4 H18 V21 H6 Z M9,13 L11,15.2 L16,9.5</StreamGeometry>
+            <StreamGeometry x:Key="IconReport">M4,20 H20 M7,20 V13 M12,20 V8 M17,20 V15</StreamGeometry>
+            <StreamGeometry x:Key="IconAusgabenliste">M8,6 H20 M8,12 H20 M8,18 H20 M4,6 L4.01,6 M4,12 L4.01,12 M4,18 L4.01,18</StreamGeometry>
+            <StreamGeometry x:Key="IconVerwaltung">M12,12 m-3,0 a3,3 0 1 0 6,0 a3,3 0 1 0 -6,0 M12,2 V5 M12,19 V22 M2,12 H5 M19,12 H22 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M4.9,19.1 L7,17 M17,7 L19.1,4.9</StreamGeometry>
+            <StreamGeometry x:Key="IconKategorien">M20,4 L13,4 L4,13 L11,20 L20,11 Z M15.5,8.5 m-1,0 a1,1 0 1 0 2,0 a1,1 0 1 0 -2,0</StreamGeometry>
+            <StreamGeometry x:Key="IconPersonen">M8,8 m-3,0 a3,3 0 1 0 6,0 a3,3 0 1 0 -6,0 M2,20 C2,15.3 4.7,13 8,13 C11.3,13 14,15.3 14,20 M17,8 m-2.3,0 a2.3,2.3 0 1 0 4.6,0 a2.3,2.3 0 1 0 -4.6,0 M12.3,20 C12.7,16.6 14.7,15 17,15 C19.5,15 21.6,16.6 22,20</StreamGeometry>
+            <StreamGeometry x:Key="IconVorlagen">M4,12 A8,8 0 0 1 18,6.3 M18,3 V7 H14 M20,12 A8,8 0 0 1 6,17.7 M6,21 V17 H10</StreamGeometry>
+            <StreamGeometry x:Key="IconDatensicherung">M12,2 L20,5 V11 C20,17 16,20.5 12,22 C8,20.5 4,17 4,11 V5 Z M8.5,12 L11,14.5 L16,9</StreamGeometry>
+            <StreamGeometry x:Key="IconDarstellung">M4,6 H20 M4,12 H20 M4,18 H20 M8,6 m-1.6,0 a1.6,1.6 0 1 0 3.2,0 a1.6,1.6 0 1 0 -3.2,0 M15,12 m-1.6,0 a1.6,1.6 0 1 0 3.2,0 a1.6,1.6 0 1 0 -3.2,0 M10,18 m-1.6,0 a1.6,1.6 0 1 0 3.2,0 a1.6,1.6 0 1 0 -3.2,0</StreamGeometry>
+            <StreamGeometry x:Key="IconChevronDown">M6,9 L12,15 L18,9</StreamGeometry>
+            <StreamGeometry x:Key="IconChevronRight">M9,6 L15,12 L9,18</StreamGeometry>
+            <StreamGeometry x:Key="IconSidebarUmschalten">M4,6 H20 M4,12 H20 M4,18 H20</StreamGeometry>
+
+            <!-- Zusaetzliche kleine Icons fuer die KPI-Kacheln der Startseite. -->
+            <StreamGeometry x:Key="IconPfeilHoch">M12,19 V5 M6,11 L12,5 L18,11</StreamGeometry>
+            <StreamGeometry x:Key="IconPfeilRunter">M12,5 V19 M6,13 L12,19 L18,13</StreamGeometry>
+        </ResourceDictionary>
     </Application.Resources>
 
     <!-- Wiederverwendbare Tabellen-Styles fuer alle Listen-/Tabellenansichten
@@ -66,7 +182,9 @@
              jedem Aufklapp-Fenster, das ein eigener Baum ist) und wird
              von dort an Eingabefelder, Schaltflaechen und Listen
              weitervererbt; die zweite fasst die Textbloecke direkt, die
-             ihre Groesse sonst aus dem Thema bezoegen.
+             ihre Groesse sonst aus dem Thema bezoegen. Dieselbe Regel
+             traegt jetzt auch Fenster-/Canvas-Hintergrund und
+             Standard-Vordergrundfarbe des neuen Designsystems.
 
              Beide stehen VOR den uebrigen Regeln: bei gleichrangigen
              Regeln gewinnt in Avalonia die spaetere, und die Klassen
@@ -77,6 +195,9 @@
              DynamicResource am Element selbst. -->
         <Style Selector=":is(TopLevel)">
             <Setter Property="FontSize" Value="{DynamicResource SchriftNormal}" />
+            <Setter Property="FontFamily" Value="avares://Avalonia.Fonts.Inter/Assets#Inter, Inter, Segoe UI, sans-serif" />
+            <Setter Property="Background" Value="{DynamicResource CanvasFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
         </Style>
         <!-- anzeige:Textzelle ausdruecklich mitgenannt: ein Selektor auf
              einen Typ trifft in Avalonia nur diesen Typ, nicht seine
@@ -86,6 +207,267 @@
              TextPresenter aus den Theme-Vorlagen betroffen. -->
         <Style Selector="TextBlock, anzeige|Textzelle">
             <Setter Property="FontSize" Value="{DynamicResource SchriftNormal}" />
+        </Style>
+
+        <!-- ==== Neue Grundformen (UIUIXDESIGN.md, 2.5/2.7) ====
+             Radien sind unabhaengig vom Thema und deshalb literal statt als
+             Ressource: 4px Buttons/Felder, 8px Karten/Banner, 12px Dialoge. -->
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="TextBox, AutoCompleteBox /template/ TextBox">
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+
+        <!-- ==== Button-Hierarchie ====
+             primary: gefuellt, Akzentfarbe - genau eine Aktion je Ansicht.
+             secondary: Rahmen, Rahmenfarbe stark.
+             ghost: nur Text, fuer zurueckhaltende Aktionen.
+             danger: nie gefuellt - ein gefuellter roter Button waere zu
+             viel Gewicht fuer eine Aktion, die ohnehin meist hinter einer
+             Bestaetigung steht (siehe Ansichten mit Loesch-Sicherheitsabfrage). -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AccentFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextAufAccentFarbe}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverFarbe}" />
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="{DynamicResource SurfaceFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderStarkFarbe}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="16,9" />
+        </Style>
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource FehlerText}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource FehlerRahmen}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="14,8" />
+        </Style>
+        <Style Selector="Button.primary, Button.secondary, Button.ghost, Button.danger">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftNormal}" />
+        </Style>
+
+        <!-- Kompakte Groesse fuer dichte Zeilen-Aktionen (Tabellen), damit
+             zwei/drei Aktions-Buttons nebeneinander in eine feste
+             Aktionsspalte passen - kombiniert mit .secondary/.danger/.ghost,
+             z. B. Classes="secondary klein". -->
+        <Style Selector="Button.klein">
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+        </Style>
+
+        <!-- Aktiver Zustand einer Schnellwahl-Schaltflaeche innerhalb einer
+             echten Button-Gruppe (UI/UX-Redesign, Abschnitt 5.3/5.4) -
+             sichtbar gefuellt statt nur einer Randfarbe, damit auf einen
+             Blick erkennbar ist, welcher Zeitraum aktiv gewaehlt ist. -->
+        <Style Selector="Button.secondary.aktiv">
+            <Setter Property="Background" Value="{DynamicResource AccentFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextAufAccentFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFarbe}" />
+        </Style>
+
+        <!-- ==== Karte ==== -->
+        <Style Selector="Border.karte">
+            <Setter Property="Background" Value="{DynamicResource SurfaceFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="20" />
+        </Style>
+
+        <!-- ==== Status-Banner ====
+             Ersetzt die bisher in jeder View einzeln hart codierten
+             Banner-Hexwerte (#FFE0E0, #DFF5DF, #FFF4CE, #FFF6DF ...) durch
+             vier benannte, in Hell UND Dunkel geprueften Klassen. -->
+        <Style Selector="Border.banner">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,10" />
+        </Style>
+        <Style Selector="Border.banner.erfolg">
+            <Setter Property="Background" Value="{DynamicResource ErfolgFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ErfolgRahmen}" />
+        </Style>
+        <Style Selector="Border.banner.warnung">
+            <Setter Property="Background" Value="{DynamicResource WarnungFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource WarnungRahmen}" />
+        </Style>
+        <Style Selector="Border.banner.fehler">
+            <Setter Property="Background" Value="{DynamicResource FehlerFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource FehlerRahmen}" />
+        </Style>
+        <Style Selector="Border.banner.hinweis">
+            <Setter Property="Background" Value="{DynamicResource HinweisFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HinweisRahmen}" />
+        </Style>
+        <Style Selector="Border.banner.erfolg TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ErfolgText}" />
+        </Style>
+        <Style Selector="Border.banner.warnung TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource WarnungText}" />
+        </Style>
+        <Style Selector="Border.banner.fehler TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource FehlerText}" />
+        </Style>
+        <Style Selector="Border.banner.hinweis TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource HinweisText}" />
+        </Style>
+        <!-- Ein "Schliessen"-/Aktions-Button innerhalb eines Banners soll
+             dessen Textfarbe NICHT erben - sonst waere er auf der eigenen
+             Flaeche kaum vom Text zu unterscheiden. -->
+        <Style Selector="Border.banner Button">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+
+        <!-- ==== Seitentitel (UIUIXDESIGN.md, 4/5) ====
+             Bewusst OHNE Untertitel/Kurzbeschreibung: eine dauerhaft
+             sichtbare Erklaerung unter dem Titel wurde nach Sichtpruefung
+             wieder verworfen - im Bild stehen nur Hinweise/Fehler, die
+             tatsaechlich einen Zustand melden, keine feste Beschriftung. -->
+        <Style Selector="TextBlock.seitentitel">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftSeitentitel}" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
+        <!-- ==== KPI-Kachel (neu, Startseite) ==== -->
+        <Style Selector="Border.kpi">
+            <Setter Property="Background" Value="{DynamicResource SurfaceFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="20" />
+        </Style>
+        <Style Selector="TextBlock.kpi-label">
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+        <Style Selector="TextBlock.kpi-wert">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKpi}" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <Style Selector="TextBlock.kpi-hinweis">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
+        </Style>
+
+        <!-- ==== Badge ==== -->
+        <Style Selector="Border.badge">
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="7,1" />
+        </Style>
+        <Style Selector="Border.badge.neutral">
+            <Setter Property="Background" Value="{DynamicResource BorderDezentFarbe}" />
+        </Style>
+        <Style Selector="Border.badge.neutral TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+        </Style>
+        <Style Selector="Border.badge.aktiv">
+            <Setter Property="Background" Value="{DynamicResource ErfolgFlaeche}" />
+        </Style>
+        <Style Selector="Border.badge.aktiv TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ErfolgText}" />
+        </Style>
+        <Style Selector="Border.badge.pausiert">
+            <Setter Property="Background" Value="{DynamicResource BorderDezentFarbe}" />
+        </Style>
+        <Style Selector="Border.badge.pausiert TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
+        </Style>
+        <Style Selector="Border.badge TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- ==== Filterleiste als eigene Karte ==== -->
+        <Style Selector="Border.filterleiste">
+            <Setter Property="Background" Value="{DynamicResource SurfaceFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <!-- ==== Sidebar (UIUIXDESIGN.md, Abschnitt 3) ==== -->
+        <Style Selector="Border.sidebar">
+            <Setter Property="Background" Value="{DynamicResource SurfaceFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+        </Style>
+        <Style Selector="TextBlock.marke">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="{DynamicResource SchriftUeberschrift}" />
+        </Style>
+        <Style Selector="Border.marken-icon">
+            <Setter Property="Background" Value="{DynamicResource AccentFarbe}" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="TextBlock.marken-buchstabe">
+            <Setter Property="Foreground" Value="{DynamicResource TextAufAccentFarbe}" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.nav-gruppe">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
+        </Style>
+
+        <!-- Ein Navigationseintrag: Button statt ListBoxItem, damit sich
+             die Verwaltungs-Untergruppe und das Badge frei zusammenbauen
+             lassen - Tastaturbedienbarkeit (Tab/Enter/Leertaste) bleibt
+             ueber die native Button-Semantik erhalten (Barrierefreiheit-
+             Checkliste, UIUIXDESIGN.md Abschnitt 6). -->
+        <Style Selector="Button.nav-item">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+        <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
+        </Style>
+        <Style Selector="Button.nav-item.aktiv /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SidebarAktivFlaeche}" />
+        </Style>
+        <Style Selector="Button.nav-item.aktiv">
+            <Setter Property="Foreground" Value="{DynamicResource AccentFarbe}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.nav-item Path.nav-icon">
+            <Setter Property="Stroke" Value="{DynamicResource TextTertiaerFarbe}" />
+        </Style>
+        <Style Selector="Button.nav-item.aktiv Path.nav-icon">
+            <Setter Property="Stroke" Value="{DynamicResource AccentFarbe}" />
+        </Style>
+        <!-- Der 3px-Balken links am aktiven Eintrag (UIUIXDESIGN.md, 3). -->
+        <Style Selector="Border.nav-aktiv-balken">
+            <Setter Property="Background" Value="{DynamicResource AccentFarbe}" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Width" Value="3" />
+        </Style>
+
+        <Style Selector="Border.sidebar-fusszeile">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
         </Style>
 
         <!-- Padding bewusst 0: der Abstand zwischen Spalten kommt
@@ -125,6 +507,7 @@
 
         <Style Selector="TextBlock.tabellenkopf">
             <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
         </Style>
         <Style Selector="TextBlock.tabellenkopf.zahl">
             <Setter Property="TextAlignment" Value="Right" />
@@ -145,6 +528,11 @@
         </Style>
         <Style Selector=":is(TextBlock).tabellenzelle.mitte">
             <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <!-- Zeilen-Hover in Tabellen (UIUIXDESIGN.md, 2.7 "Tabellenzeile") -->
+        <Style Selector="ListBox.tabelle > ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
         </Style>
 
         <!-- Negative Betraege in der Offene-Posten-Liste (dort weiterhin
@@ -181,20 +569,31 @@
             <Setter Property="Foreground" Value="{DynamicResource EinnahmeFarbe}" />
         </Style>
 
+        <!-- Opacity bewusst nur noch leicht gedaempft (vorher 0.7): mit der
+             ohnehin schon gedaempften TextTertiaerFarbe kombiniert, drueckte
+             0.7 den Kontrast im Dunkelmodus unter jede lesbare Schwelle. -->
         <Style Selector=":is(TextBlock).archiviert">
-            <Setter Property="Foreground" Value="Gray" />
-            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
+            <Setter Property="Opacity" Value="0.85" />
         </Style>
         <Style Selector="TextBlock.fehler">
-            <Setter Property="Foreground" Value="Red" />
+            <Setter Property="Foreground" Value="{DynamicResource FehlerText}" />
             <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
         </Style>
 
         <!-- Kleine Nebentexte: Feldbeschriftungen ueber den Filtern,
              Marker. Frueher in jeder Ansicht eigens mit FontSize 11
-             eingetragen, jetzt eine Klasse mit einer Ressource. -->
+             eingetragen, jetzt eine Klasse mit einer Ressource. Als
+             kleine Versalien (UIUIXDESIGN.md, 5.1: "Feldbeschriftungen
+             als kleine Versalien ueber dem Feld"). -->
         <Style Selector="TextBlock.klein">
             <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+        </Style>
+        <Style Selector="TextBlock.feldbeschriftung">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
+            <Setter Property="Margin" Value="0,10,0,3" />
         </Style>
 
         <!-- Ueberschriften in Dialogen und Gruppen. -->
@@ -218,14 +617,14 @@
             <Setter Property="Template">
                 <ControlTemplate>
                     <Border Background="{TemplateBinding Background}">
-                        <Border Name="Linie" Width="1" Background="#D0D0D0"
+                        <Border Name="Linie" Width="1" Background="{DynamicResource BorderStarkFarbe}"
                                 HorizontalAlignment="Center" />
                     </Border>
                 </ControlTemplate>
             </Setter>
         </Style>
         <Style Selector="anzeige|Spaltengriff:pointerover /template/ Border#Linie">
-            <Setter Property="Background" Value="#808080" />
+            <Setter Property="Background" Value="{DynamicResource AccentFarbe}" />
         </Style>
 
         <!-- Der Farbpunkt vor einem Kategorienamen. Er ERGAENZT den

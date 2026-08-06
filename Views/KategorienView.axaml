@@ -3,7 +3,7 @@
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
              xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.KategorienView"
              x:Name="Wurzel"
@@ -36,126 +36,64 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
         </Style>
+
+        <!-- Zeilen-Aktionen (Farbe/Umbenennen/Archivieren/Löschen/Verschieben):
+             UI/UX-Redesign, Abschnitt 5.5 - "als Icons/Text-Buttons in der
+             Zeile statt Kontextmenü/vorheriger Baumauswahl - sie werden
+             häufig genug gebraucht, um sichtbar zu sein statt versteckt". -->
+        <Style Selector="Button.zeilenaktion">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+        </Style>
+        <Style Selector="Button.zeilenaktion:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
+        </Style>
     </UserControl.Styles>
 
     <DockPanel>
+        <!-- Kein eigener Seitentitel hier: diese Ansicht sitzt als Tab
+             INNERHALB von VerwaltungView, das bereits "Verwaltung" als
+             Seitentitel traegt (UI/UX-Redesign, Abschnitt 3). -->
+
         <!-- ============ Band: Schreibfehler ============
              Der Baum darunter bleibt unverändert stehen: was nicht
              geschrieben wurde, wird auch nicht angezeigt. -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding SchreibFehlerSichtbar}"
-                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
-                CornerRadius="2" Padding="10" Margin="0,0,0,8">
+        <Border DockPanel.Dock="Top" Classes="banner fehler"
+                IsVisible="{Binding SchreibFehlerSichtbar}" Margin="0,0,0,8">
             <Grid anzeige:Raster.Spalten="*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
                            TextWrapping="Wrap" VerticalAlignment="Center" />
-                <Button Grid.Column="1" Content="Schließen"
+                <Button Grid.Column="1" Classes="ghost" Content="Schließen"
                         VerticalAlignment="Top"
                         Command="{Binding SchreibFehlerSchliessenCommand}" />
             </Grid>
         </Border>
 
-        <!-- Werkzeugleiste: alle Aktionen wirken auf AusgewaehlterKnoten -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <Button Content="Neue Oberkategorie" Command="{Binding NeueOberkategorieCommand}" />
-            <Button Content="Neue Unterkategorie"
-                    Command="{Binding NeueUnterkategorieCommand}"
-                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
-            <Button Content="Umbenennen"
-                    Command="{Binding BearbeitenStartenCommand}"
-                    CommandParameter="{Binding AusgewaehlterKnoten}"
-                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
-
-            <!-- Farbe der ausgewaehlten Kategorie. Feste Palette statt
-                 eines freien Farbwaehlers: so kann keine Kombination
-                 entstehen, die niemand mehr lesen kann. -->
-            <Button x:Name="FarbAuswahl"
-                    Content="Farbe…"
-                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}"
-                    Click="Farbwahl_Oeffnen"
-                    ToolTip.Tip="Farbe der Kategorie wählen. Unterkategorien ohne eigene Farbe übernehmen sie.">
-                <Button.Flyout>
-                    <Flyout Placement="BottomEdgeAlignedLeft">
-                        <StackPanel Width="{anzeige:Breite 300}" Spacing="4">
-                            <!-- Die Ueberschrift nennt die Kategorie, um die
-                                 es geht. Sie kommt aus FarbwahlKnoten und
-                                 nicht aus der Baumauswahl: die ist
-                                 verschwunden, sobald dieses Fenster den
-                                 Fokus hat. -->
-                            <TextBlock Text="{Binding FarbwahlHinweis}"
-                                       Classes="klein" Foreground="Gray"
-                                       TextWrapping="Wrap" Margin="6,0,0,4" />
-
-                            <!-- Fuenfzehn Eintraege werden bei den grossen
-                                 Schriftstufen hoeher als der Bildschirm -
-                                 deshalb mit Bildlauf. -->
-                            <ScrollViewer MaxHeight="{anzeige:Breite 360}">
-                                <ItemsControl ItemsSource="{Binding Farboptionen}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:FarbOption">
-                                            <!-- Auswahl ueber das Click-Ereignis statt
-                                                 ueber eine Command-Bindung: die muesste
-                                                 aus dem Aufklappfenster heraus auf den
-                                                 DataContext der Ansicht zugreifen, und
-                                                 der Weg dorthin fuehrt ueber eine
-                                                 Fenstergrenze. Was gesetzt wird, steht
-                                                 weiterhin im ViewModel (Regel 7). -->
-                                            <Button Classes="farbwahl"
-                                                    Click="Farbe_Gewaehlt">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <Border Classes="farbpunkt" Background="{Binding Pinsel}" />
-                                                    <TextBlock Text="{Binding Bezeichnung}" />
-                                                </StackPanel>
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-            <Button Content="Archivieren"
-                    Command="{Binding ArchivierenCommand}"
-                    CommandParameter="{Binding AusgewaehlterKnoten}"
-                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}"
-                    IsVisible="{Binding !AusgewaehlterKnotenIstArchiviert}" />
-            <Button Content="Wiederherstellen"
-                    Command="{Binding WiederherstellenCommand}"
-                    CommandParameter="{Binding AusgewaehlterKnoten}"
-                    IsVisible="{Binding AusgewaehlterKnotenIstArchiviert}" />
-
-            <!-- Loeschen steht NEBEN dem Archivieren, nicht an seiner
-                 Stelle: archiviert wird der Normalfall, geloescht nur,
-                 was nirgends verwendet wird (Regel 8). Was im Weg steht,
-                 erklaert das Band darunter. -->
-            <Button Content="Löschen"
-                    Command="{Binding LoeschenCommand}"
-                    CommandParameter="{Binding AusgewaehlterKnoten}"
-                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}"
-                    ToolTip.Tip="Endgültig löschen. Möglich nur, wenn die Kategorie weder Ausgaben noch Unterkategorien noch Vorlagen hat." />
-            <Button Content="▲" ToolTip.Tip="Nach oben verschieben"
-                    Command="{Binding NachObenVerschiebenCommand}"
-                    CommandParameter="{Binding AusgewaehlterKnoten}"
-                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
-            <Button Content="▼" ToolTip.Tip="Nach unten verschieben"
-                    Command="{Binding NachUntenVerschiebenCommand}"
-                    CommandParameter="{Binding AusgewaehlterKnoten}"
-                    IsEnabled="{Binding KnotenBestaetigtAusgewaehlt}" />
-            <CheckBox Content="Archivierte anzeigen" IsChecked="{Binding ArchivierteAnzeigen}" Margin="24,0,0,0" />
-        </StackPanel>
+        <!-- ============ Kopfzeile: Uebersicht + Neue Kategorie ============
+             UI/UX-Redesign, Abschnitt 5.5: "19 Kategorien, 4 Ebenen" links,
+             genau eine primaere Aktion rechts (mockups/06-verwaltung-kategorien.png). -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,12">
+            <TextBlock Grid.Column="0" Text="{Binding UebersichtText}"
+                       Foreground="{DynamicResource TextTertiaerFarbe}"
+                       VerticalAlignment="Center" />
+            <CheckBox Grid.Column="1" Content="Archivierte anzeigen"
+                      IsChecked="{Binding ArchivierteAnzeigen}" Margin="0,0,16,0" />
+            <Button Grid.Column="2" Classes="primary" Content="Neue Kategorie"
+                    Command="{Binding NeueOberkategorieCommand}" />
+        </Grid>
 
         <!-- Nachfrage, ob Unterkategorien beim Archivieren mitgenommen werden sollen -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding ArchivierungAnfrageAktiv}"
-                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                Padding="8" Margin="0,0,0,8">
+        <Border DockPanel.Dock="Top" Classes="banner warnung"
+                IsVisible="{Binding ArchivierungAnfrageAktiv}" Margin="0,0,0,8">
             <StackPanel Spacing="6">
                 <TextBlock Text="{Binding ArchivierungAnfrageText}" TextWrapping="Wrap" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Nur diese Kategorie" Command="{Binding ArchivierungNurDieseBestaetigenCommand}" />
-                    <Button Content="Mit Unterkategorien" Command="{Binding ArchivierungMitUnterkategorienBestaetigenCommand}" />
-                    <Button Content="Abbrechen" Command="{Binding ArchivierungAbbrechenCommand}" />
+                    <Button Classes="secondary" Content="Nur diese Kategorie" Command="{Binding ArchivierungNurDieseBestaetigenCommand}" />
+                    <Button Classes="secondary" Content="Mit Unterkategorien" Command="{Binding ArchivierungMitUnterkategorienBestaetigenCommand}" />
+                    <Button Classes="ghost" Content="Abbrechen" Command="{Binding ArchivierungAbbrechenCommand}" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -163,15 +101,13 @@
         <!-- Sicherheitsabfrage vor dem Loeschen einer unbenutzten
              Kategorie. Der Name steht darin, damit nicht die falsche
              verschwindet. -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding LoeschAnfrageAktiv}"
-                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                Padding="8" Margin="0,0,0,8">
+        <Border DockPanel.Dock="Top" Classes="banner warnung"
+                IsVisible="{Binding LoeschAnfrageAktiv}" Margin="0,0,0,8">
             <StackPanel Spacing="6">
                 <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
-                    <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                    <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                    <Button Classes="danger" Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -179,22 +115,20 @@
         <!-- Erklaerung statt blossem "geht nicht": was genau haengt, und
              die beiden Wege daran vorbei. Archivieren steht zuerst und
              ist der empfohlene. -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding LoeschHindernisAktiv}"
-                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                Padding="8" Margin="0,0,0,8">
+        <Border DockPanel.Dock="Top" Classes="banner warnung"
+                IsVisible="{Binding LoeschHindernisAktiv}" Margin="0,0,0,8">
             <StackPanel Spacing="6">
                 <TextBlock Text="{Binding LoeschHindernisText}" TextWrapping="Wrap" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Archivieren (empfohlen)"
+                    <Button Classes="secondary" Content="Archivieren (empfohlen)"
                             Command="{Binding HindernisArchivierenCommand}" />
-                    <Button Content="Zusammenführen…"
+                    <Button Classes="secondary" Content="Zusammenführen…"
                             Command="{Binding ZusammenfuehrenStartenCommand}"
                             IsEnabled="{Binding ZusammenfuehrenMoeglich}"
                             ToolTip.Tip="Alle Ausgaben und Vorlagen in eine andere Kategorie umhängen und diese hier löschen." />
-                    <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                    <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
                 </StackPanel>
-                <TextBlock Classes="klein" Foreground="Gray" TextWrapping="Wrap"
+                <TextBlock Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}" TextWrapping="Wrap"
                            IsVisible="{Binding !ZusammenfuehrenMoeglich}"
                            Text="Zusammenführen geht nur ohne Unterkategorien — die müssen zuerst einzeln behandelt werden." />
             </StackPanel>
@@ -204,16 +138,14 @@
              Zielwahl benutzt denselben Baum im Aufklappfenster wie die
              Kategorie-Auswahl der Ausgabenliste; waehlbar sind hier aber
              nur Blattknoten. -->
-        <Border DockPanel.Dock="Top"
-                IsVisible="{Binding ZusammenfuehrenAktiv}"
-                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                Padding="8" Margin="0,0,0,8">
+        <Border DockPanel.Dock="Top" Classes="banner warnung"
+                IsVisible="{Binding ZusammenfuehrenAktiv}" Margin="0,0,0,8">
             <StackPanel Spacing="8">
                 <TextBlock Text="{Binding ZusammenfuehrenTitel}" Classes="ueberschrift" />
 
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="Ziel:" VerticalAlignment="Center" />
-                    <Button x:Name="ZielAuswahl"
+                    <Button x:Name="ZielAuswahl" Classes="secondary"
                             Content="{Binding ZielText}"
                             Width="{anzeige:Breite 300}"
                             HorizontalContentAlignment="Left">
@@ -257,46 +189,128 @@
                            Classes="fehler" TextWrapping="Wrap" />
 
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Zusammenführen"
+                    <Button Classes="ghost" Content="Abbrechen" Command="{Binding ZusammenfuehrenAbbrechenCommand}" />
+                    <Button Classes="primary" Content="Zusammenführen"
                             Command="{Binding ZusammenfuehrenBestaetigenCommand}"
                             IsEnabled="{Binding ZusammenfuehrenBereit}" />
-                    <Button Content="Abbrechen" Command="{Binding ZusammenfuehrenAbbrechenCommand}" />
                 </StackPanel>
             </StackPanel>
         </Border>
 
-        <TreeView x:Name="Baum"
-                  ItemsSource="{Binding Wurzelknoten}"
-                  SelectedItem="{Binding AusgewaehlterKnoten}"
-                  KeyDown="Baum_KeyDown">
-            <TreeView.ItemTemplate>
-                <TreeDataTemplate x:DataType="vm:KategorieKnoten" ItemsSource="{Binding Children}">
-                    <Panel>
-                        <!-- Farbpunkt vor dem Namen: er zeigt die geltende
-                             Farbe (eigene oder geerbte) und ergaenzt den
-                             Namen, der unveraendert daneben steht. -->
-                        <StackPanel Orientation="Horizontal" Spacing="6"
-                                    IsVisible="{Binding !WirdBearbeitet}">
-                            <Border Classes="farbpunkt"
-                                    Background="{Binding Farbe}"
-                                    ToolTip.Tip="{Binding FarbHinweis}" />
-                            <TextBlock Text="{Binding Anzeigename}"
-                                       Classes.archiviert="{Binding IsArchived}"
-                                       DoubleTapped="Knoten_DoubleTapped"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
-                        <StackPanel IsVisible="{Binding WirdBearbeitet}" Spacing="2">
-                            <TextBox Text="{Binding BearbeitungsText}"
-                                     MinWidth="{anzeige:Breite 160}"
-                                     KeyDown="BearbeitungsTextBox_KeyDown"
-                                     LostFocus="BearbeitungsTextBox_LostFocus" />
-                            <TextBlock Text="{Binding BearbeitungsFehler}"
-                                       IsVisible="{Binding BearbeitungsFehlerSichtbar}"
-                                       Classes="fehler" />
-                        </StackPanel>
-                    </Panel>
-                </TreeDataTemplate>
-            </TreeView.ItemTemplate>
-        </TreeView>
+        <!-- Kein dauerhaftes Hinweisband mehr an dieser Stelle (Regel 8
+             gilt weiterhin, erklaert wird sie aber nur noch dort, wo sie
+             gerade zutrifft): der Löschen-Knopf jeder Zeile traegt die
+             Kurzfassung als Tooltip, und LoeschHindernisAktiv erklaert den
+             vollen Sachverhalt erst, wenn das Löschen tatsächlich
+             fehlschlägt. -->
+
+        <!-- ============ Kategorienliste als Karte ============
+             UI/UX-Redesign, Abschnitt 2.7/5.5: Baumstruktur mit Einzug
+             bleibt, aber in einer Karte statt frei auf dem Hintergrund,
+             und jede Zeile traegt ihre Aktionen selbst statt einer
+             Werkzeugleiste, die erst eine Baumauswahl voraussetzt. -->
+        <Border Classes="karte" Padding="8,4">
+            <ScrollViewer>
+                <TreeView x:Name="Baum"
+                          ItemsSource="{Binding Wurzelknoten}"
+                          SelectedItem="{Binding AusgewaehlterKnoten}"
+                          KeyDown="Baum_KeyDown">
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate x:DataType="vm:KategorieKnoten" ItemsSource="{Binding Children}">
+                            <Grid anzeige:Raster.Spalten="*,140,Auto" MinHeight="{anzeige:Breite 34}">
+                                <!-- Farbpunkt vor dem Namen: er zeigt die geltende
+                                     Farbe (eigene oder geerbte) und ergaenzt den
+                                     Namen, der unveraendert daneben steht. -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
+                                            IsVisible="{Binding !WirdBearbeitet}">
+                                    <Border Classes="farbpunkt"
+                                            Background="{Binding Farbe}"
+                                            ToolTip.Tip="{Binding FarbHinweis}" />
+                                    <TextBlock Text="{Binding Name}"
+                                               Classes.archiviert="{Binding IsArchived}"
+                                               DoubleTapped="Knoten_DoubleTapped"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="0" IsVisible="{Binding WirdBearbeitet}" Spacing="2">
+                                    <TextBox Text="{Binding BearbeitungsText}"
+                                             MinWidth="{anzeige:Breite 160}"
+                                             KeyDown="BearbeitungsTextBox_KeyDown"
+                                             LostFocus="BearbeitungsTextBox_LostFocus" />
+                                    <TextBlock Text="{Binding BearbeitungsFehler}"
+                                               IsVisible="{Binding BearbeitungsFehlerSichtbar}"
+                                               Classes="fehler" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="1" Text="{Binding AusgabenAnzahlText}"
+                                           Classes="tabellenzelle zahl"
+                                           Foreground="{DynamicResource TextTertiaerFarbe}"
+                                           IsVisible="{Binding !WirdBearbeitet}" />
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2"
+                                            IsVisible="{Binding !WirdBearbeitet}">
+                                    <Button Classes="zeilenaktion" Content="+ Unter"
+                                            ToolTip.Tip="Neue Unterkategorie anlegen"
+                                            Click="NeueUnterkategorieFuerZeile" />
+                                    <Button x:Name="FarbAuswahl" Classes="zeilenaktion"
+                                            Content="Farbe"
+                                            Click="Farbwahl_Oeffnen"
+                                            ToolTip.Tip="Farbe der Kategorie wählen. Unterkategorien ohne eigene Farbe übernehmen sie.">
+                                        <Button.Flyout>
+                                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                                <StackPanel Width="{anzeige:Breite 300}" Spacing="4">
+                                                    <TextBlock Text="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).FarbwahlHinweis}"
+                                                               Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}"
+                                                               TextWrapping="Wrap" Margin="6,0,0,4" />
+                                                    <ScrollViewer MaxHeight="{anzeige:Breite 360}">
+                                                        <ItemsControl ItemsSource="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).Farboptionen}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:FarbOption">
+                                                                    <Button Classes="farbwahl" Click="Farbe_Gewaehlt">
+                                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                            <Border Classes="farbpunkt" Background="{Binding Pinsel}" />
+                                                                            <TextBlock Text="{Binding Bezeichnung}" />
+                                                                        </StackPanel>
+                                                                    </Button>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </ScrollViewer>
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <Button Classes="zeilenaktion" Content="Umbenennen"
+                                            Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).BearbeitenStartenCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Classes="zeilenaktion" Content="Archivieren"
+                                            IsVisible="{Binding !IsArchived}"
+                                            Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).ArchivierenCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Classes="zeilenaktion" Content="Wiederherstellen"
+                                            IsVisible="{Binding IsArchived}"
+                                            Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).WiederherstellenCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <!-- Loeschen steht NEBEN dem Archivieren, nicht an
+                                         seiner Stelle (Regel 8) - moeglich nur, wenn die
+                                         Kategorie nirgends verwendet wird; das Band unter
+                                         der Liste erklaert die beiden Wege daran vorbei. -->
+                                    <Button Classes="zeilenaktion" Content="Löschen"
+                                            Foreground="{DynamicResource FehlerText}"
+                                            Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).LoeschenCommand}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip.Tip="Endgültig löschen. Möglich nur, wenn die Kategorie weder Ausgaben noch Unterkategorien noch Vorlagen hat." />
+                                    <Button Classes="zeilenaktion" Content="▲" ToolTip.Tip="Nach oben verschieben"
+                                            Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).NachObenVerschiebenCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Classes="zeilenaktion" Content="▼" ToolTip.Tip="Nach unten verschieben"
+                                            Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).NachUntenVerschiebenCommand}"
+                                            CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Grid>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </ScrollViewer>
+        </Border>
     </DockPanel>
 </UserControl>

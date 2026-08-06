@@ -1,6 +1,7 @@
 using System.Data;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Logging;
 using Dapper;
 
 namespace Ausgabenverwaltung.Core.People;
@@ -54,6 +55,8 @@ public sealed class PersonRepository
 
         var id = _connection.ExecuteScalar<long>("SELECT last_insert_rowid()");
 
+        AppLog.Current.Info(LogEvents.PersonCreated((int)id));
+
         return new Person
         {
             Id = (int)id,
@@ -74,18 +77,24 @@ public sealed class PersonRepository
 
         const string sql = "UPDATE Person SET Name = @Name WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id, Name = newName });
+
+        AppLog.Current.Info(LogEvents.PersonRenamed(id));
     }
 
     public void Archive(int id)
     {
         const string sql = "UPDATE Person SET IsArchived = 1 WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id });
+
+        AppLog.Current.Info(LogEvents.PersonArchived(id));
     }
 
     public void Restore(int id)
     {
         const string sql = "UPDATE Person SET IsArchived = 0 WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id });
+
+        AppLog.Current.Info(LogEvents.PersonRestored(id));
     }
 
     public void MoveUp(int id) => Reorder(id, delta: -1);
@@ -121,6 +130,8 @@ public sealed class PersonRepository
         const string updateSql = "UPDATE Person SET SortOrder = @SortOrder WHERE Id = @Id";
         _connection.Execute(updateSql, new { Id = selbst.Id, SortOrder = nachbar.SortOrder });
         _connection.Execute(updateSql, new { Id = nachbar.Id, SortOrder = selbst.SortOrder });
+
+        AppLog.Current.Info(LogEvents.PersonMoved(id, delta));
     }
 
     /// <summary>

@@ -50,8 +50,8 @@
             <!-- ============ Werkzeugleiste ============ -->
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
                         Margin="0,0,0,8">
-                <Button Content="Neue Vorlage" Command="{Binding NeueVorlageCommand}" />
-                <Button Content="Jetzt erzeugen"
+                <Button Classes="primary" Content="Neue Vorlage" Command="{Binding NeueVorlageCommand}" />
+                <Button Classes="secondary" Content="Jetzt erzeugen"
                         Command="{Binding JetztErzeugenCommand}"
                         ToolTip.Tip="Erzeugt alle bis heute fälligen Buchungen aller aktiven Vorlagen — dasselbe, was auch beim Programmstart läuft." />
             </StackPanel>
@@ -61,8 +61,8 @@
                  geschrieben wurde, wird auch nicht angezeigt. -->
             <Border DockPanel.Dock="Top"
                     IsVisible="{Binding SchreibFehlerSichtbar}"
-                    Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
-                    CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                    Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
+                    CornerRadius="8" Padding="10" Margin="0,0,0,8">
                 <Grid anzeige:Raster.Spalten="*,Auto">
                     <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
                                TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -75,8 +75,8 @@
             <!-- ============ Band: Ergebnis der Erzeugung ============ -->
             <Border DockPanel.Dock="Top"
                     IsVisible="{Binding ErgebnisSichtbar}"
-                    Background="#DFF5DF" BorderBrush="#8FCB8F" BorderThickness="1"
-                    CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                    Background="{DynamicResource ErfolgFlaeche}" BorderBrush="{DynamicResource ErfolgRahmen}" BorderThickness="1"
+                    CornerRadius="8" Padding="10" Margin="0,0,0,8">
                 <StackPanel Spacing="6">
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0" Text="{Binding ErgebnisText}"
@@ -97,16 +97,16 @@
                  nachbuchen. -->
             <Border DockPanel.Dock="Top"
                     IsVisible="{Binding ReaktivierungAnfrageAktiv}"
-                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                    CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                    Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
+                    CornerRadius="8" Padding="10" Margin="0,0,0,8">
                 <StackPanel Spacing="8">
                     <TextBlock Text="{Binding ReaktivierungAnfrageText}" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Rückstand nachholen"
+                        <Button Classes="secondary" Content="Rückstand nachholen"
                                 Command="{Binding ReaktivierungNachholenCommand}" />
-                        <Button Content="Erst ab heute weiterlaufen"
+                        <Button Classes="secondary" Content="Erst ab heute weiterlaufen"
                                 Command="{Binding ReaktivierungAbHeuteCommand}" />
-                        <Button Content="Abbrechen"
+                        <Button Classes="ghost" Content="Abbrechen"
                                 Command="{Binding ReaktivierungAbbrechenCommand}" />
                     </StackPanel>
                 </StackPanel>
@@ -116,7 +116,7 @@
             <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto"
                   Margin="4,10,20,0">
                 <TextBlock Grid.Column="0" Text="{Binding AnzahlText}"
-                           Foreground="Gray" VerticalAlignment="Center" />
+                           Foreground="{DynamicResource TextTertiaerFarbe}" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" FontWeight="Bold"
                            ToolTip.Tip="Alle aktiven, nicht abgelaufenen Vorlagen auf Monatsbasis umgerechnet (jährlich durch zwölf, wöchentlich mit der mittleren Monatslänge)."
                            Classes.ausgabe="{Binding MonatlicheBelastungIstAusgabe}"
@@ -176,7 +176,7 @@
             <TextBlock Text="Noch keine Vorlagen angelegt. „Neue Vorlage“ legt die erste an."
                        IsVisible="{Binding KeineVorlagen}"
                        DockPanel.Dock="Top"
-                       Foreground="Gray" FontStyle="Italic"
+                       Foreground="{DynamicResource TextTertiaerFarbe}" FontStyle="Italic"
                        Margin="4,8" />
 
             <!-- ============ Tabelle ============ -->
@@ -184,7 +184,7 @@
                 <ItemsControl x:Name="Zeilenliste" ItemsSource="{Binding Zeilen}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:VorlageZeile">
-                            <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
+                            <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
                                 <Grid anzeige:Raster.Spalten="2*,16,Kategorie,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
                                     <anzeige:Textzelle Grid.Column="0" Inhalt="{Binding Titel}"
                                                        Classes="tabellenzelle"
@@ -223,24 +223,29 @@
                                                    Classes="tabellenzelle mitte" />
                                     </Panel>
 
-                                    <TextBlock Grid.Column="14" Text="{Binding StatusText}"
-                                               Classes="tabellenzelle"
-                                               Classes.archiviert="{Binding !IstAktiv}" />
+                                    <!-- Status als farbiges Badge statt reinem Text
+                                         (UI/UX-Redesign, Abschnitt 5.7) - auf einen
+                                         Blick erkennbar, welche Vorlagen gerade wirken. -->
+                                    <Border Grid.Column="14" Classes="badge" HorizontalAlignment="Left"
+                                            Classes.aktiv="{Binding IstAktiv}"
+                                            Classes.pausiert="{Binding !IstAktiv}">
+                                        <TextBlock Text="{Binding StatusText}" />
+                                    </Border>
 
                                     <StackPanel Grid.Column="16" Orientation="Horizontal" Spacing="6">
-                                        <Button Content="Bearbeiten"
+                                        <Button Classes="secondary klein" Content="Bearbeiten"
                                                 Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenOeffnenCommand}"
                                                 CommandParameter="{Binding}" />
-                                        <Button Content="Deaktivieren"
+                                        <Button Classes="secondary klein" Content="Deaktivieren"
                                                 IsVisible="{Binding IstAktiv}"
                                                 ToolTip.Tip="Stoppt die künftige Erzeugung. Bereits erzeugte Buchungen bleiben unverändert."
                                                 Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).DeaktivierenCommand}"
                                                 CommandParameter="{Binding}" />
-                                        <Button Content="Aktivieren"
+                                        <Button Classes="secondary klein" Content="Aktivieren"
                                                 IsVisible="{Binding !IstAktiv}"
                                                 Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).AktivierenCommand}"
                                                 CommandParameter="{Binding}" />
-                                        <Button Content="Löschen"
+                                        <Button Classes="danger klein" Content="Löschen"
                                                 Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).LoeschenCommand}"
                                                 CommandParameter="{Binding}" />
                                     </StackPanel>
@@ -256,15 +261,15 @@
 
         <!-- ============ Overlay: Loesch-Sicherheitsabfrage ============ -->
         <Panel IsVisible="{Binding LoeschAnfrageAktiv}" Background="#60000000">
-            <Border Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                    CornerRadius="2" Padding="16" Margin="24"
+            <Border Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
+                    CornerRadius="8" Padding="16" Margin="24"
                     MaxWidth="{anzeige:Breite 560}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel Spacing="12">
                     <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                        <Button Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
-                        <Button Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                        <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
+                        <Button Classes="danger" Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -275,8 +280,8 @@
             <!-- Hoehe aus dem Fenster statt fest: das Formular wird mit
                  der Schriftgroesse hoeher, und der ScrollViewer darin
                  faengt den Rest ab. -->
-            <Border Background="White" BorderBrush="#C0C0C0" BorderThickness="1"
-                    CornerRadius="2" Padding="16" Margin="24"
+            <Border Background="{DynamicResource SurfaceRaisedFarbe}" BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="1"
+                    CornerRadius="8" Padding="16" Margin="24"
                     MaxWidth="{anzeige:Breite 520}"
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <DockPanel DataContext="{Binding Bearbeiten}"
@@ -291,14 +296,14 @@
                     <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,12,0,0">
                         <!-- Rueckwirkende Erzeugung ab elf Buchungen: ausdrueckliche Abfrage -->
                         <Border IsVisible="{Binding RueckwirkendAbfrageSichtbar}"
-                                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
-                                CornerRadius="2" Padding="8">
+                                Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
+                                CornerRadius="8" Padding="8">
                             <StackPanel Spacing="6">
                                 <TextBlock Text="{Binding RueckwirkendAbfrageText}" Classes="hinweis" />
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Content="Ja, erzeugen"
+                                    <Button Classes="secondary" Content="Ja, erzeugen"
                                             Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).RueckwirkendBestaetigenCommand}" />
-                                    <Button Content="Abbrechen"
+                                    <Button Classes="ghost" Content="Abbrechen"
                                             Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).RueckwirkendAbbrechenCommand}" />
                                 </StackPanel>
                             </StackPanel>
@@ -307,16 +312,16 @@
                         <!-- Schreibfehler: das Formular bleibt offen und
                              vollständig gefüllt. -->
                         <Border IsVisible="{Binding SpeicherFehlerSichtbar}"
-                                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
-                                CornerRadius="2" Padding="8">
+                                Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
+                                CornerRadius="8" Padding="8">
                             <TextBlock Text="{Binding SpeicherFehlerText}" TextWrapping="Wrap" />
                         </Border>
 
                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                            <Button Content="Speichern"
-                                    Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenSpeichernCommand}" />
-                            <Button Content="Abbrechen"
+                            <Button Classes="ghost" Content="Abbrechen"
                                     Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenAbbrechenCommand}" />
+                            <Button Classes="primary" Content="Speichern"
+                                    Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenSpeichernCommand}" />
                         </StackPanel>
                     </StackPanel>
 
@@ -324,7 +329,7 @@
                         <StackPanel Spacing="2">
                             <!-- Regel 6: die Historie haengt nicht an der Vorlage -->
                             <Border IsVisible="{Binding BetragHinweisSichtbar}"
-                                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                    Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                                     Padding="8" Margin="0,0,0,10">
                                 <TextBlock Classes="hinweis"
                                            Text="Änderungen wirken nur auf künftig erzeugte Buchungen. Bereits erzeugte Buchungen behalten Betrag, Kategorie und Zahler, die zum Zeitpunkt ihrer Erzeugung galten." />
@@ -332,7 +337,7 @@
 
                             <!-- Startdatum nach vorne verschoben, obwohl schon erzeugt wurde -->
                             <Border IsVisible="{Binding StartVorverlegtHinweisSichtbar}"
-                                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                    Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                                     Padding="8" Margin="0,0,0,10">
                                 <TextBlock Text="{Binding StartVorverlegtHinweis}" Classes="hinweis" />
                             </Border>
@@ -340,14 +345,14 @@
                             <TextBlock Text="Titel" />
                             <TextBox Text="{Binding Titel}" PlaceholderText="z. B. Stallmiete Ponyhof Weber" />
                             <TextBlock Text="{Binding TitelFehler}"
-                                       IsVisible="{Binding TitelFehlerSichtbar}" Foreground="Red" />
+                                       IsVisible="{Binding TitelFehlerSichtbar}" Foreground="{DynamicResource FehlerText}" />
 
                             <!-- Das €-Zeichen steht in der Beschriftung, nicht
                                  im Feld: eingegeben wird die blanke Zahl. -->
                             <TextBlock Text="Betrag (€)" Classes="formularbeschriftung" />
                             <TextBox Text="{Binding BetragText}" PlaceholderText="0,00" />
                             <TextBlock Text="{Binding BetragFehler}"
-                                       IsVisible="{Binding BetragFehlerSichtbar}" Foreground="Red" />
+                                       IsVisible="{Binding BetragFehlerSichtbar}" Foreground="{DynamicResource FehlerText}" />
 
                             <!-- Einnahme statt Ausgabe: mindert die
                                  Summen in Liste und Auswertung, statt
@@ -373,7 +378,7 @@
                                 </AutoCompleteBox.ItemTemplate>
                             </AutoCompleteBox>
                             <TextBlock Text="{Binding KategorieFehler}"
-                                       IsVisible="{Binding KategorieFehlerSichtbar}" Foreground="Red" />
+                                       IsVisible="{Binding KategorieFehlerSichtbar}" Foreground="{DynamicResource FehlerText}" />
 
                             <TextBlock Text="Zahler" Classes="formularbeschriftung" />
                             <ComboBox ItemsSource="{Binding ZahlerOptionen}"
@@ -386,7 +391,7 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
                             <TextBlock Text="{Binding ZahlerFehler}"
-                                       IsVisible="{Binding ZahlerFehlerSichtbar}" Foreground="Red" />
+                                       IsVisible="{Binding ZahlerFehlerSichtbar}" Foreground="{DynamicResource FehlerText}" />
 
                             <!-- Kein anderer Zahler vorhanden, um eine
                                  gerade angekreuzte Einnahme zuzuordnen -
@@ -396,7 +401,7 @@
                             <TextBlock Text="{Binding EinnahmeHinweisText}"
                                        IsVisible="{Binding EinnahmeHinweisSichtbar}"
                                        TextWrapping="Wrap"
-                                       Foreground="#B8860B"
+                                       Foreground="{DynamicResource WarnungText}"
                                        Margin="0,6,0,0" />
 
                             <TextBlock Text="Bemerkung" Classes="formularbeschriftung" />
@@ -431,13 +436,13 @@
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="{Binding IntervallAnzahlFehler}"
-                                       IsVisible="{Binding IntervallAnzahlFehlerSichtbar}" Foreground="Red" />
+                                       IsVisible="{Binding IntervallAnzahlFehlerSichtbar}" Foreground="{DynamicResource FehlerText}" />
                             <TextBlock Text="{Binding AnkertagFehler}"
-                                       IsVisible="{Binding AnkertagFehlerSichtbar}" Foreground="Red" />
+                                       IsVisible="{Binding AnkertagFehlerSichtbar}" Foreground="{DynamicResource FehlerText}" />
 
                             <!-- Regel 5: Kuerzung auf den Monatsletzten -->
                             <Border IsVisible="{Binding AnkertagHinweisSichtbar}"
-                                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                    Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                                     Padding="8" Margin="0,8,0,0">
                                 <TextBlock Classes="hinweis"
                                            Text="Diesen Tag gibt es nicht in jedem Monat. In kürzeren Monaten wird auf den letzten Tag des Monats gekürzt — der Termin wandert dadurch nicht dauerhaft, im nächsten langen Monat trifft er wieder genau." />
@@ -454,29 +459,29 @@
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="{Binding StartDatumFehler}"
-                                       IsVisible="{Binding StartDatumFehlerSichtbar}" Foreground="Red" />
+                                       IsVisible="{Binding StartDatumFehlerSichtbar}" Foreground="{DynamicResource FehlerText}" />
                             <TextBlock Text="{Binding EndDatumFehler}"
-                                       IsVisible="{Binding EndDatumFehlerSichtbar}" Foreground="Red" />
+                                       IsVisible="{Binding EndDatumFehlerSichtbar}" Foreground="{DynamicResource FehlerText}" />
 
                             <CheckBox Content="Aktiv" IsChecked="{Binding IstAktiv}" Margin="0,10,0,0"
                                       ToolTip.Tip="Inaktive Vorlagen erzeugen nichts mehr, bleiben aber erhalten." />
 
                             <TextBlock Text="Nächste Fälligkeiten" FontWeight="Bold" Margin="0,16,0,4" />
 
-                            <Border Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="1"
-                                    CornerRadius="2" Padding="8">
+                            <Border Background="{DynamicResource CanvasFarbe}" BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="1"
+                                    CornerRadius="8" Padding="8">
                                 <StackPanel Spacing="4">
                                     <ItemsControl ItemsSource="{Binding VorschauTermine}"
                                                   IsVisible="{Binding VorschauSichtbar}" />
                                     <TextBlock Text="{Binding VorschauLeerText}"
                                                IsVisible="{Binding !VorschauSichtbar}"
-                                               Foreground="Gray" FontStyle="Italic"
+                                               Foreground="{DynamicResource TextTertiaerFarbe}" FontStyle="Italic"
                                                TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
 
                             <Border IsVisible="{Binding RueckwirkendSichtbar}"
-                                    Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                    Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                                     Padding="8" Margin="0,8,0,0">
                                 <TextBlock Text="{Binding RueckwirkendText}" Classes="hinweis" />
                             </Border>

@@ -17,7 +17,7 @@
          abgeschnitten wird. -->
     <UserControl.Styles>
         <Style Selector="Border.selbst">
-            <Setter Property="Background" Value="#DDE8FF" />
+            <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
             <Setter Property="CornerRadius" Value="3" />
             <Setter Property="Padding" Value="4,1" />
         </Style>
@@ -28,8 +28,8 @@
              Die Liste darunter bleibt unverändert stehen. -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding SchreibFehlerSichtbar}"
-                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
-                CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
+                CornerRadius="8" Padding="10" Margin="0,0,0,8">
             <Grid anzeige:Raster.Spalten="*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
                            TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -41,7 +41,7 @@
 
         <!-- Werkzeugleiste -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <Button Content="Neue Person" Command="{Binding NeuePersonCommand}" />
+            <Button Classes="primary" Content="Neue Person" Command="{Binding NeuePersonCommand}" />
             <CheckBox Content="Archivierte anzeigen" IsChecked="{Binding ArchivierteAnzeigen}" Margin="24,0,0,0" />
         </StackPanel>
 
@@ -68,7 +68,7 @@
             <ItemsControl x:Name="Zeilenliste" ItemsSource="{Binding Personen}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:PersonZeile">
-                        <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="4,6">
+                        <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
                             <Grid anzeige:Raster.Spalten="2*,16,90,16,140,24,340">
                                 <Panel Grid.Column="0">
                                     <!-- Raster statt eines waagerechten StackPanels:
@@ -91,7 +91,7 @@
                                             <Border Classes="selbst" IsVisible="{Binding IsSelf}">
                                                 <TextBlock Text="Ich" Classes="klein" />
                                             </Border>
-                                            <TextBlock Text="(archiviert)" FontStyle="Italic" Foreground="Gray"
+                                            <TextBlock Text="(archiviert)" FontStyle="Italic" Foreground="{DynamicResource TextTertiaerFarbe}"
                                                        IsVisible="{Binding IsArchived}"
                                                        VerticalAlignment="Center" />
                                         </StackPanel>
@@ -113,22 +113,26 @@
                                            Classes="tabellenzelle zahl"
                                            Classes.erstattung="{Binding OffenePostenSummeIstErstattung}" />
 
+                                <!-- Auf/Ab bleiben erhalten (bestehende Funktion, im
+                                     Mockup nicht dargestellt) - Reihenfolge der
+                                     Personen ist ueber diese Liste die einzige
+                                     Stelle, an der sie sich aendern laesst. -->
                                 <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="6"
                                             IsVisible="{Binding !WirdBearbeitet}">
-                                    <Button Content="▲" ToolTip.Tip="Nach oben verschieben"
+                                    <Button Classes="ghost klein" Content="▲" ToolTip.Tip="Nach oben verschieben"
                                             Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).NachObenVerschiebenCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Content="▼" ToolTip.Tip="Nach unten verschieben"
+                                    <Button Classes="ghost klein" Content="▼" ToolTip.Tip="Nach unten verschieben"
                                             Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).NachUntenVerschiebenCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Content="Umbenennen"
+                                    <Button Classes="secondary klein" Content="Umbenennen"
                                             Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).BearbeitenStartenCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Content="Archivieren"
+                                    <Button Classes="secondary klein" Content="Archivieren"
                                             Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).ArchivierenCommand}"
                                             CommandParameter="{Binding}"
                                             IsVisible="{Binding KannArchiviertWerden}" />
-                                    <Button Content="Wiederherstellen"
+                                    <Button Classes="secondary klein" Content="Wiederherstellen"
                                             Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).WiederherstellenCommand}"
                                             CommandParameter="{Binding}"
                                             IsVisible="{Binding IsArchived}" />

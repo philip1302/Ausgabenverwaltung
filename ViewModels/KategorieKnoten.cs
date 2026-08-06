@@ -25,7 +25,6 @@ public sealed partial class KategorieKnoten : ObservableObject
     public KategorieKnoten? Eltern { get; init; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Anzeigename))]
     private string _name;
 
     [ObservableProperty]
@@ -62,7 +61,7 @@ public sealed partial class KategorieKnoten : ObservableObject
         : "Farbe: geerbt";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Anzeigename))]
+    [NotifyPropertyChangedFor(nameof(AusgabenAnzahlText))]
     private int _ausgabenAnzahl;
 
     [ObservableProperty]
@@ -80,7 +79,12 @@ public sealed partial class KategorieKnoten : ObservableObject
 
     public bool BearbeitungsFehlerSichtbar => !string.IsNullOrEmpty(BearbeitungsFehler);
 
-    public string Anzeigename => AusgabenAnzahl > 0 ? $"{Name} ({AusgabenAnzahl})" : Name;
+    /// <summary>
+    /// Anzahl der Ausgaben als eigene, rechtsbuendige Spalte statt in
+    /// Klammern hinter dem Namen (UI/UX-Redesign, Abschnitt 5.5, mockups/
+    /// 06-verwaltung-kategorien.png).
+    /// </summary>
+    public string AusgabenAnzahlText => AusgabenAnzahl == 1 ? "1 Ausgabe" : $"{AusgabenAnzahl} Ausgaben";
 
     public bool IstNeuUndUnbestaetigt => Id is null;
 

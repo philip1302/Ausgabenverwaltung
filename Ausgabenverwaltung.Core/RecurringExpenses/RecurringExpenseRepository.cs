@@ -1,6 +1,7 @@
 using System.Data;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Logging;
 using Dapper;
 
 namespace Ausgabenverwaltung.Core.RecurringExpenses;
@@ -70,6 +71,8 @@ public sealed class RecurringExpenseRepository
 
         var id = _connection.ExecuteScalar<long>("SELECT last_insert_rowid()");
 
+        AppLog.Current.Info(LogEvents.RecurringExpenseCreated((int)id));
+
         return new RecurringExpense
         {
             Id = (int)id,
@@ -138,6 +141,8 @@ public sealed class RecurringExpenseRepository
             IsIncome = isIncome,
             NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow),
         });
+
+        AppLog.Current.Info(LogEvents.RecurringExpenseUpdated(id));
     }
 
     /// <summary>
@@ -155,6 +160,8 @@ public sealed class RecurringExpenseRepository
             """;
 
         _connection.Execute(sql, new { Id = id, NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow) });
+
+        AppLog.Current.Info(LogEvents.RecurringExpenseDeactivated(id));
     }
 
     /// <summary>
@@ -174,6 +181,8 @@ public sealed class RecurringExpenseRepository
             """;
 
         _connection.Execute(sql, new { Id = id, NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow) });
+
+        AppLog.Current.Info(LogEvents.RecurringExpenseActivated(id));
     }
 
     /// <summary>
@@ -197,6 +206,8 @@ public sealed class RecurringExpenseRepository
             GeneratedThroughText = IsoDate.ToDateText(through),
             NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow),
         });
+
+        AppLog.Current.Info(LogEvents.RecurringExpenseGeneratedThroughSet(id, through));
     }
 
     /// <summary>
@@ -214,6 +225,8 @@ public sealed class RecurringExpenseRepository
     {
         const string sql = "DELETE FROM RecurringExpense WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id });
+
+        AppLog.Current.Info(LogEvents.RecurringExpenseDeleted(id));
     }
 
     /// <summary>
@@ -309,6 +322,18 @@ public sealed class RecurringExpenseRepository
             }
 
             transaction.Commit();
+
+            // Hier statt bei jedem einzelnen Aufrufer protokolliert (Regel 7):
+            // so kann kein Aufrufer - Scheduler beim Bereichswechsel oder
+            // Programmstart - das Protokollieren vergessen. Nur bei
+            // tatsaechlich Erzeugtem, sonst quaelle bei jedem
+            // Bereichswechsel eine Zeile "0 Buchungen erzeugt" durch das
+            // Protokoll.
+            if (created.Count > 0)
+            {
+                AppLog.Current.Info(LogEvents.RecurringGenerated(created.Count, asOf));
+            }
+
             return created;
         }
         catch
@@ -340,6 +365,12 @@ public sealed class RecurringExpenseRepository
         {
             var created = GenerateForTemplate(template, asOf, transaction);
             transaction.Commit();
+
+            if (created.Count > 0)
+            {
+                AppLog.Current.Info(LogEvents.RecurringGeneratedForTemplate(templateId, created.Count, asOf));
+            }
+
             return created;
         }
         catch

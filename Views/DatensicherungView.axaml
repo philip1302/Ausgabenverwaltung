@@ -24,46 +24,55 @@
             <Setter Property="FontFamily" Value="Consolas, Courier New, monospace" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
-        <Style Selector="Border.kasten">
-            <Setter Property="BorderBrush" Value="#E0E0E0" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="2" />
-            <Setter Property="Padding" Value="12" />
-        </Style>
-
         <!-- Farben bewusst hier und nicht als Attribut am Element: ein
              direkt gesetzter Wert schlaegt jeden Style, die Umschaltung
              auf .fehler bzw. .veraltet griffe dann nie. -->
         <Style Selector="Border.meldung">
-            <Setter Property="Background" Value="#DFF5DF" />
-            <Setter Property="BorderBrush" Value="#8FCB8F" />
+            <Setter Property="Background" Value="{DynamicResource ErfolgFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ErfolgRahmen}" />
         </Style>
         <Style Selector="Border.meldung.fehler">
-            <Setter Property="Background" Value="#FFF6DF" />
-            <Setter Property="BorderBrush" Value="#E0C070" />
+            <Setter Property="Background" Value="{DynamicResource WarnungFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource WarnungRahmen}" />
         </Style>
 
         <!-- "Dezent hervorheben" bei laenger zurueckliegender externer
              Sicherung: derselbe Text, nur nicht mehr in Grau. -->
         <Style Selector="TextBlock.zielstatus">
-            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
         </Style>
         <Style Selector="TextBlock.zielstatus.veraltet">
-            <Setter Property="Foreground" Value="#B06000" />
+            <Setter Property="Foreground" Value="{DynamicResource WarnungText}" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
     </UserControl.Styles>
 
     <DockPanel>
+        <!-- ============ Status der externen Sicherung ============
+             Ganz oben als Banner statt einer separaten Textzeile
+             (UI/UX-Redesign, Abschnitt 5.8): die wichtigste Frage der
+             Seite ("bin ich gerade abgesichert?") faellt so zuerst auf. -->
+        <Border DockPanel.Dock="Top" Classes="banner" Margin="0,0,0,12"
+                Classes.erfolg="{Binding ExterneSicherungIstAktuell}"
+                Classes.warnung="{Binding ExterneSicherungIstVeraltet}"
+                Classes.hinweis="{Binding ExterneSicherungFehlt}">
+            <StackPanel Spacing="2">
+                <TextBlock FontWeight="SemiBold" Text="Externe Sicherung aktuell" IsVisible="{Binding ExterneSicherungIstAktuell}" />
+                <TextBlock FontWeight="SemiBold" Text="Externe Sicherung veraltet" IsVisible="{Binding ExterneSicherungIstVeraltet}" />
+                <TextBlock FontWeight="SemiBold" Text="Kein zweites Sicherungsziel" IsVisible="{Binding ExterneSicherungFehlt}" />
+                <TextBlock Text="{Binding ExterneSicherungBannerText}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
         <!-- ============ Werkzeugleiste ============ -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
                     Margin="0,0,0,8">
-            <Button Content="Sicherung jetzt"
+            <Button Classes="primary" Content="Sicherung jetzt"
                     Command="{Binding SicherungJetztCommand}"
                     ToolTip.Tip="Sichert sofort, unabhängig davon, ob heute schon gesichert wurde." />
-            <Button Content="Sicherungsordner öffnen"
+            <Button Classes="secondary" Content="Sicherungsordner öffnen"
                     Click="SicherungsordnerOeffnen_Click" />
-            <Button Content="Protokollordner öffnen"
+            <Button Classes="secondary" Content="Protokollordner öffnen"
                     IsVisible="{Binding ProtokollordnerVerfuegbar}"
                     Click="ProtokollordnerOeffnen_Click"
                     ToolTip.Tip="Enthält das Protokoll der letzten 30 Tage — Programmstarts, Sicherungen, Fehler. Es enthält keine Beträge, Bemerkungen oder Namen und lässt sich deshalb weitergeben." />
@@ -72,14 +81,14 @@
         <!-- ============ Band: Meldung ============ -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding MeldungSichtbar}"
-                Classes="meldung"
+                Classes="banner"
                 Classes.fehler="{Binding MeldungIstFehler}"
-                BorderThickness="1"
-                CornerRadius="2" Padding="10" Margin="0,0,0,8">
+                Classes.erfolg="{Binding !MeldungIstFehler}"
+                Margin="0,0,0,8">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding MeldungText}"
                            TextWrapping="Wrap" VerticalAlignment="Center" />
-                <Button Grid.Column="1" Content="Schliessen"
+                <Button Grid.Column="1" Classes="ghost" Content="Schliessen"
                         Command="{Binding MeldungSchliessenCommand}" />
             </Grid>
         </Border>
@@ -87,12 +96,16 @@
         <ScrollViewer>
             <StackPanel Spacing="16">
 
-                <!-- ============ Ziel 1 ============ -->
-                <Border Classes="kasten">
+                <!-- ============ Ziel 1 ============
+                     Die dauerhafte Erklaerung dazu ("laeuft immer, braucht
+                     keine Einrichtung") steht nicht mehr fest im Bild,
+                     sondern als Hilfetext an der Ueberschrift. -->
+                <Border Classes="karte">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="Ziel 1 — dieser Rechner" Classes="abschnitt" />
+                        <TextBlock Text="Ziel 1 — dieser Rechner" Classes="abschnitt"
+                                   ToolTip.Tip="Läuft immer und braucht keine Einrichtung. Beim Programmstart wird höchstens einmal pro Tag gesichert." />
                         <TextBlock Text="{Binding SicherungsordnerPfad}" Classes="pfad" />
-                        <TextBlock Text="{Binding Ziel1StatusText}" Foreground="Gray"
+                        <TextBlock Text="{Binding Ziel1StatusText}" Foreground="{DynamicResource TextTertiaerFarbe}"
                                    TextWrapping="Wrap" Margin="0,4,0,0" />
 
                         <!-- Eine beim Start gescheiterte Sicherung hält den
@@ -100,20 +113,18 @@
                              trotzdem, und zwar hier und dauerhaft, nicht
                              nur als wegklickbares Band im Hauptfenster. -->
                         <Border IsVisible="{Binding Ziel1FehlerSichtbar}"
-                                Background="#FFE0E0" BorderBrush="#D08080" BorderThickness="1"
+                                Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
                                 Padding="8" Margin="0,8,0,0">
                             <TextBlock Text="{Binding Ziel1FehlerText}" TextWrapping="Wrap" />
                         </Border>
-
-                        <TextBlock Foreground="Gray" TextWrapping="Wrap" FontStyle="Italic"
-                                   Text="Läuft immer und braucht keine Einrichtung. Beim Programmstart wird höchstens einmal pro Tag gesichert." />
                     </StackPanel>
                 </Border>
 
                 <!-- ============ Ziel 2 ============ -->
-                <Border Classes="kasten">
+                <Border Classes="karte">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="Ziel 2 — zusätzlicher Ordner (optional)" Classes="abschnitt" />
+                        <TextBlock Text="Ziel 2 — zusätzlicher Ordner (optional)" Classes="abschnitt"
+                                   ToolTip.Tip="Ein beliebiger Ordner — ob dahinter ein Cloud-Ordner, ein USB-Stick oder ein Netzlaufwerk steckt, spielt keine Rolle. Beim Auswählen wird einmal testweise geschrieben, damit fehlende Berechtigungen sofort auffallen. Ist das Ziel beim Start nicht erreichbar, läuft die Anwendung ohne Meldung weiter." />
 
                         <TextBlock Text="{Binding Ziel2Pfad}" Classes="pfad"
                                    IsVisible="{Binding Ziel2Eingerichtet}" />
@@ -130,55 +141,54 @@
                              Text, ruhiger im Ton — Ziel 1 hat ja
                              funktioniert, es fehlt nur die Kopie. -->
                         <Border IsVisible="{Binding Ziel2FehlerSichtbar}"
-                                Background="#FFF6DF" BorderBrush="#E0C070" BorderThickness="1"
+                                Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                                 Padding="8" Margin="0,8,0,0">
                             <TextBlock Text="{Binding Ziel2FehlerText}" TextWrapping="Wrap" />
                         </Border>
 
                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                            <Button Content="Ordner wählen..." Click="ZweitesZielWaehlen_Click" />
-                            <Button Content="Ziel entfernen"
+                            <Button Classes="secondary" Content="Ordner wählen..." Click="ZweitesZielWaehlen_Click" />
+                            <Button Classes="ghost" Content="Ziel entfernen"
                                     IsVisible="{Binding Ziel2Eingerichtet}"
                                     Command="{Binding ZweitesZielEntfernenCommand}" />
                         </StackPanel>
-
-                        <TextBlock Foreground="Gray" TextWrapping="Wrap" FontStyle="Italic"
-                                   Margin="0,4,0,0"
-                                   Text="Ein beliebiger Ordner — ob dahinter ein Cloud-Ordner, ein USB-Stick oder ein Netzlaufwerk steckt, spielt keine Rolle. Beim Auswählen wird einmal testweise geschrieben, damit fehlende Berechtigungen sofort auffallen. Ist das Ziel beim Start nicht erreichbar, läuft die Anwendung ohne Meldung weiter." />
                     </StackPanel>
                 </Border>
 
-                <!-- ============ Wiederherstellen ============ -->
-                <Border Classes="kasten">
+                <!-- ============ Wiederherstellen ============
+                     Die Anleitung steht nicht mehr dauerhaft im Bild,
+                     sondern eingeklappt - verfuegbar, wenn sie gebraucht
+                     wird, sonst nicht im Weg. -->
+                <Border Classes="karte">
                     <StackPanel Spacing="6">
                         <TextBlock Text="Wiederherstellen" Classes="abschnitt" />
-                        <TextBlock Text="{Binding WiederherstellungHinweis}" TextWrapping="Wrap" />
+                        <Expander Header="Anleitung anzeigen">
+                            <TextBlock Text="{Binding WiederherstellungHinweis}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                        </Expander>
 
                         <TextBlock Text="Aktive Datenbank:" Margin="0,8,0,0" />
                         <Grid ColumnDefinitions="*,8,Auto">
                             <TextBlock Grid.Column="0" Text="{Binding DatenbankPfad}"
                                        Classes="pfad" VerticalAlignment="Center" />
-                            <Button Grid.Column="2" Content="Pfad kopieren"
+                            <Button Grid.Column="2" Classes="secondary" Content="Pfad kopieren"
                                     Click="DatenbankPfadKopieren_Click" />
                         </Grid>
                     </StackPanel>
                 </Border>
 
                 <!-- ============ Vorhandene Sicherungen ============ -->
-                <Border Classes="kasten">
+                <Border Classes="karte">
                     <StackPanel Spacing="4">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Vorhandene Sicherungen" Classes="abschnitt" />
+                            <TextBlock Grid.Column="0" Text="Vorhandene Sicherungen" Classes="abschnitt"
+                                       ToolTip.Tip="Behalten werden die letzten zehn Sicherungen und zusätzlich, dauerhaft, die jeweils letzte Sicherung jedes Monats. Alles andere wird beim nächsten Lauf gelöscht." />
                             <TextBlock Grid.Column="1" Text="{Binding AnzahlText}"
-                                       Foreground="Gray" VerticalAlignment="Center" />
+                                       Foreground="{DynamicResource TextTertiaerFarbe}" VerticalAlignment="Center" />
                         </Grid>
-
-                        <TextBlock Foreground="Gray" TextWrapping="Wrap" FontStyle="Italic"
-                                   Text="Behalten werden die letzten zehn Sicherungen und zusätzlich, dauerhaft, die jeweils letzte Sicherung jedes Monats. Alles andere wird beim nächsten Lauf gelöscht." />
 
                         <TextBlock Text="Noch keine Sicherung vorhanden. „Sicherung jetzt“ erstellt die erste."
                                    IsVisible="{Binding KeineSicherungen}"
-                                   Foreground="Gray" FontStyle="Italic" Margin="0,8" />
+                                   Foreground="{DynamicResource TextTertiaerFarbe}" FontStyle="Italic" Margin="0,8" />
 
                         <Grid anzeige:Raster.Spalten="*,16,150,16,100" Margin="0,8,0,0">
                             <TextBlock Grid.Column="0" Text="Datei"   Classes="tabellenkopf" />
@@ -189,7 +199,7 @@
                         <ItemsControl ItemsSource="{Binding Sicherungen}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:SicherungZeile">
-                                    <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="0,6">
+                                    <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="0,6">
                                         <Grid anzeige:Raster.Spalten="*,16,150,16,100">
                                             <!-- Einzeilig und notfalls gekuerzt, damit ein
                                                  langer Dateiname weder umbricht noch die

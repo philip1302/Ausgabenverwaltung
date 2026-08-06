@@ -1,6 +1,7 @@
 using System.Data;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.Reports;
 using Dapper;
 
@@ -60,6 +61,8 @@ public sealed class ExpenseRepository
 
         var id = _connection.ExecuteScalar<long>("SELECT last_insert_rowid()");
 
+        AppLog.Current.Info(LogEvents.ExpenseCreated((int)id, isIncome));
+
         return new Expense
         {
             Id = (int)id,
@@ -111,12 +114,16 @@ public sealed class ExpenseRepository
             IsIncome = isIncome,
             NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow),
         });
+
+        AppLog.Current.Info(LogEvents.ExpenseUpdated(id));
     }
 
     public void Delete(int id)
     {
         const string sql = "DELETE FROM Expense WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id });
+
+        AppLog.Current.Info(LogEvents.ExpenseDeleted(id));
     }
 
     /// <summary>
@@ -133,6 +140,8 @@ public sealed class ExpenseRepository
 
         const string sql = "DELETE FROM Expense WHERE Id IN @Ids";
         _connection.Execute(sql, new { Ids = ids });
+
+        AppLog.Current.Info(LogEvents.ExpensesDeleted(ids.Count));
     }
 
     public Expense? GetById(int id)

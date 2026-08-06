@@ -1,0 +1,188 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="750"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="Ausgabenverwaltung.Views.StartseiteView"
+             x:DataType="vm:StartseiteViewModel">
+
+    <!-- Neue Startseite (UI/UX-Redesign, Abschnitt 4): ersetzt "Erfassen"
+         als ersten Eindruck durch einen Ueberblick statt eines leeren
+         Formulars. Reiner Lesezugriff auf bestehende Core-Abfragen (siehe
+         StartseiteViewModel) - hier steht nur die Zusammenstellung. -->
+    <ScrollViewer>
+        <StackPanel Margin="32,24,32,32" Spacing="24">
+
+            <!-- ============ Kopfzeile ============ -->
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Classes="seitentitel" Text="Guten Tag" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="primary" VerticalAlignment="Top"
+                        Command="{Binding AusgabeErfassenCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Path Data="{DynamicResource IconErfassen}"
+                              Width="{anzeige:Breite 16}" Height="{anzeige:Breite 16}"
+                              Stretch="Uniform" StrokeThickness="1.75"
+                              StrokeLineCap="Round" StrokeJoin="Round"
+                              Fill="Transparent" Stroke="{DynamicResource TextAufAccentFarbe}" />
+                        <TextBlock Text="Ausgabe erfassen" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- ============ Vier KPI-Kacheln ============
+                 Prozentuale Spalten (UniformGrid) statt fester Pixelbreiten
+                 (Regel 9) - alle vier greifen auf bereits vorhandene
+                 Core-Abfragen zurueck, keine neue Fachlogik. -->
+            <UniformGrid Columns="4" Rows="1">
+                <Border Classes="kpi" Margin="0,0,8,0">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,6,*">
+                            <Path Grid.Column="0" Data="{DynamicResource IconPfeilHoch}"
+                                  Width="{anzeige:Breite 16}" Height="{anzeige:Breite 16}"
+                                  Stretch="Uniform" StrokeThickness="1.75"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  Fill="Transparent" Stroke="{DynamicResource AusgabeFarbe}" />
+                            <TextBlock Grid.Column="2" Classes="kpi-label" Text="Ausgaben, diesen Monat" TextWrapping="Wrap" />
+                        </Grid>
+                        <TextBlock Classes="kpi-wert ausgabe" Text="{Binding AusgabenMonatText}" />
+                        <TextBlock Classes="kpi-hinweis" Text="{Binding AusgabenMonatHinweis}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="kpi" Margin="8,0">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,6,*">
+                            <Path Grid.Column="0" Data="{DynamicResource IconPfeilRunter}"
+                                  Width="{anzeige:Breite 16}" Height="{anzeige:Breite 16}"
+                                  Stretch="Uniform" StrokeThickness="1.75"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  Fill="Transparent" Stroke="{DynamicResource EinnahmeFarbe}" />
+                            <TextBlock Grid.Column="2" Classes="kpi-label" Text="Einnahmen, diesen Monat" TextWrapping="Wrap" />
+                        </Grid>
+                        <TextBlock Classes="kpi-wert einnahme" Text="{Binding EinnahmenMonatText}" />
+                        <TextBlock Classes="kpi-hinweis" Text="{Binding EinnahmenMonatHinweis}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="kpi" Margin="8,0">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,6,*">
+                            <Path Grid.Column="0" Data="{DynamicResource IconOffenePosten}"
+                                  Width="{anzeige:Breite 16}" Height="{anzeige:Breite 16}"
+                                  Stretch="Uniform" StrokeThickness="1.75"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}" />
+                            <TextBlock Grid.Column="2" Classes="kpi-label" Text="Offene Posten" TextWrapping="Wrap" />
+                        </Grid>
+                        <TextBlock Classes="kpi-wert" Text="{Binding OffenePostenText}" />
+                        <TextBlock Classes="kpi-hinweis" Text="{Binding OffenePostenHinweis}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="kpi" Margin="8,0,0,0">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,6,*">
+                            <Path Grid.Column="0" Data="{DynamicResource IconVorlagen}"
+                                  Width="{anzeige:Breite 16}" Height="{anzeige:Breite 16}"
+                                  Stretch="Uniform" StrokeThickness="1.75"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}" />
+                            <TextBlock Grid.Column="2" Classes="kpi-label" Text="Nächste fällige Vorlage" TextWrapping="Wrap" />
+                        </Grid>
+                        <TextBlock FontSize="{DynamicResource SchriftUeberschrift}" FontWeight="Bold"
+                                   Text="{Binding NaechsteFaelligkeitTitel}" TextWrapping="Wrap"
+                                   Classes.archiviert="{Binding !NaechsteFaelligkeitVorhanden}" />
+                        <TextBlock Classes="kpi-hinweis" Text="{Binding NaechsteFaelligkeitHinweis}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- ============ Netto-Trend + Letzte Buchungen ============ -->
+            <Grid ColumnDefinitions="2*,16,1*">
+                <Border Grid.Column="0" Classes="karte">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12" Spacing="2">
+                            <TextBlock Classes="ueberschrift" Text="Netto der letzten 6 Monate" TextWrapping="Wrap" />
+                            <TextBlock Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}"
+                                       Text="Einnahmen − Ausgaben, eigene Buchungen" />
+                        </StackPanel>
+
+                        <!-- Monatsbeschriftungen unter der Linie -->
+                        <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding TrendMonatsBeschriftungen}"
+                                      Margin="0,4,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Text="{Binding}" Classes="klein"
+                                               Foreground="{DynamicResource TextTertiaerFarbe}"
+                                               HorizontalAlignment="Center" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Die "einfache Linie" (UI/UX-Redesign, Abschnitt 4):
+                             ein Viewbox skaliert einen festen, gedachten
+                             Koordinatenraum (0..600 x 0..160, siehe
+                             StartseiteViewModel.TrendLinien) auf die
+                             tatsaechliche Kartenbreite. -->
+                        <!-- ItemsPanel MUSS ausdruecklich ein Canvas sein: ohne
+                             diese Angabe legt ItemsControl seine Eintraege in
+                             einem StackPanel ab, und die absoluten Von/Bis-
+                             Koordinaten der Segmente wirken dann nicht mehr -
+                             die Linie erschien dadurch vorher gar nicht. -->
+                        <Viewbox Stretch="Fill" Height="{anzeige:Breite 160}">
+                            <ItemsControl ItemsSource="{Binding TrendLinien}" Width="600" Height="160">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TrendSegment">
+                                        <Line StartPoint="{Binding Von}" EndPoint="{Binding Bis}"
+                                              Stroke="{DynamicResource AccentFarbe}"
+                                              StrokeThickness="2.5"
+                                              StrokeLineCap="Round" StrokeJoin="Round" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Viewbox>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Column="2" Classes="karte">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Classes="ueberschrift" Text="Letzte Buchungen" Margin="0,0,0,10" />
+
+                        <Button DockPanel.Dock="Bottom" Classes="ghost" Margin="-12,10,0,0"
+                                Foreground="{DynamicResource AccentFarbe}"
+                                Content="Alle Buchungen ansehen →"
+                                Command="{Binding AlleBuchungenAnsehenCommand}" />
+
+                        <ItemsControl ItemsSource="{Binding LetzteBuchungen}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LetzteAusgabeZeile">
+                                    <Border BorderBrush="{DynamicResource BorderDezentFarbe}"
+                                            BorderThickness="0,0,0,1" Padding="0,8">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding VorText}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding BetragText}"
+                                                       Classes.ausgabe="{Binding IstAusgabe}"
+                                                       Classes.einnahme="{Binding IstEinnahme}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

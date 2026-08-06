@@ -104,12 +104,11 @@ public static class StartupService
         // sich auf den Tag des Anwenders, nicht auf UTC-Mitternacht (Regel 3
         // betrifft nur gespeicherte Zeitstempel, nicht diesen Eingabewert).
         var asOf = DateOnly.FromDateTime(DateTime.Now);
+        // Protokolliert sich bei tatsaechlich Erzeugtem selbst (siehe
+        // RecurringExpenseRepository.GenerateDueOccurrences) - das gilt
+        // dann automatisch fuer jeden Aufrufer, nicht nur fuer den
+        // Programmstart.
         var generatedExpenses = new RecurringExpenseRepository(connection).GenerateDueOccurrences(asOf);
-
-        if (generatedExpenses.Count > 0)
-        {
-            AppLog.Current.Info(LogEvents.RecurringGenerated(generatedExpenses.Count, asOf));
-        }
 
         return new StartupResult
         {

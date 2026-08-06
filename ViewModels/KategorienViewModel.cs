@@ -49,6 +49,14 @@ public sealed partial class KategorienViewModel : ViewModelBase
     private bool _archivierteAnzeigen;
 
     /// <summary>
+    /// "19 Kategorien, 4 Ebenen" im Kopf der Seite (UI/UX-Redesign,
+    /// Abschnitt 5.5, mockups/06-verwaltung-kategorien.png) - reine
+    /// Anzeigezusammenfassung, wird bei jedem Baumaufbau neu berechnet.
+    /// </summary>
+    [ObservableProperty]
+    private string _uebersichtText = string.Empty;
+
+    /// <summary>
     /// Ein Schreibfehler bei einem Vorgang am Baum - archivieren,
     /// loeschen, umsortieren, einfaerben. Als Band ueber dem Baum. Der
     /// Baum selbst bleibt dabei unveraendert stehen: was nicht
@@ -645,9 +653,12 @@ public sealed partial class KategorienViewModel : ViewModelBase
 
     /// <summary>
     /// Wird beim Oeffnen der Farbwahl aufgerufen und haelt den Knoten
-    /// fest, um den es geht.
+    /// fest, um den es geht - direkt die Zeile, in der "Farbe…" gewaehlt
+    /// wurde (UI/UX-Redesign, Abschnitt 5.5: Aktionen sitzen jetzt in der
+    /// Zeile selbst statt an einer Werkzeugleiste mit vorheriger
+    /// Baumauswahl zu haengen).
     /// </summary>
-    public void OeffneFarbwahl() => FarbwahlKnoten = AusgewaehlterKnoten;
+    public void OeffneFarbwahlFuer(KategorieKnoten knoten) => FarbwahlKnoten = knoten;
 
     /// <summary>
     /// Setzt die Farbe der Kategorie, fuer die die Farbwahl geoeffnet
@@ -757,6 +768,23 @@ public sealed partial class KategorienViewModel : ViewModelBase
         }
 
         AusgewaehlterKnoten = ausgewaehlteId is int id ? FindeKnoten(Wurzelknoten, id) : null;
+
+        var anzahlGesamt = 0;
+        var maxEbene = 0;
+        ZaehleBaum(Wurzelknoten, ebene: 1, ref anzahlGesamt, ref maxEbene);
+        UebersichtText =
+            $"{anzahlGesamt} {(anzahlGesamt == 1 ? "Kategorie" : "Kategorien")}, " +
+            $"{maxEbene} {(maxEbene == 1 ? "Ebene" : "Ebenen")}";
+    }
+
+    private static void ZaehleBaum(IEnumerable<KategorieKnoten> knoten, int ebene, ref int anzahl, ref int maxEbene)
+    {
+        foreach (var kandidat in knoten)
+        {
+            anzahl++;
+            maxEbene = Math.Max(maxEbene, ebene);
+            ZaehleBaum(kandidat.Children, ebene + 1, ref anzahl, ref maxEbene);
+        }
     }
 
     private List<KategorieKnoten> BaueKnoten(

@@ -1,6 +1,7 @@
 using System.Data;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Logging;
 using Dapper;
 
 namespace Ausgabenverwaltung.Core.Categories;
@@ -57,6 +58,8 @@ public sealed class CategoryRepository
 
         var id = _connection.ExecuteScalar<long>("SELECT last_insert_rowid()");
 
+        AppLog.Current.Info(LogEvents.CategoryCreated((int)id, parentId));
+
         return new Category
         {
             Id = (int)id,
@@ -80,6 +83,8 @@ public sealed class CategoryRepository
 
         const string sql = "UPDATE Category SET Name = @Name WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id, Name = newName });
+
+        AppLog.Current.Info(LogEvents.CategoryRenamed(id));
     }
 
     /// <summary>
@@ -97,12 +102,16 @@ public sealed class CategoryRepository
 
         const string sql = "UPDATE Category SET IsArchived = 1 WHERE Id IN @Ids";
         _connection.Execute(sql, new { Ids = ids });
+
+        AppLog.Current.Info(LogEvents.CategoryArchived(id, ids.Count - 1));
     }
 
     public void Restore(int id)
     {
         const string sql = "UPDATE Category SET IsArchived = 0 WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id });
+
+        AppLog.Current.Info(LogEvents.CategoryRestored(id));
     }
 
     /// <summary>
@@ -159,6 +168,8 @@ public sealed class CategoryRepository
         }
 
         _connection.Execute("DELETE FROM Category WHERE Id = @Id", new { Id = id });
+
+        AppLog.Current.Info(LogEvents.CategoryDeleted(id));
     }
 
     /// <summary>
@@ -228,7 +239,7 @@ public sealed class CategoryRepository
                 ModifiedUtc = @NowUtcText
             WHERE CategoryId = @SourceId
             """;
-        _connection.Execute(moveExpensesSql, parameters, transaction);
+        var expenseCount = _connection.Execute(moveExpensesSql, parameters, transaction);
 
         const string moveRecurringSql = """
             UPDATE RecurringExpense
@@ -236,12 +247,17 @@ public sealed class CategoryRepository
                 ModifiedUtc = @NowUtcText
             WHERE CategoryId = @SourceId
             """;
-        _connection.Execute(moveRecurringSql, parameters, transaction);
+        var recurringExpenseCount = _connection.Execute(moveRecurringSql, parameters, transaction);
 
         const string deleteSql = "DELETE FROM Category WHERE Id = @SourceId";
         _connection.Execute(deleteSql, parameters, transaction);
 
         transaction.Commit();
+
+        // Die Zeilenzahlen der beiden UPDATE-Anweisungen sind hier schon
+        // bekannt - eine zusaetzliche Zaehlabfrage fuer das Protokoll waere
+        // ueberfluessig.
+        AppLog.Current.Info(LogEvents.CategoryMerged(sourceId, targetId, expenseCount, recurringExpenseCount));
     }
 
     /// <summary>
@@ -299,6 +315,8 @@ public sealed class CategoryRepository
 
         const string sql = "UPDATE Category SET Color = @Color WHERE Id = @Id";
         _connection.Execute(sql, new { Id = id, Color = value });
+
+        AppLog.Current.Info(LogEvents.CategoryColorChanged(id));
     }
 
     /// <summary>
@@ -367,6 +385,8 @@ public sealed class CategoryRepository
         const string updateSql = "UPDATE Category SET SortOrder = @SortOrder WHERE Id = @Id";
         _connection.Execute(updateSql, new { Id = self.Id, SortOrder = neighbour.SortOrder });
         _connection.Execute(updateSql, new { Id = neighbour.Id, SortOrder = self.SortOrder });
+
+        AppLog.Current.Info(LogEvents.CategoryMoved(id, delta));
     }
 
     /// <summary>

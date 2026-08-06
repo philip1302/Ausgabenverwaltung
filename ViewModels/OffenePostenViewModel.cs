@@ -41,6 +41,15 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     [ObservableProperty]
     private bool _keineEintraege;
 
+    /// <summary>
+    /// Anzahl der tatsaechlich noch offenen (nicht beglichenen) Posten -
+    /// unabhaengig vom Schalter "Beglichene der letzten 30 Tage anzeigen".
+    /// Fuer das Zaehler-Badge an "Offene Posten" in der Sidebar
+    /// (UI/UX-Redesign, Abschnitt 3).
+    /// </summary>
+    [ObservableProperty]
+    private int _anzahlOffenerPosten;
+
     [ObservableProperty]
     private bool _beglicheneLetzte30TageAnzeigen;
 
@@ -387,6 +396,7 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
         AnzahlAusgewaehlt = 0;
         KeineEintraege = Gruppen.Count == 0;
+        AnzahlOffenerPosten = Gruppen.SelectMany(g => g.Zeilen).Count(z => !z.IstBeglichen);
         AktualisiereGesamtsumme();
     }
 

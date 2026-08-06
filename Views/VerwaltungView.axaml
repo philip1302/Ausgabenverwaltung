@@ -3,25 +3,48 @@
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
              xmlns:views="using:Ausgabenverwaltung.Views"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="650"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.VerwaltungView"
              x:DataType="vm:VerwaltungViewModel">
-    <TabControl Margin="16">
-        <TabItem Header="Kategorien">
-            <views:KategorienView DataContext="{Binding Kategorien}" />
-        </TabItem>
-        <TabItem Header="Personen">
-            <views:PersonenView DataContext="{Binding Personen}" />
-        </TabItem>
-        <TabItem Header="Wiederkehrende Ausgaben">
-            <views:VorlagenView DataContext="{Binding Vorlagen}" />
-        </TabItem>
-        <TabItem Header="Datensicherung">
-            <views:DatensicherungView DataContext="{Binding Datensicherung}" />
-        </TabItem>
-        <TabItem Header="Darstellung">
-            <views:DarstellungView DataContext="{Binding Darstellung}" />
-        </TabItem>
-    </TabControl>
+
+    <!-- UI/UX-Redesign, Abschnitt 3/5.5-5.9: "Verwaltung" wird von der
+         Sidebar aus direkt in einen der fuenf Unterbereiche angesprungen
+         (siehe NavigationItem.VerwaltungsTabIndex, MainViewModel). Die
+         Tab-Leiste bleibt zusaetzlich als Kontext-Umschalter INNERHALB
+         dieser Seite erhalten - deshalb SelectedIndex zweiseitig an
+         VerwaltungViewModel.AusgewaehlterTabIndex gebunden. -->
+    <UserControl.Styles>
+        <Style Selector="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+            <Setter Property="Padding" Value="4,10" />
+            <Setter Property="Margin" Value="0,0,24,0" />
+        </Style>
+        <Style Selector="TabItem:selected">
+            <Setter Property="Foreground" Value="{DynamicResource AccentFarbe}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Margin="32,24">
+        <TextBlock DockPanel.Dock="Top" Classes="seitentitel" Text="Verwaltung" Margin="0,0,0,16" />
+
+        <TabControl SelectedIndex="{Binding AusgewaehlterTabIndex}">
+            <TabItem Header="Kategorien">
+                <views:KategorienView DataContext="{Binding Kategorien}" Margin="0,20,0,0" />
+            </TabItem>
+            <TabItem Header="Personen">
+                <views:PersonenView DataContext="{Binding Personen}" Margin="0,20,0,0" />
+            </TabItem>
+            <TabItem Header="Wiederkehrende Ausgaben">
+                <views:VorlagenView DataContext="{Binding Vorlagen}" Margin="0,20,0,0" />
+            </TabItem>
+            <TabItem Header="Datensicherung">
+                <views:DatensicherungView DataContext="{Binding Datensicherung}" Margin="0,20,0,0" />
+            </TabItem>
+            <TabItem Header="Darstellung">
+                <views:DarstellungView DataContext="{Binding Darstellung}" Margin="0,20,0,0" />
+            </TabItem>
+        </TabControl>
+    </DockPanel>
 </UserControl>

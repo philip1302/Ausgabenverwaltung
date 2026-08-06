@@ -29,6 +29,12 @@ public sealed class Skalierung : INotifyPropertyChanged
     public const string SchriftNormalKey = "SchriftNormal";
     public const string SchriftUeberschriftKey = "SchriftUeberschrift";
 
+    /// <summary>Seitentitel im Kopf jedes Bereichs (UI/UX-Redesign, neue vierte Stufe).</summary>
+    public const string SchriftSeitentitelKey = "SchriftSeitentitel";
+
+    /// <summary>KPI-Zahlen auf der Startseite (UI/UX-Redesign).</summary>
+    public const string SchriftKpiKey = "SchriftKpi";
+
     public static Skalierung Aktuell { get; } = new();
 
     private Skalierung()
@@ -72,5 +78,7 @@ public sealed class Skalierung : INotifyPropertyChanged
         anwendung.Resources[SchriftKleinKey] = groessen.Small;
         anwendung.Resources[SchriftNormalKey] = groessen.Normal;
         anwendung.Resources[SchriftUeberschriftKey] = groessen.Heading;
+        anwendung.Resources[SchriftSeitentitelKey] = groessen.PageTitle;
+        anwendung.Resources[SchriftKpiKey] = groessen.Kpi;
     }
 }

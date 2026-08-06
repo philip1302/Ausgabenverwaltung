@@ -1,5 +1,6 @@
 using System.Data;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Logging;
 using Dapper;
 
 namespace Ausgabenverwaltung.Core.OpenItems;
@@ -103,6 +104,8 @@ public sealed class OpenItemsRepository
             SettledDateText = settledDate is DateOnly settled ? IsoDate.ToDateText(settled) : null,
             NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow),
         });
+
+        AppLog.Current.Info(LogEvents.OpenItemSettled(id, settled: settledDate is not null));
     }
 
     /// <summary>
