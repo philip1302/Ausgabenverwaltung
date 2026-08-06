@@ -114,6 +114,79 @@ public sealed class ReportRepository
             .ToList();
     }
 
+    /// <summary>
+    /// Je Zeitabschnitt DREI getrennte Summen, wie sie das Diagramm der
+    /// Startseite braucht: was der Anwender selbst gezahlt hat, was er
+    /// fuer andere auslegt und noch nicht zurueckbekommen hat, und was
+    /// ihm zugeflossen ist.
+    ///
+    /// <see cref="Evaluate"/> liefert nur EINE Summe je Abschnitt (schon
+    /// verrechnet) und kann diese Aufschluesselung nicht geben - deshalb
+    /// eine eigene Abfrage statt dreier Aufrufe mit verbogenen Filtern.
+    ///
+    /// Die drei Faelle in Worten (mit dem Anwender abgestimmt):
+    ///
+    /// - <b>Eigene Ausgaben</b>: Zahler bin ich. Zaehlen immer, einen
+    ///   Status gibt es dafuer nicht (Regel 4).
+    /// - <b>Fremde offene Ausgaben</b>: jemand anders hat gezahlt, aber
+    ///   noch nicht abgerechnet - ich trage sie also bis auf Weiteres.
+    ///   Beglichene Fremdausgaben tauchen NIRGENDS auf: sie sind
+    ///   ausgeglichen und belasten mich nicht.
+    /// - <b>Einnahmen</b>: nur mit fremdem Zahler UND erst nach
+    ///   Begleichung. Eine offene Einnahme ist Geld, das mir jemand
+    ///   schuldet, aber noch nicht gezahlt hat.
+    ///
+    /// Die Bedingung <c>p.IsSelf = 0</c> bei den Einnahmen ist der eine
+    /// bewusste Unterschied zu <see cref="SumCentsSql"/>: eine Einnahme
+    /// an mich selbst gleicht sich aus und soll auch dann nicht zaehlen,
+    /// wenn bei ihr versehentlich ein Begleichungsdatum steht.
+    ///
+    /// <paramref name="filter"/> wird bis auf Zeitraum und Gruppierung
+    /// nicht ausgewertet - Zahlerbereich und Status stecken bereits in
+    /// den drei Spalten und wuerden sich sonst widersprechen.
+    /// </summary>
+    public IReadOnlyList<TrendGroupResult> EvaluateTrend(DateRange range, ReportGrouping grouping)
+    {
+        const string sql = """
+            SELECT
+            """ + GroupKeySql + """
+                                   AS GroupKey,
+
+                SUM(CASE WHEN e.IsIncome = 0 AND p.IsSelf = 1
+                         THEN ABS(e.AmountCents) ELSE 0 END)   AS OwnExpenseCents,
+
+                SUM(CASE WHEN e.IsIncome = 0 AND p.IsSelf = 0 AND e.SettledDate IS NULL
+                         THEN ABS(e.AmountCents) ELSE 0 END)   AS ForeignOpenExpenseCents,
+
+                SUM(CASE WHEN e.IsIncome = 1 AND p.IsSelf = 0 AND e.SettledDate IS NOT NULL
+                         THEN ABS(e.AmountCents) ELSE 0 END)   AS IncomeCents
+
+            FROM   Expense e
+            JOIN   Person  p ON p.Id = e.PayerId
+            WHERE  e.ExpenseDate >= @FromText
+              AND  e.ExpenseDate <  @ToText
+            GROUP  BY GroupKey
+            ORDER  BY GroupKey
+            """;
+
+        var rows = _connection.Query<TrendRow>(sql, new
+        {
+            FromText = Formatting.IsoDate.ToDateText(range.From),
+            ToText = Formatting.IsoDate.ToDateText(range.ToExclusive),
+            GroupUnit = GroupUnitText(grouping),
+        });
+
+        return rows
+            .Select(row => new TrendGroupResult
+            {
+                GroupKey = row.GroupKey,
+                OwnExpenseCents = row.OwnExpenseCents,
+                ForeignOpenExpenseCents = row.ForeignOpenExpenseCents,
+                IncomeCents = row.IncomeCents,
+            })
+            .ToList();
+    }
+
     // Der Schluessel des Zeitabschnitts. Eine gemeinsame Konstante, weil
     // Evaluate und EvaluateMatrix zwingend dieselben Schluessel liefern
     // muessen - und weil Reports.ReportPeriods genau diese drei Formate in
@@ -157,6 +230,14 @@ public sealed class ReportRepository
         public string GroupKey { get; set; } = string.Empty;
         public long SumCents { get; set; }
         public int Count { get; set; }
+    }
+
+    private sealed class TrendRow
+    {
+        public string GroupKey { get; set; } = string.Empty;
+        public long OwnExpenseCents { get; set; }
+        public long ForeignOpenExpenseCents { get; set; }
+        public long IncomeCents { get; set; }
     }
 
     private sealed class ReportMatrixRowData

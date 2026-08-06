@@ -348,6 +348,41 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Zeigt genau die Buchungen eines Zeitabschnitts. Wird aus dem
+    /// Diagramm der Startseite heraus aufgerufen: ein Klick auf einen
+    /// Balken soll zeigen, woraus er besteht.
+    ///
+    /// Wie beim Vorlagensprung werden die uebrigen Filter geleert - ein
+    /// stehen gebliebener Kategorie- oder Zahlerfilter wuerde die Liste
+    /// ausduennen, und der Anwender erwartet nach dem Klick genau die
+    /// Buchungen dieses Balkens.
+    ///
+    /// <paramref name="bisEinschliesslich"/> ist der letzte Tag, der noch
+    /// dazugehoert - die Filterleiste versteht ihre beiden Felder
+    /// einschliessend (siehe DateRangePresets.FromInclusiveBounds).
+    /// </summary>
+    public void ZeigeZeitraum(DateOnly von, DateOnly bisEinschliesslich)
+    {
+        _ladenGesperrt = true;
+        AusgewaehlteFilterKategorie = null;
+        AusgewaehlterZahler = ZahlerOptionen[0];
+        AusgewaehlterStatus = StatusOptionen[0];
+        Suchtext = string.Empty;
+
+        _vorlageFilterId = null;
+        VorlageFilterText = null;
+
+        VonText = GermanDateInput.ToText(von);
+        BisText = GermanDateInput.ToText(bisEinschliesslich);
+
+        SortSpalte = ExpenseSortColumn.Datum;
+        SortAufsteigend = false;
+        _ladenGesperrt = false;
+
+        LadeDaten();
+    }
+
+    /// <summary>
     /// Hebt die Einschraenkung auf eine Vorlage auf, ohne die uebrigen
     /// Filter anzufassen.
     /// </summary>

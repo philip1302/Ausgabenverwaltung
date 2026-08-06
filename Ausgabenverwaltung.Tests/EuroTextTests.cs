@@ -132,4 +132,80 @@ public class EuroTextTests
         Assert.Equal("-300,00" + Geschuetzt + "€", EuroText.FormatSigned(-30000, isIncome: false));
         Assert.Equal("+300,00" + Geschuetzt + "€", EuroText.FormatSigned(-30000, isIncome: true));
     }
+
+    // ================= Achsenbeschriftung =================
+
+    /// <summary>
+    /// An einer Wertachse stehen mehrere Beschriftungen untereinander -
+    /// dort zaehlt Kuerze, und die Nachkommastellen sagen nichts.
+    /// </summary>
+    [Fact]
+    public void Die_Achsenform_laesst_die_Nachkommastellen_weg()
+    {
+        Assert.Equal("1.250" + Geschuetzt + "€", EuroText.Axis(125000));
+        Assert.Equal("0" + Geschuetzt + "€", EuroText.Axis(0));
+    }
+
+    [Fact]
+    public void Die_Achsenform_kuerzt_grosse_Betraege_auf_Tausend()
+    {
+        Assert.Equal("25" + Geschuetzt + "€", EuroText.Axis(2500));
+
+        // 2.500 EUR liegen noch unter der Kuerzungsschwelle.
+        Assert.Equal("2.500" + Geschuetzt + "€", EuroText.Axis(250000));
+
+        // 25.000 EUR darueber.
+        Assert.Equal("25" + Geschuetzt + "Tsd." + Geschuetzt + "€", EuroText.Axis(2500000));
+        Assert.Equal("25,5" + Geschuetzt + "Tsd." + Geschuetzt + "€", EuroText.Axis(2550000));
+    }
+
+    /// <summary>
+    /// Zahl, Einheit und Waehrungszeichen gehoeren zusammen - ein
+    /// Zeilenumbruch mitten im Betrag waere ein Lesefehler.
+    /// </summary>
+    [Fact]
+    public void Die_Achsenform_haelt_den_Betrag_ueber_Umbrueche_hinweg_zusammen()
+    {
+        Assert.DoesNotContain(" ", EuroText.Axis(2500000));
+        Assert.DoesNotContain(" ", EuroText.Axis(150000000));
+    }
+
+    [Fact]
+    public void Die_Achsenform_behaelt_uebliche_Haushaltsbetraege_ungekuerzt()
+    {
+        // Bis 10.000 EUR bleibt die volle Zahl stehen - im ueblichen
+        // Bereich eines Haushaltsbuchs liest sie sich sofort.
+        Assert.Equal("9.999" + Geschuetzt + "€", EuroText.Axis(999900));
+    }
+
+    [Fact]
+    public void Die_Achsenform_zeigt_negative_Betraege_mit_Minus()
+    {
+        Assert.Equal("-500" + Geschuetzt + "€", EuroText.Axis(-50000));
+        Assert.StartsWith("-", EuroText.Axis(-2500000));
+    }
+
+    [Fact]
+    public void Die_Achsenform_kuerzt_Millionen()
+    {
+        Assert.Contains("Mio.", EuroText.Axis(150000000));
+    }
+
+    /// <summary>
+    /// "2,0 Tsd." waere nur laenger als "2 Tsd." - eine Nachkommastelle
+    /// gibt es nur, wenn sie etwas beitraegt.
+    /// </summary>
+    [Fact]
+    public void Die_Achsenform_haengt_keine_leere_Nachkommastelle_an()
+    {
+        Assert.DoesNotContain(",0", EuroText.Axis(2000000));
+    }
+
+    [Fact]
+    public void Die_Achsenform_traegt_immer_das_Waehrungszeichen()
+    {
+        Assert.All(
+            new[] { 0L, 5000L, -5000L, 250000L, 150000000L },
+            cents => Assert.EndsWith("€", EuroText.Axis(cents)));
+    }
 }

@@ -75,6 +75,15 @@
                     <SolidColorBrush x:Key="AusgabeFarbe">#A03A30</SolidColorBrush>
                     <SolidColorBrush x:Key="EinnahmeFarbe">#187A40</SolidColorBrush>
                     <SolidColorBrush x:Key="ErstattungFarbe">#A03A30</SolidColorBrush>
+
+                    <!-- Ausgelegt und noch offen: erkennbar dieselbe Familie wie
+                         AusgabeFarbe, aber sichtbar zurueckgenommen - im Diagramm
+                         sitzt dieser Ton unmittelbar auf dem kraeftigen, und die
+                         Grenze dazwischen muss ohne Hinsehen auffallen. Ein
+                         eigener Farbwert statt Deckkraft: eine durchscheinende
+                         Flaeche nimmt die Gitterlinien darunter an und wirkt
+                         schmutzig. -->
+                    <SolidColorBrush x:Key="AusgabeOffenFarbe">#D08C84</SolidColorBrush>
                 </ResourceDictionary>
 
                 <!-- ==== Dunkel (docs/design/UIUIXDESIGN.md, 2.2) ==== -->
@@ -127,6 +136,12 @@
                     <SolidColorBrush x:Key="AusgabeFarbe">#F1A79E</SolidColorBrush>
                     <SolidColorBrush x:Key="EinnahmeFarbe">#4ADE80</SolidColorBrush>
                     <SolidColorBrush x:Key="ErstattungFarbe">#F1A79E</SolidColorBrush>
+
+                    <!-- Siehe die helle Fassung. Im Dunkelmodus geht die
+                         Zuruecknahme in die andere Richtung: nicht aufhellen,
+                         sondern abdunkeln - auf dunklem Grund wirkt heller
+                         staerker, nicht schwaecher. -->
+                    <SolidColorBrush x:Key="AusgabeOffenFarbe">#9C625C</SolidColorBrush>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -636,6 +651,112 @@
             <Setter Property="Height" Value="{DynamicResource SchriftKlein}" />
             <Setter Property="CornerRadius" Value="99" />
             <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- ==================================================
+             Diagramm (Startseite)
+             ==================================================
+             Die Farben sind dieselben, die auch Betraege in Listen
+             kennzeichnen - ein roter Balken und ein roter Betrag meinen
+             dasselbe. Was welche Farbe bedeutet, steht zusaetzlich als
+             Text in der Legende (Regel 10). -->
+
+        <!-- Ein Balken ist ein Knopf, damit der Klick in die Buchungen
+             springt und die Flaeche mit der Tastatur erreichbar bleibt.
+             Deshalb muss hier alles abgeraeumt werden, was einen Knopf
+             sonst ausmacht. -->
+        <Style Selector="Button.balken">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.balken.eigene-ausgabe">
+            <Setter Property="Background" Value="{DynamicResource AusgabeFarbe}" />
+        </Style>
+        <Style Selector="Button.balken.offene-ausgabe">
+            <Setter Property="Background" Value="{DynamicResource AusgabeOffenFarbe}" />
+        </Style>
+        <Style Selector="Button.balken.einnahme">
+            <Setter Property="Background" Value="{DynamicResource EinnahmeFarbe}" />
+        </Style>
+        <Style Selector="Button.balken.netto-positiv">
+            <Setter Property="Background" Value="{DynamicResource EinnahmeFarbe}" />
+        </Style>
+        <Style Selector="Button.balken.netto-negativ">
+            <Setter Property="Background" Value="{DynamicResource AusgabeFarbe}" />
+        </Style>
+
+        <!-- Beim Zeigen aufhellen statt umfaerben: die Farbe traegt hier
+             Bedeutung und darf sich nicht aendern. -->
+        <Style Selector="Button.balken:pointerover">
+            <Setter Property="Opacity" Value="0.82" />
+        </Style>
+
+        <!-- Avalonia setzt beim Zeigen und Druecken eine eigene Flaeche
+             ueber das Template; ohne diese beiden Regeln waere die
+             Balkenfarbe dabei weg. -->
+        <Style Selector="Button.balken:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+        </Style>
+        <Style Selector="Button.balken:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+        </Style>
+
+        <!-- Gitternetz: da, aber im Hintergrund. Es soll das Ablesen
+             stuetzen, nicht um Aufmerksamkeit mit den Balken ringen. -->
+        <Style Selector="Line.gitter">
+            <Setter Property="Stroke" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="StrokeThickness" Value="1" />
+        </Style>
+
+        <!-- Die Nulllinie ist die Bezugslinie, von der aus jeder Balken
+             gelesen wird - sie hebt sich deshalb ab. -->
+        <Style Selector="Line.nulllinie">
+            <Setter Property="Stroke" Value="{DynamicResource BorderStarkFarbe}" />
+            <Setter Property="StrokeThickness" Value="1.5" />
+        </Style>
+
+        <Style Selector="Line.durchschnitt">
+            <Setter Property="StrokeThickness" Value="1.5" />
+            <Setter Property="StrokeDashArray" Value="5,4" />
+        </Style>
+        <Style Selector="Line.durchschnitt-ausgaben">
+            <Setter Property="Stroke" Value="{DynamicResource AusgabeFarbe}" />
+        </Style>
+        <Style Selector="Line.durchschnitt-einnahmen">
+            <Setter Property="Stroke" Value="{DynamicResource EinnahmeFarbe}" />
+        </Style>
+        <Style Selector="Line.durchschnitt-netto">
+            <Setter Property="Stroke" Value="{DynamicResource AccentFarbe}" />
+        </Style>
+
+        <!-- Farbfeld der Legende -->
+        <Style Selector="Border.legende">
+            <Setter Property="Width" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="Height" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.legende.eigene-ausgabe">
+            <Setter Property="Background" Value="{DynamicResource AusgabeFarbe}" />
+        </Style>
+        <Style Selector="Border.legende.offene-ausgabe">
+            <Setter Property="Background" Value="{DynamicResource AusgabeOffenFarbe}" />
+        </Style>
+        <Style Selector="Border.legende.einnahme">
+            <Setter Property="Background" Value="{DynamicResource EinnahmeFarbe}" />
+        </Style>
+        <Style Selector="Border.legende.durchschnitt">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TextTertiaerFarbe}" />
+            <Setter Property="BorderThickness" Value="0,1.5,0,0" />
+            <Setter Property="Height" Value="2" />
         </Style>
     </Application.Styles>
 </Application>
