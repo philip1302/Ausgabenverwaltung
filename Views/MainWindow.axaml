@@ -156,8 +156,11 @@
 
                             <!-- "Verwaltung": statischer Gruppenkopf mit
                                  Zahnrad-Icon (UI/UX-Redesign, Abschnitt 3) -
-                                 die fuenf echten Sprungziele stehen darunter,
-                                 eingerueckt. -->
+                                 die echten Sprungziele stehen darunter,
+                                 eingerueckt. Wiederkehrende Ausgaben und
+                                 Darstellung sind seit dem Reiter-Umbau kein
+                                 Unterpunkt hier mehr (siehe oben bzw. die
+                                 Fusszeile). -->
                             <Grid ColumnDefinitions="Auto,*" Margin="8,4,8,2">
                                 <Path Grid.Column="0" Data="{DynamicResource IconVerwaltung}"
                                       Width="{anzeige:Breite 18}" Height="{anzeige:Breite 18}"
@@ -175,11 +178,15 @@
                     </ScrollViewer>
 
                     <!-- Fusszeile: Thema und Schriftstufe auf einen Blick,
-                         ohne erst in die Verwaltung wechseln zu muessen
-                         (UI/UX-Redesign, Abschnitt 3). -->
-                    <Border Grid.Row="2" Classes="sidebar-fusszeile"
+                         jetzt zugleich der einzige Zugang zu "Darstellung"
+                         (seit dem Reiter-Umbau kein eigener Menuepunkt mehr) -
+                         ein Klick wechselt wie jeder andere Bereichswechsel
+                         den normalen Anzeigebereich rechts (UI/UX-Redesign,
+                         Abschnitt 3). -->
+                    <Button Grid.Row="2" Classes="sidebar-fusszeile"
                             Height="{anzeige:Breite 44}"
-                            BorderThickness="0,1,0,0" Padding="8,0" Margin="0,8,0,0">
+                            BorderThickness="0,1,0,0" Padding="8,0" Margin="0,8,0,0"
+                            Command="{Binding OeffneDarstellungCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <Path Data="{DynamicResource IconDarstellung}"
                                   Width="{anzeige:Breite 14}" Height="{anzeige:Breite 14}"
@@ -189,7 +196,7 @@
                             <TextBlock Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}"
                                        Text="{Binding Darstellung.FusszeilenText}" />
                         </StackPanel>
-                    </Border>
+                    </Button>
                 </Grid>
             </Border>
 

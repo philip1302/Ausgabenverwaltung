@@ -15,10 +15,17 @@ namespace Ausgabenverwaltung.ViewModels;
 ///
 /// Die Navigation ist seit dem UI/UX-Redesign (Abschnitt 3) in Gruppen
 /// gegliedert (siehe <see cref="NavigationGruppe"/>) statt einer flachen
-/// Liste von fuenf Eintraegen, und "Verwaltung" traegt fuenf eigene
-/// Unterpunkte, die auf dieselbe <see cref="VerwaltungViewModel"/>-Instanz
-/// zeigen, aber jeweils einen anderen Tab aktivieren (siehe
-/// <see cref="NavigationItem.VerwaltungsTabIndex"/>).
+/// Liste von fuenf Eintraegen. "Wiederkehrende Ausgaben" (Gruppe
+/// "Erfassen &amp; Verwalten") sowie die drei verbliebenen Unterpunkte von
+/// "Verwaltung" zeigen dabei alle auf dieselbe
+/// <see cref="VerwaltungViewModel"/>-Instanz, aktivieren aber jeweils einen
+/// anderen Tab (siehe <see cref="NavigationItem.VerwaltungsTabIndex"/>).
+/// "Darstellung" hat seit dem Reiter-Umbau keinen sichtbaren Sidebar-Platz
+/// mehr (Gruppe <see cref="NavigationGruppe.Keine"/>, wie die Startseite),
+/// bleibt aber ein normaler Navigationseintrag: die Fusszeile
+/// (Views/MainWindow.axaml) waehlt ihn ueber <see cref="OeffneDarstellungCommand"/>
+/// an und wechselt damit ganz normal den Hauptinhalt statt ein Flyout zu
+/// oeffnen.
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase
 {
@@ -59,6 +66,13 @@ public sealed partial class MainViewModel : ViewModelBase
     /// <summary>Fuer die Sidebar-Fusszeile ("Hell · Normal") - siehe Views/MainWindow.axaml.</summary>
     public DarstellungViewModel Darstellung => _verwaltung.Darstellung;
 
+    // "Darstellung" hat keinen sichtbaren Sidebar-Platz mehr (Gruppe
+    // "Keine", wie die Startseite), bleibt aber ein normaler
+    // Navigationseintrag: ein Klick auf die Fusszeile (Views/MainWindow.axaml)
+    // wechselt wie jeder andere Bereichswechsel den Hauptinhalt, statt ein
+    // Flyout zu oeffnen.
+    private readonly NavigationItem _darstellungEintrag;
+
     public MainViewModel(
         StartupNoticeViewModel startupNotice,
         AktualisierungViewModel aktualisierung,
@@ -86,21 +100,23 @@ public sealed partial class MainViewModel : ViewModelBase
 
             new("Erfassen", erfassen, "IconErfassen", NavigationGruppe.ErfassenUndVerwalten),
             new("Offene Posten", offenePosten, "IconOffenePosten", NavigationGruppe.ErfassenUndVerwalten),
+            new("Wiederkehrende Ausgaben", verwaltung, "IconVorlagen", NavigationGruppe.ErfassenUndVerwalten, verwaltungsTabIndex: 2),
 
             new("Report", report, "IconReport", NavigationGruppe.Auswertung),
             new("Ausgabenliste", ausgabenliste, "IconAusgabenliste", NavigationGruppe.Auswertung),
 
             new("Kategorien", verwaltung, "IconKategorien", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 0),
             new("Personen", verwaltung, "IconPersonen", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 1),
-            new("Wiederkehrende Ausgaben", verwaltung, "IconVorlagen", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 2),
             new("Datensicherung", verwaltung, "IconDatensicherung", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 3),
-            new("Darstellung", verwaltung, "IconDarstellung", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 4),
+
+            new("Darstellung", verwaltung, "IconDarstellung", NavigationGruppe.Keine, verwaltungsTabIndex: 4),
         };
 
         StartseiteEintrag = NavigationItems[0];
         ErfassenUndVerwaltenEintraege = NavigationItems.Where(i => i.Gruppe == NavigationGruppe.ErfassenUndVerwalten).ToList();
         AuswertungEintraege = NavigationItems.Where(i => i.Gruppe == NavigationGruppe.Auswertung).ToList();
         EinstellungenEintraege = NavigationItems.Where(i => i.Gruppe == NavigationGruppe.Einstellungen).ToList();
+        _darstellungEintrag = NavigationItems.Last();
 
         _selectedNavigationItem = NavigationItems[0];
 
@@ -177,10 +193,23 @@ public sealed partial class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Gebunden an die Sidebar-Fusszeile (Views/MainWindow.axaml): wechselt
+    /// wie ein gewaehlter Navigationseintrag in den normalen Anzeigebereich,
+    /// nur eben zu einem Eintrag ohne eigenen Sidebar-Platz.
+    /// </summary>
+    [RelayCommand]
+    private void OeffneDarstellung()
+    {
+        SelectedNavigationItem = _darstellungEintrag;
+    }
+
     // Genau ein Eintrag ist aktiv - siehe NavigationItem.IstAktiv. Bei den
-    // fuenf Verwaltungs-Unterpunkten sind das fuenf verschiedene Objekte
-    // (dieselbe ViewModel-Instanz, aber je ein eigener Navigationseintrag),
-    // ReferenceEquals traegt deshalb auch dort korrekt genau einen Treffer.
+    // vier Eintraegen, die auf VerwaltungViewModel zeigen (Wiederkehrende
+    // Ausgaben plus die drei Verwaltungs-Unterpunkte), sind das vier
+    // verschiedene Objekte (dieselbe ViewModel-Instanz, aber je ein eigener
+    // Navigationseintrag), ReferenceEquals traegt deshalb auch dort korrekt
+    // genau einen Treffer.
     private void AktualisiereAktivStatus()
     {
         foreach (var item in NavigationItems)

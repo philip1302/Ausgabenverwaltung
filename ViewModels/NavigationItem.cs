@@ -6,7 +6,10 @@ namespace Ausgabenverwaltung.ViewModels;
 /// Eine Gruppe der Hauptnavigation (UI/UX-Redesign, Abschnitt 3): die
 /// Sidebar ist nicht mehr eine flache Liste, sondern in Abschnitte
 /// gegliedert. <see cref="Keine"/> steht für die Startseite, die bewusst
-/// ohne Kopfzeile über den übrigen Gruppen steht.
+/// ohne Kopfzeile über den übrigen Gruppen steht, sowie seit dem
+/// Reiter-Umbau für "Darstellung": dessen Eintrag hat keinen sichtbaren
+/// Sidebar-Platz, wird aber von der Fusszeile aus angewählt (siehe
+/// MainViewModel.OeffneDarstellungCommand).
 /// </summary>
 public enum NavigationGruppe
 {
@@ -27,10 +30,12 @@ public enum NavigationGruppe
 /// direkt "IstAktiv" statt eines Konverters, der zwei Objektreferenzen
 /// vergleicht.
 ///
-/// <see cref="VerwaltungsTabIndex"/> bildet die Unterpunkte der Gruppe
-/// "Verwaltung" ab (UI/UX-Redesign, Abschnitt 3): die fünf Unterpunkte
-/// teilen sich dasselbe <see cref="VerwaltungViewModel"/> als
-/// <see cref="ViewModel"/> (dieselbe Instanz, mehrere Navigationseintraege)
+/// <see cref="VerwaltungsTabIndex"/> markiert Eintraege, die auf
+/// <see cref="VerwaltungViewModel"/> zeigen, aber einen bestimmten Tab
+/// dort aktivieren sollen (UI/UX-Redesign, Abschnitt 3, seit dem
+/// Reiter-Umbau auch "Wiederkehrende Ausgaben" ausserhalb der Gruppe
+/// "Verwaltung"): mehrere Navigationseintraege teilen sich dieselbe
+/// <see cref="VerwaltungViewModel"/>-Instanz als <see cref="ViewModel"/>
 /// und tragen zusaetzlich den Index des Tabs, der beim Auswaehlen aktiviert
 /// werden soll.
 /// </summary>

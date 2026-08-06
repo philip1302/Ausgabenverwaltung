@@ -480,8 +480,18 @@
             <Setter Property="Width" Value="3" />
         </Style>
 
-        <Style Selector="Border.sidebar-fusszeile">
+        <!-- Fusszeile als Knopf statt reiner Anzeige: oeffnet das
+             Darstellung-Flyout (UI/UX-Redesign, Reiter-Umbau) - Randfarbe
+             wie zuvor, dazu ein dezenter Hover wie bei nav-item. -->
+        <Style Selector="Button.sidebar-fusszeile">
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.sidebar-fusszeile:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
         </Style>
 
         <!-- Padding bewusst 0: der Abstand zwischen Spalten kommt
