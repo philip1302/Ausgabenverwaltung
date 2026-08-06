@@ -29,9 +29,6 @@ public sealed partial class PersonZeile : ObservableObject
 
     public string OffenePostenSummeText { get; }
 
-    /// <summary>Erstattung (negative Summe) - wird gedaempft rot hervorgehoben.</summary>
-    public bool OffenePostenSummeIstErstattung { get; }
-
     [ObservableProperty]
     private bool _wirdBearbeitet;
 
@@ -61,8 +58,12 @@ public sealed partial class PersonZeile : ObservableObject
         // Bei der eigenen Person wird "SettledDate IS NULL" nie als offen
         // ausgewertet (Regel 4) - deshalb hier bewusst kein Betrag statt
         // einer irrefuehrenden 0,00-Anzeige.
+        //
+        // Keine Farbe: die Summe addiert offene Ausgaben UND Einnahmen in
+        // dieselbe Richtung (siehe OpenItemsRepository.GetOpenSumsByPayer),
+        // ihr Vorzeichen sagt also nichts ueber Gewinn/Verlust aus wie im
+        // Report.
         OffenePostenSummeText = isSelf ? "–" : EuroText.Format(offenePostenSummeCents);
-        OffenePostenSummeIstErstattung = !isSelf && EuroText.IsNegative(offenePostenSummeCents);
     }
 
     public void UebernehmeErstellteId(int id) => Id = id;

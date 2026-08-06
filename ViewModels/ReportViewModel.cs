@@ -147,10 +147,6 @@ public sealed partial class ReportViewModel : ViewModelBase
     [ObservableProperty]
     private string _detailSummeText = string.Empty;
 
-    /// <summary>Die Summe des Dialogs ist negativ - Ausgaben ueberwiegen.</summary>
-    [ObservableProperty]
-    private bool _detailSummeIstAusgabe;
-
     /// <summary>Die Summe des Dialogs ist positiv - Einnahmen ueberwiegen.</summary>
     [ObservableProperty]
     private bool _detailSummeIstEinnahme;
@@ -359,7 +355,6 @@ public sealed partial class ReportViewModel : ViewModelBase
             ? "1 Buchung"
             : $"{summary.Count.ToString("N0", DeDe)} Buchungen";
         DetailSummeText = EuroText.Format(summary.SumCents);
-        DetailSummeIstAusgabe = EuroText.IsNegative(summary.SumCents);
         DetailSummeIstEinnahme = EuroText.IsPositive(summary.SumCents);
 
         DetailTitel = zelle.Beschreibung;

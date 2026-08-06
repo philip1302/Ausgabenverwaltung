@@ -16,4 +16,14 @@ public sealed class ExpenseOverview
 
     /// <summary>Ob dieser Betrag eine Einnahme ist (siehe Entities.Expense.IsIncome).</summary>
     public required bool IsIncome { get; init; }
+
+    /// <summary>
+    /// Ob der Zahler die eigene Person ist. Noetig fuer die Farbwahl in
+    /// der Anzeige: bei eigenen Buchungen wird SettledDate nie
+    /// ausgewertet (Regel 4).
+    /// </summary>
+    public required bool PayerIsSelf { get; init; }
+
+    /// <summary>NULL = nicht beglichen (nur bei fremdem Zahler relevant).</summary>
+    public DateOnly? SettledDate { get; init; }
 }

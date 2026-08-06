@@ -39,14 +39,20 @@
                 <Border Classes="kpi" Margin="0,0,8,0">
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="Auto,6,*">
+                            <!-- Neutral statt rot: die Kachel mischt eigene UND noch
+                                 offene fremde Ausgaben (PayerScope.SelfAndOpen) zu
+                                 einer Summe - unter der Summen-Regel (negativ =
+                                 neutral) verliert sie ihre bisherige rote
+                                 Hervorhebung, wie die uebrigen neutralen Kacheln
+                                 rechts daneben. -->
                             <Path Grid.Column="0" Data="{DynamicResource IconPfeilHoch}"
                                   Width="{anzeige:Breite 16}" Height="{anzeige:Breite 16}"
                                   Stretch="Uniform" StrokeThickness="1.75"
                                   StrokeLineCap="Round" StrokeJoin="Round"
-                                  Fill="Transparent" Stroke="{DynamicResource AusgabeFarbe}" />
+                                  Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}" />
                             <TextBlock Grid.Column="2" Classes="kpi-label" Text="Ausgaben, diesen Monat" TextWrapping="Wrap" />
                         </Grid>
-                        <TextBlock Classes="kpi-wert ausgabe" Text="{Binding AusgabenMonatText}" />
+                        <TextBlock Classes="kpi-wert" Text="{Binding AusgabenMonatText}" />
                         <TextBlock Classes="kpi-hinweis" Text="{Binding AusgabenMonatHinweis}" />
                     </StackPanel>
                 </Border>
@@ -103,56 +109,209 @@
             <Grid ColumnDefinitions="2*,16,1*">
                 <Border Grid.Column="0" Classes="karte">
                     <DockPanel>
-                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12" Spacing="2">
-                            <TextBlock Classes="ueberschrift" Text="Netto der letzten 6 Monate" TextWrapping="Wrap" />
-                            <TextBlock Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}"
-                                       Text="Einnahmen − Ausgaben, eigene Buchungen" />
+                        <!-- ============ Kopf: Titel und Bedienung ============ -->
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Classes="ueberschrift" TextWrapping="Wrap"
+                                           Text="{Binding DiagrammUeberschrift}" />
+                                <TextBlock Classes="klein" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextTertiaerFarbe}"
+                                           Text="{Binding DiagrammZusammenfassung}" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
+                                        VerticalAlignment="Top">
+                                <!-- Ansicht. Dasselbe Muster wie die Zeitraum-
+                                     Schnellwahl der Auswertung: der aktive Knopf
+                                     traegt die Klasse "aktiv" (siehe TextGleich). -->
+                                <StackPanel Orientation="Horizontal" Spacing="0">
+                                    <Button Classes="secondary klein" Content="Detail"
+                                            Command="{Binding AnsichtWaehlenCommand}" CommandParameter="Detail"
+                                            Classes.aktiv="{Binding AktiveAnsicht,
+                                                Converter={x:Static anzeige:TextGleich.Instanz},
+                                                ConverterParameter=Detail}" />
+                                    <Button Classes="secondary klein" Content="Netto"
+                                            Command="{Binding AnsichtWaehlenCommand}" CommandParameter="Netto"
+                                            Classes.aktiv="{Binding AktiveAnsicht,
+                                                Converter={x:Static anzeige:TextGleich.Instanz},
+                                                ConverterParameter=Netto}" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Spacing="0">
+                                    <Button Classes="secondary klein" Content="6 M"
+                                            Command="{Binding ZeitraumWaehlenCommand}" CommandParameter="6"
+                                            Classes.aktiv="{Binding AktiverZeitraum,
+                                                Converter={x:Static anzeige:TextGleich.Instanz},
+                                                ConverterParameter=6}" />
+                                    <Button Classes="secondary klein" Content="12 M"
+                                            Command="{Binding ZeitraumWaehlenCommand}" CommandParameter="12"
+                                            Classes.aktiv="{Binding AktiverZeitraum,
+                                                Converter={x:Static anzeige:TextGleich.Instanz},
+                                                ConverterParameter=12}" />
+                                    <Button Classes="secondary klein" Content="24 M"
+                                            Command="{Binding ZeitraumWaehlenCommand}" CommandParameter="24"
+                                            Classes.aktiv="{Binding AktiverZeitraum,
+                                                Converter={x:Static anzeige:TextGleich.Instanz},
+                                                ConverterParameter=24}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- ============ Legende ============
+                             Farbe ist immer nur Zusatz (Regel 10) - was welche
+                             Farbe bedeutet, steht hier als Text daneben. -->
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                                    Spacing="16" Margin="0,10,0,0">
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        IsVisible="{Binding Detailansicht}">
+                                <Border Classes="legende eigene-ausgabe" />
+                                <TextBlock Classes="klein" Text="Selbst gezahlt" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        IsVisible="{Binding Detailansicht}">
+                                <Border Classes="legende offene-ausgabe" />
+                                <TextBlock Classes="klein" Text="Ausgelegt, noch offen" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        IsVisible="{Binding Detailansicht}">
+                                <Border Classes="legende einnahme" />
+                                <TextBlock Classes="klein" Text="Eingenommen" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        IsVisible="{Binding !Detailansicht}">
+                                <Border Classes="legende einnahme" />
+                                <TextBlock Classes="klein" Text="Überschuss" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        IsVisible="{Binding !Detailansicht}">
+                                <Border Classes="legende eigene-ausgabe" />
+                                <TextBlock Classes="klein" Text="Ausgabenüberhang" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Border Classes="legende durchschnitt" />
+                                <TextBlock Classes="klein" Text="Durchschnitt" />
+                            </StackPanel>
                         </StackPanel>
 
-                        <!-- Monatsbeschriftungen unter der Linie -->
-                        <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding TrendMonatsBeschriftungen}"
-                                      Margin="0,4,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Rows="1" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <TextBlock Text="{Binding}" Classes="klein"
-                                               Foreground="{DynamicResource TextTertiaerFarbe}"
-                                               HorizontalAlignment="Center" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <!-- ============ Zeichenflaeche ============
+                             EINE Flaeche fuer alles: Gitternetz, Balken und
+                             beide Achsenbeschriftungen. Die Koordinaten rechnet
+                             Core (Charts.BarChart) aus der gemeldeten Groesse -
+                             kein gedachter Koordinatenraum und kein Viewbox
+                             mehr, der Strichstaerken und Strichelmuster
+                             verzerren wuerde.
 
-                        <!-- Die "einfache Linie" (UI/UX-Redesign, Abschnitt 4):
-                             ein Viewbox skaliert einen festen, gedachten
-                             Koordinatenraum (0..600 x 0..160, siehe
-                             StartseiteViewModel.TrendLinien) auf die
-                             tatsaechliche Kartenbreite. -->
-                        <!-- ItemsPanel MUSS ausdruecklich ein Canvas sein: ohne
-                             diese Angabe legt ItemsControl seine Eintraege in
-                             einem StackPanel ab, und die absoluten Von/Bis-
-                             Koordinaten der Segmente wirken dann nicht mehr -
-                             die Linie erschien dadurch vorher gar nicht. -->
-                        <Viewbox Stretch="Fill" Height="{anzeige:Breite 160}">
-                            <ItemsControl ItemsSource="{Binding TrendLinien}" Width="600" Height="160">
+                             Jedes ItemsControl braucht ausdruecklich ein Canvas
+                             als ItemsPanel: ohne diese Angabe legt Avalonia die
+                             Eintraege in einem StackPanel ab, und die absoluten
+                             Koordinaten wirken nicht - daran war das Diagramm
+                             hier schon einmal unsichtbar. -->
+                        <Grid Height="{anzeige:Breite 240}" SizeChanged="Zeichenflaeche_Groesse">
+                            <!-- Gitternetz und Nulllinie, ganz hinten -->
+                            <ItemsControl ItemsSource="{Binding DiagrammLinien}">
                                 <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <Canvas />
-                                    </ItemsPanelTemplate>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:TrendSegment">
+                                    <DataTemplate x:DataType="vm:DiagrammLinie">
                                         <Line StartPoint="{Binding Von}" EndPoint="{Binding Bis}"
-                                              Stroke="{DynamicResource AccentFarbe}"
-                                              StrokeThickness="2.5"
-                                              StrokeLineCap="Round" StrokeJoin="Round" />
+                                              ToolTip.Tip="{Binding Hinweis}"
+                                              Classes.gitter="{Binding IstGitter}"
+                                              Classes.nulllinie="{Binding IstNulllinie}"
+                                              Classes.durchschnitt="{Binding IstDurchschnitt}"
+                                              Classes.durchschnitt-ausgaben="{Binding IstDurchschnittAusgaben}"
+                                              Classes.durchschnitt-einnahmen="{Binding IstDurchschnittEinnahmen}"
+                                              Classes.durchschnitt-netto="{Binding IstDurchschnittNetto}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                        </Viewbox>
+
+                            <!-- Balken. Als Button, damit der Klick in die
+                                 Buchungen des Monats springt - und damit die
+                                 Flaeche mit der Tastatur erreichbar bleibt. -->
+                            <ItemsControl ItemsSource="{Binding DiagrammBalken}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerTheme>
+                                    <!-- Ungepruefte Bindungen: die Setter binden
+                                         an den Listeneintrag, der Bindungspruefer
+                                         nimmt hier aber den Typ der Ansicht an. -->
+                                    <ControlTheme TargetType="ContentPresenter" x:CompileBindings="False">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                    </ControlTheme>
+                                </ItemsControl.ItemContainerTheme>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DiagrammBalken">
+                                        <Button Classes="balken"
+                                                Width="{Binding Breite}" Height="{Binding Hoehe}"
+                                                ToolTip.Tip="{Binding Hinweis}"
+                                                Command="{Binding $parent[ItemsControl].((vm:StartseiteViewModel)DataContext).MonatOeffnenCommand}"
+                                                CommandParameter="{Binding Schluessel}"
+                                                Classes.eigene-ausgabe="{Binding IstEigeneAusgabe}"
+                                                Classes.offene-ausgabe="{Binding IstOffeneFremdausgabe}"
+                                                Classes.einnahme="{Binding IstEinnahme}"
+                                                Classes.netto-positiv="{Binding IstNettoPositiv}"
+                                                Classes.netto-negativ="{Binding IstNettoNegativ}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Wertachse links -->
+                            <ItemsControl ItemsSource="{Binding DiagrammWertachse}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerTheme>
+                                    <!-- Ungepruefte Bindungen: die Setter binden
+                                         an den Listeneintrag, der Bindungspruefer
+                                         nimmt hier aber den Typ der Ansicht an. -->
+                                    <ControlTheme TargetType="ContentPresenter" x:CompileBindings="False">
+                                        <Setter Property="Canvas.Left" Value="0" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                    </ControlTheme>
+                                </ItemsControl.ItemContainerTheme>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DiagrammWertBeschriftung">
+                                        <TextBlock Text="{Binding Text}" Classes="klein"
+                                                   Width="{Binding Breite}" TextAlignment="Right"
+                                                   Foreground="{DynamicResource TextTertiaerFarbe}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Zeitachse unten -->
+                            <ItemsControl ItemsSource="{Binding DiagrammZeitachse}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerTheme>
+                                    <!-- Ungepruefte Bindungen: die Setter binden
+                                         an den Listeneintrag, der Bindungspruefer
+                                         nimmt hier aber den Typ der Ansicht an. -->
+                                    <ControlTheme TargetType="ContentPresenter" x:CompileBindings="False">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                    </ControlTheme>
+                                </ItemsControl.ItemContainerTheme>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DiagrammZeitBeschriftung">
+                                        <TextBlock Text="{Binding Text}" Classes="klein"
+                                                   Width="{Binding Breite}" TextAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource TextTertiaerFarbe}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Leerzustand: ein Satz statt einer leeren Flaeche -->
+                            <TextBlock IsVisible="{Binding DiagrammLeer}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       Foreground="{DynamicResource TextTertiaerFarbe}"
+                                       Text="In diesem Zeitraum ist noch nichts erfasst." />
+                        </Grid>
                     </DockPanel>
                 </Border>
 
@@ -173,8 +332,9 @@
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding VorText}" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Text="{Binding BetragText}"
-                                                       Classes.ausgabe="{Binding IstAusgabe}"
-                                                       Classes.einnahme="{Binding IstEinnahme}" />
+                                                       Classes.offen="{Binding IstOffen}"
+                                                       Classes.einnahme="{Binding IstEinnahme}"
+                                                       Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>

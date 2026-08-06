@@ -134,6 +134,19 @@ public sealed partial class MainViewModel : ViewModelBase
                 .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
         };
 
+        // Klick auf einen Balken im Diagramm: zeigt die Buchungen genau
+        // dieses Monats - derselbe Weg wie beim Sprung aus einer Zelle
+        // der Auswertung.
+        startseite.ZeitraumAngefordert += (_, zeitraum) =>
+        {
+            // Das Ende des Zeitraums ist ausschliessend, die Filterleiste
+            // versteht ihre Felder einschliessend.
+            _ausgabenliste.ZeigeZeitraum(zeitraum.From, zeitraum.ToExclusive.AddDays(-1));
+
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
+        };
+
         // Zaehler-Badge an "Offene Posten" (UI/UX-Redesign, Abschnitt 3) -
         // OffenePostenViewModel ist ein DI-Singleton und meldet jede
         // Neuberechnung ueber PropertyChanged weiter.

@@ -24,14 +24,28 @@ public sealed partial class AusgabeZeile : ObservableObject
     public string BetragText { get; }
 
     /// <summary>
-    /// Ausgabe (nicht Einnahme). Die Zeile hebt den Betrag dann gedaempft
-    /// rot hervor - zusaetzlich zum Minuszeichen, das die Angabe auch
-    /// ohne Farbwahrnehmung traegt.
+    /// Der Buchungstyp selbst - unabhaengig von Zahler und Beglichen-
+    /// Status. Fuer Stellen ausserhalb der Farbwahl, die genau das
+    /// brauchen (etwa das Bearbeiten-Formular, das die Checkbox
+    /// "Einnahme" danach vorbelegt) - NICHT fuer die Farbe: siehe
+    /// <see cref="IstBeglicheneEinnahme"/>.
     /// </summary>
-    public bool IstAusgabe { get; }
-
-    /// <summary>Einnahme - wird gedaempft hellgruen hervorgehoben und mindert die Summen.</summary>
     public bool IstEinnahme { get; }
+
+    /// <summary>
+    /// Beglichene Einnahme mit fremdem Zahler - tatsaechlich zugeflossenes
+    /// Geld, wird gruen hervorgehoben. Eine eigene Einnahme zaehlt NICHT
+    /// dazu (sie gleicht sich aus, Regel 4) und bleibt neutral, ebenso wie
+    /// eine noch offene fremde Einnahme (siehe <see cref="IstOffen"/>).
+    /// </summary>
+    public bool IstBeglicheneEinnahme { get; }
+
+    /// <summary>
+    /// Beglichene Ausgabe mit fremdem Zahler - der Anwender hat sie schon
+    /// zurueckbekommen, wird blau hervorgehoben.
+    /// </summary>
+    public bool IstBeglichenAusgabe { get; }
+
     public int PayerId { get; }
     public string PayerName { get; }
     public bool PayerIsSelf { get; }
@@ -55,6 +69,11 @@ public sealed partial class AusgabeZeile : ObservableObject
     /// </summary>
     public string StatusText { get; }
 
+    /// <summary>
+    /// Ausgabe ODER Einnahme mit fremdem Zahler, noch nicht beglichen -
+    /// wird rot hervorgehoben. Eine eigene Buchung ist nie "offen"
+    /// (Regel 4) und bleibt neutral, unabhaengig vom Buchungstyp.
+    /// </summary>
     public bool IstOffen { get; }
 
     /// <summary>
@@ -87,7 +106,6 @@ public sealed partial class AusgabeZeile : ObservableObject
         CategoryFullPath = item.CategoryFullPath;
         AmountCents = item.AmountCents;
         BetragText = EuroText.FormatSigned(item.AmountCents, item.IsIncome);
-        IstAusgabe = !item.IsIncome;
         IstEinnahme = item.IsIncome;
         PayerId = item.PayerId;
         PayerName = item.PayerName;
@@ -104,6 +122,9 @@ public sealed partial class AusgabeZeile : ObservableObject
                 : string.Empty;
 
         IstOffen = !item.PayerIsSelf && item.SettledDate is null;
+        IstBeglicheneEinnahme = !item.PayerIsSelf && item.SettledDate is not null && item.IsIncome;
+        IstBeglichenAusgabe = !item.PayerIsSelf && item.SettledDate is not null && !item.IsIncome;
+
         StatusText = item.PayerIsSelf
             ? "—"
             : item.SettledDate is DateOnly beglichen

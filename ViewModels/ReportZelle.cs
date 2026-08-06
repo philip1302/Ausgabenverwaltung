@@ -24,7 +24,6 @@ public sealed class ReportZelle
             ? EuroText.Format(betrag.SumCents)
             : "–";
 
-        IstAusgabe = betrag.HasValues && EuroText.IsNegative(betrag.SumCents);
         IstEinnahme = betrag.HasValues && EuroText.IsPositive(betrag.SumCents);
 
         KategorieId = kategorieId;
@@ -38,15 +37,10 @@ public sealed class ReportZelle
     public bool HatWerte { get; }
 
     /// <summary>
-    /// Ausgabenueberhang: die Zelle summiert sich auf einen negativen
-    /// Betrag. Wird gedaempft rot hervorgehoben, zusaetzlich zum
-    /// Minuszeichen.
-    /// </summary>
-    public bool IstAusgabe { get; }
-
-    /// <summary>
     /// Einnahmenueberhang: die Zelle summiert sich auf einen positiven
-    /// Betrag. Wird gedaempft hellgruen hervorgehoben.
+    /// Betrag. Wird gruen hervorgehoben. Ein Ausgabenueberhang (negativer
+    /// Betrag) bleibt dagegen neutral - bei einer Summe zaehlt nur noch
+    /// das Vorzeichen, kein einzelner Zahler oder Beglichen-Status mehr.
     /// </summary>
     public bool IstEinnahme { get; }
 
