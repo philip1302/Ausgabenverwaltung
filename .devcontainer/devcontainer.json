@@ -1,0 +1,35 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
+{
+	"name": "Ubuntu",
+	"image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+		"ghcr.io/devcontainers/features/dotnet:2": {
+			"version": "10.0"
+		}
+	},
+
+	"mounts": [
+		"source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
+		"source=/mnt/wslg,target=/mnt/wslg,type=bind",
+		"source=claude-code-config-${devcontainerId},target=/home/vscode/.claude,type=volume"
+	],
+
+	"containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+    "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
+    "PULSE_SERVER": "${localEnv:PULSE_SERVER}",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "VSCODE_DOTNET_RUNTIME_DISABLE_MUTEX": "true"
+},
+
+	"postCreateCommand": "sudo apt update && sudo apt install -y libfontconfig1 libice6 libsm6 libx11-6 libx11-xcb1 libxext6 libxrandr2 libxi6 libgl1 libegl1 && sudo apt update && sudo apt install -y libfontconfig1 libice6 libsm6 libx11-6 libx11-xcb1 libxext6 libxrandr2 libxi6 libgl1 libegl1 && sudo chown -R vscode:vscode /home/vscode/.claude"
+
+	// "forwardPorts": [],
+	// "customizations": {},
+	// "remoteUser": "root"
+}

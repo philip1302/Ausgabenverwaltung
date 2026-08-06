@@ -487,3 +487,9 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Claude Code: maschinenspezifische Einstellungen und lokale Worktrees.
+# Gemeinsame Projekteinstellungen (.claude/settings.json, CLAUDE.md)
+# bleiben absichtlich versioniert.
+.claude/settings.local.json
+.claude/worktrees/
