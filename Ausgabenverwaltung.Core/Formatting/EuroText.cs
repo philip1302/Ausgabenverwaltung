@@ -131,10 +131,10 @@ public static class EuroText
     /// Fuer eine SUMME ueber mehrere Buchungen (gemischt aus Ausgaben und
     /// Einnahmen): ob das Ergebnis insgesamt negativ ist, also die
     /// Ausgaben ueberwiegen. Steht hier und nicht als "&lt; 0" in jeder
-    /// Zeile, damit die Anzeige einen Namen fuer das hat, was sie
-    /// farblich (rot, Classes.ausgabe) hervorhebt. Fuer eine einzelne
-    /// Buchung mit bekanntem Typ gilt stattdessen deren IsIncome direkt -
-    /// siehe FormatSigned.
+    /// Zeile, damit die Anzeige einen Namen fuer das hat. Anders als bei
+    /// einer einzelnen Buchung (siehe FormatSigned, dort entscheidet
+    /// IsIncome) bleibt eine negative Summe farblich neutral - nur eine
+    /// positive wird hervorgehoben (Classes.einnahme, gruen).
     /// </summary>
     public static bool IsNegative(long cents) => cents < 0;
 

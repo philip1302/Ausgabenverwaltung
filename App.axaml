@@ -68,22 +68,24 @@
                     <SolidColorBrush x:Key="HinweisFlaeche">#EFF8FF</SolidColorBrush>
                     <SolidColorBrush x:Key="HinweisRahmen">#B2DDFF</SolidColorBrush>
 
-                    <!-- Ausgabe unveraendert aus der bisherigen AusgabeFarbe (6,68:1).
-                         Einnahme KORRIGIERT: das bisherige #66BB6A erreichte auf Weiss
-                         nur 2,36:1 und verfehlte WCAG AA - jetzt #187A40 (5,39:1), siehe
-                         UIUIXDESIGN.md Abschnitt 2.1, "Fund waehrend der Recherche". -->
-                    <SolidColorBrush x:Key="AusgabeFarbe">#A03A30</SolidColorBrush>
+                    <!-- Einnahme: #187A40 (5,39:1 auf Weiss) - siehe Regel 10, Farbe
+                         ist immer Zusatz zum Text, nie sein Ersatz. Gilt sowohl fuer
+                         eine beglichene Einnahme mit fremdem Zahler als auch, im
+                         Report/in Summenzeilen, fuer jede positive Summe. -->
                     <SolidColorBrush x:Key="EinnahmeFarbe">#187A40</SolidColorBrush>
-                    <SolidColorBrush x:Key="ErstattungFarbe">#A03A30</SolidColorBrush>
 
-                    <!-- Ausgelegt und noch offen: erkennbar dieselbe Familie wie
-                         AusgabeFarbe, aber sichtbar zurueckgenommen - im Diagramm
-                         sitzt dieser Ton unmittelbar auf dem kraeftigen, und die
-                         Grenze dazwischen muss ohne Hinsehen auffallen. Ein
-                         eigener Farbwert statt Deckkraft: eine durchscheinende
-                         Flaeche nimmt die Gitterlinien darunter an und wirkt
-                         schmutzig. -->
-                    <SolidColorBrush x:Key="AusgabeOffenFarbe">#D08C84</SolidColorBrush>
+                    <!-- Offen: Ausgabe ODER Einnahme mit fremdem Zahler, noch nicht
+                         beglichen - braucht Aufmerksamkeit. Unveraendert aus der
+                         bisherigen AusgabeFarbe (6,68:1 auf Weiss). -->
+                    <SolidColorBrush x:Key="OffenFarbe">#A03A30</SolidColorBrush>
+
+                    <!-- Beglichen: eine beglichene Ausgabe mit fremdem Zahler - der
+                         Anwender hat sie zurueckbekommen. Bewusst NICHT AccentFarbe
+                         (#2F5FD1, Buttons/Links) - ein blauer Betrag saehe sonst wie
+                         ein anklickbares Element aus. Ein Blaugruen/Teal statt eines
+                         Indigo/Periwinkle-Tons haelt die beiden Blaus klar
+                         auseinander. 5,36:1 auf Weiss (SurfaceFarbe). -->
+                    <SolidColorBrush x:Key="BeglichenFarbe">#0E7490</SolidColorBrush>
                 </ResourceDictionary>
 
                 <!-- ==== Dunkel (docs/design/UIUIXDESIGN.md, 2.2) ==== -->
@@ -133,15 +135,12 @@
                     <SolidColorBrush x:Key="HinweisFlaeche">#101E36</SolidColorBrush>
                     <SolidColorBrush x:Key="HinweisRahmen">#274270</SolidColorBrush>
 
-                    <SolidColorBrush x:Key="AusgabeFarbe">#F1A79E</SolidColorBrush>
                     <SolidColorBrush x:Key="EinnahmeFarbe">#4ADE80</SolidColorBrush>
-                    <SolidColorBrush x:Key="ErstattungFarbe">#F1A79E</SolidColorBrush>
+                    <SolidColorBrush x:Key="OffenFarbe">#F1A79E</SolidColorBrush>
 
-                    <!-- Siehe die helle Fassung. Im Dunkelmodus geht die
-                         Zuruecknahme in die andere Richtung: nicht aufhellen,
-                         sondern abdunkeln - auf dunklem Grund wirkt heller
-                         staerker, nicht schwaecher. -->
-                    <SolidColorBrush x:Key="AusgabeOffenFarbe">#9C625C</SolidColorBrush>
+                    <!-- Beglichen, dunkel: heller als die helle Fassung, damit sie auf
+                         dunklem Grund traegt - 8,68:1 auf SurfaceFarbe (#1B1D22). -->
+                    <SolidColorBrush x:Key="BeglichenFarbe">#5EC8E0</SolidColorBrush>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -550,33 +549,28 @@
             <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
         </Style>
 
-        <!-- Negative Betraege in der Offene-Posten-Liste (dort weiterhin
-             "Erstattung" im urspruenglichen Sinn). Zwei Regeln, weil
-             Betraege an beiden Stellen stehen: als Text in den
-             Tabellenzellen und als Inhalt der anklickbaren Zellen der
-             Kreuztabelle. Bei den Schaltflaechen greift die Regel im
-             Vorlagenbaum, weil das Thema die Vordergrundfarbe im Zustand
-             "pointerover" sonst am ContentPresenter selbst ueberschreibt. -->
-        <Style Selector=":is(TextBlock).erstattung">
-            <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
+        <!-- Farbschema fuer Buchungen (Zahler + Beglichen-Status):
+             .offen (rot) - Ausgabe ODER Einnahme mit fremdem Zahler, noch
+                            nicht beglichen. Braucht Aufmerksamkeit.
+             .beglichen-ausgabe (blau) - beglichene Ausgabe mit fremdem
+                            Zahler, bereits zurueckerhalten.
+             .einnahme (gruen) - beglichene Einnahme mit fremdem Zahler,
+                            UND (in Summenzeilen/Report-Zellen, wo nur
+                            noch das Vorzeichen zaehlt) jede positive
+                            Summe.
+             Eine eigene Buchung (gleich welchen Typs) traegt KEINE dieser
+             Klassen und bleibt in der normalen Textfarbe - "schwarz" im
+             urspruenglichen Sinn ist hier die vorhandene neutrale
+             Textfarbe, kein eigener Pinsel: im Dunkelmodus waere
+             wortwoertliches Schwarz auf fast schwarzem Grund unsichtbar.
+             Ebenso eine negative Summe (Report, Fusszeilen): auch dort
+             keine Klasse, statt wie bisher rot. -->
+        <Style Selector=":is(TextBlock).offen">
+            <Setter Property="Foreground" Value="{DynamicResource OffenFarbe}" />
         </Style>
-        <Style Selector="Button.erstattung /template/ ContentPresenter">
-            <Setter Property="Foreground" Value="{DynamicResource ErstattungFarbe}" />
+        <Style Selector=":is(TextBlock).beglichen-ausgabe">
+            <Setter Property="Foreground" Value="{DynamicResource BeglichenFarbe}" />
         </Style>
-
-        <!-- Ausgaben ausserhalb der Offene-Posten-Liste - dasselbe Muster
-             wie .erstattung oben, unter eigenem Namen (siehe AusgabeFarbe). -->
-        <Style Selector=":is(TextBlock).ausgabe">
-            <Setter Property="Foreground" Value="{DynamicResource AusgabeFarbe}" />
-        </Style>
-        <Style Selector="Button.ausgabe /template/ ContentPresenter">
-            <Setter Property="Foreground" Value="{DynamicResource AusgabeFarbe}" />
-        </Style>
-
-        <!-- Einnahmen - dasselbe Muster, nur gruen. Ausgabe und Einnahme
-             schliessen sich beim Buchungstyp gegenseitig aus, und ein
-             Betrag ist nach ExpenseValidator nie negativ - eine Zeile
-             traegt also nie .ausgabe und .einnahme gleichzeitig. -->
         <Style Selector=":is(TextBlock).einnahme">
             <Setter Property="Foreground" Value="{DynamicResource EinnahmeFarbe}" />
         </Style>
@@ -676,11 +670,18 @@
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
+        <!-- Eigene Ausgabe: neutral, dieselbe Farbe wie normaler Text -
+             sie betrifft nur den Anwender selbst, kein Handlungsbedarf. -->
         <Style Selector="Button.balken.eigene-ausgabe">
-            <Setter Property="Background" Value="{DynamicResource AusgabeFarbe}" />
+            <Setter Property="Background" Value="{DynamicResource TextPrimaerFarbe}" />
         </Style>
+        <!-- Offene Fremdausgabe: volle Staerke statt einer blassen
+             Abstufung - "eigene" und "offene" sind jetzt zwei
+             verschiedene Farben (neutral/rot), keine Notwendigkeit mehr,
+             sie durch einen helleren Ton derselben Farbfamilie zu
+             unterscheiden. -->
         <Style Selector="Button.balken.offene-ausgabe">
-            <Setter Property="Background" Value="{DynamicResource AusgabeOffenFarbe}" />
+            <Setter Property="Background" Value="{DynamicResource OffenFarbe}" />
         </Style>
         <Style Selector="Button.balken.einnahme">
             <Setter Property="Background" Value="{DynamicResource EinnahmeFarbe}" />
@@ -688,8 +689,11 @@
         <Style Selector="Button.balken.netto-positiv">
             <Setter Property="Background" Value="{DynamicResource EinnahmeFarbe}" />
         </Style>
+        <!-- Negatives Netto ist eine SUMME (Einnahmen minus getragene
+             Ausgaben), keine einzelne offene Buchung - folgt deshalb der
+             Summen-Regel (negativ = neutral), nicht der Buchungsregel. -->
         <Style Selector="Button.balken.netto-negativ">
-            <Setter Property="Background" Value="{DynamicResource AusgabeFarbe}" />
+            <Setter Property="Background" Value="{DynamicResource TextPrimaerFarbe}" />
         </Style>
 
         <!-- Beim Zeigen aufhellen statt umfaerben: die Farbe traegt hier
@@ -726,8 +730,12 @@
             <Setter Property="StrokeThickness" Value="1.5" />
             <Setter Property="StrokeDashArray" Value="5,4" />
         </Style>
+        <!-- Mittelt "getragene Ausgaben" - eine Mischung aus neutralen
+             (eigenen) und roten (offenen fremden) Balken. Rot markiert
+             sie als Aufmerksamkeits-Linie, statt in den jetzt neutralen
+             "eigene Ausgabe"-Balken unterzugehen. -->
         <Style Selector="Line.durchschnitt-ausgaben">
-            <Setter Property="Stroke" Value="{DynamicResource AusgabeFarbe}" />
+            <Setter Property="Stroke" Value="{DynamicResource OffenFarbe}" />
         </Style>
         <Style Selector="Line.durchschnitt-einnahmen">
             <Setter Property="Stroke" Value="{DynamicResource EinnahmeFarbe}" />
@@ -744,10 +752,10 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
         <Style Selector="Border.legende.eigene-ausgabe">
-            <Setter Property="Background" Value="{DynamicResource AusgabeFarbe}" />
+            <Setter Property="Background" Value="{DynamicResource TextPrimaerFarbe}" />
         </Style>
         <Style Selector="Border.legende.offene-ausgabe">
-            <Setter Property="Background" Value="{DynamicResource AusgabeOffenFarbe}" />
+            <Setter Property="Background" Value="{DynamicResource OffenFarbe}" />
         </Style>
         <Style Selector="Border.legende.einnahme">
             <Setter Property="Background" Value="{DynamicResource EinnahmeFarbe}" />

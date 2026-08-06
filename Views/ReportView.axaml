@@ -345,7 +345,6 @@
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:ReportZelle">
                                                             <Button Classes="zelle" Width="{anzeige:Breite 125}"
-                                                                    Classes.ausgabe="{Binding IstAusgabe}"
                                                                     Classes.einnahme="{Binding IstEinnahme}"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
@@ -358,7 +357,6 @@
 
                                                 <Button Classes="zelle" Width="{anzeige:Breite 145}"
                                                         FontWeight="SemiBold"
-                                                        Classes.ausgabe="{Binding Summe.IstAusgabe}"
                                                         Classes.einnahme="{Binding Summe.IstEinnahme}"
                                                         Content="{Binding Summe.Text}"
                                                         IsEnabled="{Binding Summe.HatWerte}"
@@ -372,7 +370,6 @@
                                                      Buchungen, den ein Klick oeffnen koennte. -->
                                                 <TextBlock Classes="tabellenzelle zahl" Width="{anzeige:Breite 145}"
                                                            FontWeight="SemiBold"
-                                                           Classes.ausgabe="{Binding DurchschnittIstAusgabe}"
                                                            Classes.einnahme="{Binding DurchschnittIstEinnahme}"
                                                            Text="{Binding DurchschnittText}"
                                                            ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
@@ -407,7 +404,6 @@
                                                         <DataTemplate x:DataType="vm:ReportZelle">
                                                             <Button Classes="zelle" Width="{anzeige:Breite 125}"
                                                                     FontWeight="Bold"
-                                                                    Classes.ausgabe="{Binding IstAusgabe}"
                                                                     Classes.einnahme="{Binding IstEinnahme}"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
@@ -419,7 +415,6 @@
                                                 </ItemsControl>
                                                 <Button Classes="zelle" Width="{anzeige:Breite 145}"
                                                         FontWeight="Bold"
-                                                        Classes.ausgabe="{Binding Summe.IstAusgabe}"
                                                         Classes.einnahme="{Binding Summe.IstEinnahme}"
                                                         Content="{Binding Summe.Text}"
                                                         IsEnabled="{Binding Summe.HatWerte}"
@@ -428,7 +423,6 @@
                                                         CommandParameter="{Binding Summe}" />
                                                 <TextBlock Classes="tabellenzelle zahl" Width="{anzeige:Breite 145}"
                                                            FontWeight="Bold"
-                                                           Classes.ausgabe="{Binding DurchschnittIstAusgabe}"
                                                            Classes.einnahme="{Binding DurchschnittIstEinnahme}"
                                                            Text="{Binding DurchschnittText}"
                                                            ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
@@ -475,7 +469,6 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
                             <TextBlock FontWeight="Bold"
                                        VerticalAlignment="Center"
-                                       Classes.ausgabe="{Binding DetailSummeIstAusgabe}"
                                        Classes.einnahme="{Binding DetailSummeIstEinnahme}"
                                        Text="{Binding DetailSummeText, StringFormat='Summe: {0}'}" />
                             <Button Content="Schließen"
@@ -522,8 +515,9 @@
                                                            Classes="tabellenzelle" />
                                         <TextBlock Grid.Column="4" Text="{Binding BetragText}"
                                                    Classes="tabellenzelle zahl"
-                                                   Classes.ausgabe="{Binding IstAusgabe}"
-                                                   Classes.einnahme="{Binding IstEinnahme}" />
+                                                   Classes.offen="{Binding IstOffen}"
+                                                   Classes.einnahme="{Binding IstBeglicheneEinnahme}"
+                                                   Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}" />
                                         <anzeige:Textzelle Grid.Column="6" Inhalt="{Binding PayerName}"
                                                            Classes="tabellenzelle" />
                                         <anzeige:Textzelle Grid.Column="8" Inhalt="{Binding Note}"

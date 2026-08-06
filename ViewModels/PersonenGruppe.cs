@@ -21,9 +21,6 @@ public sealed partial class PersonenGruppe : ObservableObject
     [ObservableProperty]
     private string _zwischensummeText = string.Empty;
 
-    [ObservableProperty]
-    private bool _zwischensummeIstErstattung;
-
     public PersonenGruppe(string personName)
     {
         PersonName = personName;
@@ -34,10 +31,11 @@ public sealed partial class PersonenGruppe : ObservableObject
         // Bewusst ohne Fallunterscheidung nach IstEinnahme: eine offene
         // Ausgabe und eine offene Einnahme schulden mir beide Geld in
         // derselben Richtung (siehe OpenItemsRepository.GetOpenSumsByPayer).
+        // Deshalb auch keine Farbe: das Vorzeichen sagt hier nichts ueber
+        // Gewinn/Verlust aus wie im Report, nur "wie viel liegt offen".
         var summeCents = Zeilen
             .Where(z => !z.IstBeglichen)
             .Sum(z => z.AmountCents);
         ZwischensummeText = EuroText.Format(summeCents);
-        ZwischensummeIstErstattung = EuroText.IsNegative(summeCents);
     }
 }

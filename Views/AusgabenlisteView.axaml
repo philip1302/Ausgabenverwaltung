@@ -278,7 +278,6 @@
                            VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2"
                            FontWeight="Bold"
-                           Classes.ausgabe="{Binding SummeIstAusgabe}"
                            Classes.einnahme="{Binding SummeIstEinnahme}"
                            Text="{Binding SummeText, StringFormat='Summe: {0}'}" />
             </Grid>
@@ -402,8 +401,9 @@
 
                                 <TextBlock Grid.Column="8" Text="{Binding BetragText}"
                                            Classes="tabellenzelle zahl"
-                                           Classes.ausgabe="{Binding IstAusgabe}"
-                                           Classes.einnahme="{Binding IstEinnahme}" />
+                                           Classes.offen="{Binding IstOffen}"
+                                           Classes.einnahme="{Binding IstBeglicheneEinnahme}"
+                                           Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}" />
                                 <anzeige:Textzelle Grid.Column="10" Inhalt="{Binding PayerName}"
                                                    Classes="tabellenzelle" />
                                 <TextBlock Grid.Column="12" Text="{Binding StatusText}"

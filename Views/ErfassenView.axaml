@@ -180,8 +180,9 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding VorText}" />
                                         <TextBlock Text="{Binding BetragText}"
-                                                   Classes.ausgabe="{Binding IstAusgabe}"
-                                                   Classes.einnahme="{Binding IstEinnahme}" />
+                                                   Classes.offen="{Binding IstOffen}"
+                                                   Classes.einnahme="{Binding IstEinnahme}"
+                                                   Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}" />
                                         <TextBlock Text="{Binding NachText}" />
                                     </StackPanel>
                                 </Border>

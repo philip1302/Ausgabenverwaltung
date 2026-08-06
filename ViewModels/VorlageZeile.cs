@@ -31,7 +31,6 @@ public sealed class VorlageZeile
         ErzeugteAnzahl = erzeugteAnzahl;
 
         BetragText = EuroText.FormatSigned(vorlage.AmountCents, vorlage.IsIncome);
-        IstAusgabe = !vorlage.IsIncome;
         IstEinnahme = vorlage.IsIncome;
 
         RhythmusText = RecurrenceText.Describe(
@@ -70,10 +69,11 @@ public sealed class VorlageZeile
     public string PayerName { get; }
     public string BetragText { get; }
 
-    /// <summary>Ausgabe (nicht Einnahme) - wird gedaempft rot hervorgehoben.</summary>
-    public bool IstAusgabe { get; }
-
-    /// <summary>Einnahme - wird gedaempft hellgruen hervorgehoben.</summary>
+    /// <summary>
+    /// Einnahme - wird gruen hervorgehoben. Eine Vorlage kennt kein
+    /// "beglichen" (sie ist ein Plan, keine tatsaechliche Buchung); eine
+    /// Ausgabe bleibt deshalb schlicht neutral statt rot.
+    /// </summary>
     public bool IstEinnahme { get; }
 
     public string RhythmusText { get; }

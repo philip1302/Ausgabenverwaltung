@@ -119,7 +119,6 @@
                            Foreground="{DynamicResource TextTertiaerFarbe}" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" FontWeight="Bold"
                            ToolTip.Tip="Alle aktiven, nicht abgelaufenen Vorlagen auf Monatsbasis umgerechnet (jährlich durch zwölf, wöchentlich mit der mittleren Monatslänge)."
-                           Classes.ausgabe="{Binding MonatlicheBelastungIstAusgabe}"
                            Classes.einnahme="{Binding MonatlicheBelastungIstEinnahme}"
                            Text="{Binding MonatlicheBelastungText, StringFormat='Monatliche Belastung: {0}'}" />
             </Grid>
@@ -195,7 +194,6 @@
                                                        Classes.archiviert="{Binding !IstAktiv}" />
                                     <TextBlock Grid.Column="4" Text="{Binding BetragText}"
                                                Classes="tabellenzelle zahl"
-                                               Classes.ausgabe="{Binding IstAusgabe}"
                                                Classes.einnahme="{Binding IstEinnahme}"
                                                Classes.archiviert="{Binding !IstAktiv}" />
                                     <anzeige:Textzelle Grid.Column="6" Inhalt="{Binding RhythmusText}"

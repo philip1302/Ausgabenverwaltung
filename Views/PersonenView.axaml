@@ -110,8 +110,7 @@
                                 <TextBlock Grid.Column="2" Text="{Binding AusgabenAnzahl}"
                                            Classes="tabellenzelle zahl" />
                                 <TextBlock Grid.Column="4" Text="{Binding OffenePostenSummeText}"
-                                           Classes="tabellenzelle zahl"
-                                           Classes.erstattung="{Binding OffenePostenSummeIstErstattung}" />
+                                           Classes="tabellenzelle zahl" />
 
                                 <!-- Auf/Ab bleiben erhalten (bestehende Funktion, im
                                      Mockup nicht dargestellt) - Reihenfolge der

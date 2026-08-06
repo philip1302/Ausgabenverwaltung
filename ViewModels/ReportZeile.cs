@@ -49,13 +49,11 @@ public sealed class ReportZeile
         {
             var cents = summenBetrag.AveragePerPeriod(periodenAnzahl);
             DurchschnittText = EuroText.Format(cents);
-            DurchschnittIstAusgabe = EuroText.IsNegative(cents);
             DurchschnittIstEinnahme = EuroText.IsPositive(cents);
         }
         else
         {
             DurchschnittText = "–";
-            DurchschnittIstAusgabe = false;
             DurchschnittIstEinnahme = false;
         }
     }
@@ -112,8 +110,6 @@ public sealed class ReportZeile
     /// <see cref="ReportZelle"/>.
     /// </summary>
     public string DurchschnittText { get; }
-
-    public bool DurchschnittIstAusgabe { get; }
 
     public bool DurchschnittIstEinnahme { get; }
 

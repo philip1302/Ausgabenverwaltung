@@ -136,10 +136,6 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     [ObservableProperty]
     private string _summeText = string.Empty;
 
-    /// <summary>Die Summe der Treffer ist negativ - Ausgaben ueberwiegen.</summary>
-    [ObservableProperty]
-    private bool _summeIstAusgabe;
-
     /// <summary>Die Summe der Treffer ist positiv - Einnahmen ueberwiegen.</summary>
     [ObservableProperty]
     private bool _summeIstEinnahme;
@@ -598,7 +594,6 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             ? "1 Treffer"
             : $"{summary.Count.ToString("N0", DeDe)} Treffer";
         SummeText = EuroText.Format(summary.SumCents);
-        SummeIstAusgabe = EuroText.IsNegative(summary.SumCents);
         SummeIstEinnahme = EuroText.IsPositive(summary.SumCents);
 
         AnzahlAusgewaehlt = 0;

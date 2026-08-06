@@ -167,7 +167,8 @@ public sealed class ExpenseRepository
     {
         const string sql = """
             SELECT e.Id, e.ExpenseDate, e.AmountCents, c.Name AS CategoryName,
-                   p.Name AS PayerName, e.Note, e.IsIncome
+                   p.Name AS PayerName, e.Note, e.IsIncome, p.IsSelf AS PayerIsSelf,
+                   e.SettledDate
             FROM   Expense e
             JOIN   Category c ON c.Id = e.CategoryId
             JOIN   Person   p ON p.Id = e.PayerId
@@ -186,6 +187,8 @@ public sealed class ExpenseRepository
             PayerName = row.PayerName,
             Note = row.Note,
             IsIncome = row.IsIncome,
+            PayerIsSelf = row.PayerIsSelf,
+            SettledDate = row.SettledDate is null ? null : IsoDate.ParseDate(row.SettledDate),
         }).ToList();
     }
 
@@ -362,6 +365,8 @@ public sealed class ExpenseRepository
         public string PayerName { get; set; } = string.Empty;
         public string? Note { get; set; }
         public bool IsIncome { get; set; }
+        public bool PayerIsSelf { get; set; }
+        public string? SettledDate { get; set; }
     }
 
     private sealed class ExpenseListRow

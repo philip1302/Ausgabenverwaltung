@@ -34,10 +34,6 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     [ObservableProperty]
     private string _gesamtsummeText = string.Empty;
 
-    /// <summary>Die offene Gesamtsumme ist negativ - Erstattungen ueberwiegen.</summary>
-    [ObservableProperty]
-    private bool _gesamtsummeIstErstattung;
-
     [ObservableProperty]
     private bool _keineEintraege;
 
@@ -441,7 +437,6 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
             .Where(z => !z.IstBeglichen)
             .Sum(z => z.AmountCents);
         GesamtsummeText = EuroText.Format(summeCents);
-        GesamtsummeIstErstattung = EuroText.IsNegative(summeCents);
     }
 
     private string KopfText(string bezeichnung, OffenePostenSortSpalte spalte) =>

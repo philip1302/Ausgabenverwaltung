@@ -19,11 +19,28 @@ public sealed partial class OffenerPostenZeile : ObservableObject
     public long AmountCents { get; }
     public string BetragText { get; }
 
-    /// <summary>Erstattung (negativer Betrag) - wird gedaempft rot hervorgehoben.</summary>
-    public bool IstErstattung { get; }
+    /// <summary>
+    /// Noch nicht beglichen - wird rot hervorgehoben. Jede Zeile dieser
+    /// Liste hat per Definition einen fremden Zahler (siehe
+    /// <see cref="OpenItem"/>), die Einschraenkung auf "eigene Buchung"
+    /// entfaellt hier deshalb anders als bei <see cref="AusgabeZeile"/>.
+    /// </summary>
+    public bool IstOffen { get; }
 
-    /// <summary>Einnahme - wird gedaempft gruen hervorgehoben.</summary>
+    /// <summary>
+    /// Der Buchungstyp selbst - unabhaengig vom Beglichen-Status. Steuert
+    /// Wortwahl (<see cref="AbhakenButtonText"/> etc.), NICHT die Farbe:
+    /// eine noch offene Einnahme heisst weiterhin "Erhalten", auch wenn
+    /// sie farblich (noch) nicht gruen ist.
+    /// </summary>
     public bool IstEinnahme { get; }
+
+    /// <summary>Beglichene Einnahme - wird gruen hervorgehoben.</summary>
+    public bool IstBeglicheneEinnahme { get; }
+
+    /// <summary>Beglichene Ausgabe - wird blau hervorgehoben.</summary>
+    public bool IstBeglichenAusgabe { get; }
+
     public string CategoryFullPath { get; }
     public string? Note { get; }
     public int TageOffen { get; }
@@ -70,7 +87,6 @@ public sealed partial class OffenerPostenZeile : ObservableObject
         DatumText = GermanDateInput.ToText(item.ExpenseDate);
         AmountCents = item.AmountCents;
         BetragText = EuroText.Format(item.AmountCents, item.IsIncome);
-        IstErstattung = EuroText.IsNegative(item.AmountCents);
         IstEinnahme = item.IsIncome;
         CategoryFullPath = item.CategoryFullPath;
         Note = item.Note;
@@ -78,5 +94,9 @@ public sealed partial class OffenerPostenZeile : ObservableObject
         PayerId = item.PayerId;
         PayerName = item.PayerName;
         SettledDate = item.SettledDate;
+
+        IstOffen = item.SettledDate is null;
+        IstBeglicheneEinnahme = item.SettledDate is not null && item.IsIncome;
+        IstBeglichenAusgabe = item.SettledDate is not null && !item.IsIncome;
     }
 }

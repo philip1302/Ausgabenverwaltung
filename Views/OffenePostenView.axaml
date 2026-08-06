@@ -52,8 +52,12 @@
             <StackPanel Grid.Column="1" HorizontalAlignment="Right">
                 <TextBlock Text="Gesamt offen" Classes="klein" HorizontalAlignment="Right"
                            Foreground="{DynamicResource TextTertiaerFarbe}" />
+                <!-- Bleibt neutral: die Summe addiert offene Ausgaben UND
+                     Einnahmen in dieselbe Richtung (siehe
+                     OpenItemsRepository.GetOpenSumsByPayer) - ihr Vorzeichen
+                     sagt nichts ueber Gewinn/Verlust aus wie im Report,
+                     sondern nur "wie viel liegt insgesamt offen". -->
                 <TextBlock FontSize="{DynamicResource SchriftKpi}" FontWeight="Bold" HorizontalAlignment="Right"
-                           Classes.erstattung="{Binding GesamtsummeIstErstattung}"
                            Text="{Binding GesamtsummeText}" />
             </StackPanel>
         </Grid>
@@ -181,8 +185,9 @@
                                                                        Classes.beglichen="{Binding IstBeglichen}" />
                                                     <TextBlock Grid.Column="5" Text="{Binding BetragText}"
                                                                Classes="tabellenzelle zahl"
-                                                               Classes.erstattung="{Binding IstErstattung}"
-                                                               Classes.einnahme="{Binding IstEinnahme}"
+                                                               Classes.offen="{Binding IstOffen}"
+                                                               Classes.einnahme="{Binding IstBeglicheneEinnahme}"
+                                                               Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}"
                                                                Classes.beglichen="{Binding IstBeglichen}" />
                                                     <anzeige:Textzelle Grid.Column="7" Inhalt="{Binding Note}"
                                                                        Classes="tabellenzelle"
@@ -242,8 +247,8 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
+                            <!-- Bleibt neutral, wie die Gesamtsumme oben. -->
                             <TextBlock HorizontalAlignment="Right" FontWeight="Bold" Margin="0,4,20,0"
-                                       Classes.erstattung="{Binding ZwischensummeIstErstattung}"
                                        Text="{Binding ZwischensummeText, StringFormat='Zwischensumme: {0}'}" />
                         </StackPanel>
                     </DataTemplate>
