@@ -219,7 +219,14 @@ public sealed partial class StartseiteViewModel : ViewModelBase
             ascending: true);
 
         var ausgaben = buchungen.Where(b => !b.IsIncome).ToList();
-        var einnahmen = buchungen.Where(b => b.IsIncome).ToList();
+
+        // Wie ueberall sonst (siehe AusgabeZeile.IstBeglicheneEinnahme):
+        // eine Einnahme zaehlt erst, wenn sie abgehakt ist. Eine noch
+        // offene Einnahme eines fremden Zahlers ist noch nicht
+        // zugeflossenes Geld (Regel 4) und darf die Kachel nicht erhoehen.
+        var einnahmen = buchungen
+            .Where(b => b.IsIncome && !b.PayerIsSelf && b.SettledDate is not null)
+            .ToList();
 
         var ausgabenSumme = ausgaben.Sum(b => b.AmountCents);
         AusgabenMonatText = EuroText.Format(ausgabenSumme);
