@@ -13,6 +13,7 @@ using Ausgabenverwaltung.Core.RecurringExpenses;
 using Ausgabenverwaltung.Core.Reports;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -113,7 +114,8 @@ public sealed partial class StartseiteViewModel : ViewModelBase
         ExpenseRepository expenseRepository,
         OpenItemsRepository openItemsRepository,
         RecurringExpenseRepository recurringExpenseRepository,
-        ReportRepository reportRepository)
+        ReportRepository reportRepository,
+        IMessenger messenger)
     {
         _expenseRepository = expenseRepository;
         _openItemsRepository = openItemsRepository;
@@ -125,6 +127,12 @@ public sealed partial class StartseiteViewModel : ViewModelBase
         Skalierung.Aktuell.PropertyChanged += (_, _) => ZeichneDiagramm();
 
         Aktualisiere();
+
+        // Buchungsaenderungen aus anderen Bereichen sollen Kacheln,
+        // Diagramm und "Letzte Buchungen" sofort aktualisieren, nicht erst
+        // beim naechsten Navigieren zur Startseite (Regel 14).
+        messenger.Register<StartseiteViewModel, BuchungenGeaendertNachricht>(
+            this, (empfaenger, _) => empfaenger.Aktualisiere());
     }
 
     /// <summary>

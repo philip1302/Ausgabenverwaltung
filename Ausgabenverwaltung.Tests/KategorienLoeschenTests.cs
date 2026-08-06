@@ -7,6 +7,7 @@ using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.RecurringExpenses;
 using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.ViewModels;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Data.Sqlite;
 
 namespace Ausgabenverwaltung.Tests;
@@ -54,7 +55,7 @@ public class KategorienLoeschenTests : IDisposable
         _tempDir.Delete(recursive: true);
     }
 
-    private KategorienViewModel NeuesViewModel() => new(_repository, _backupService);
+    private KategorienViewModel NeuesViewModel() => new(_repository, _backupService, new WeakReferenceMessenger());
 
     private static KategorieKnoten Knoten(KategorienViewModel viewModel, string name) =>
         viewModel.Wurzelknoten.Single(k => k.Name == name);

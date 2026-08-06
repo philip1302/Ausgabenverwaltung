@@ -9,6 +9,7 @@ using Ausgabenverwaltung.Core.Errors;
 using Ausgabenverwaltung.Core.Formatting;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -26,6 +27,7 @@ public sealed partial class KategorienViewModel : ViewModelBase
 {
     private readonly CategoryRepository _categoryRepository;
     private readonly BackupService _backupService;
+    private readonly IMessenger _messenger;
 
     public ObservableCollection<KategorieKnoten> Wurzelknoten { get; } = new();
 
@@ -95,10 +97,11 @@ public sealed partial class KategorienViewModel : ViewModelBase
           (ArchivierungAnfrageAnzahlUnterkategorien == 1 ? "Unterkategorie" : "Unterkategorien") +
           ". Sollen diese mit archiviert werden?";
 
-    public KategorienViewModel(CategoryRepository categoryRepository, BackupService backupService)
+    public KategorienViewModel(CategoryRepository categoryRepository, BackupService backupService, IMessenger messenger)
     {
         _categoryRepository = categoryRepository;
         _backupService = backupService;
+        _messenger = messenger;
         LadeBaum();
     }
 
@@ -531,6 +534,10 @@ public sealed partial class KategorienViewModel : ViewModelBase
         SchliesseNachfragen();
         AusgewaehlterKnoten = null;
         LadeBaum();
+
+        // Der Merge haengt Ausgaben auf eine andere Kategorie um - andere
+        // Farbe/Pfad ueberall, wo diese Ausgaben angezeigt werden (Regel 14).
+        _messenger.Send(new BuchungenGeaendertNachricht());
     }
 
     [RelayCommand]

@@ -6,6 +6,7 @@ using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.ViewModels;
 using Avalonia.Media;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.Tests;
 
@@ -40,7 +41,8 @@ public class KategorienFarbenTests : IDisposable
         new(_repository, new BackupService(
             _connection,
             Path.Combine(_tempDir.FullName, "Backups"),
-            new AppSettingsStore(Path.Combine(_tempDir.FullName, "settings.json"))));
+            new AppSettingsStore(Path.Combine(_tempDir.FullName, "settings.json"))),
+            new WeakReferenceMessenger());
 
     private static Color FarbeVon(IBrush pinsel) => ((ISolidColorBrush)pinsel).Color;
 

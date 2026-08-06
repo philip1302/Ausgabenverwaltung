@@ -9,6 +9,7 @@ using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.OpenItems;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -26,6 +27,7 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     private static readonly TimeSpan RueckgaengigDauer = TimeSpan.FromSeconds(6);
 
     private readonly OpenItemsRepository _openItemsRepository;
+    private readonly IMessenger _messenger;
     private CancellationTokenSource? _rueckgaengigCts;
     private IReadOnlyList<int> _rueckgaengigIds = Array.Empty<int>();
 
@@ -98,10 +100,18 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     public string BemerkungHeaderText => KopfText("Bemerkung", OffenePostenSortSpalte.Bemerkung);
     public string TageOffenHeaderText => KopfText("Tage offen", OffenePostenSortSpalte.TageOffen);
 
-    public OffenePostenViewModel(OpenItemsRepository openItemsRepository)
+    public OffenePostenViewModel(OpenItemsRepository openItemsRepository, IMessenger messenger)
     {
         _openItemsRepository = openItemsRepository;
+        _messenger = messenger;
         LadeDaten();
+
+        // Buchungsaenderungen aus anderen Bereichen (Anlegen in "Erfassen",
+        // Bearbeiten/Loeschen in der Ausgabenliste, Zusammenfuehren von
+        // Kategorien) sollen hier sofort sichtbar werden, nicht erst beim
+        // naechsten Navigieren zu "Offene Posten" (Regel 14).
+        _messenger.Register<OffenePostenViewModel, BuchungenGeaendertNachricht>(
+            this, (empfaenger, _) => empfaenger.LadeDaten());
     }
 
     /// <summary>
@@ -161,7 +171,10 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
             return;
         }
 
-        LadeDaten();
+        // Statt nur der eigenen Liste (LadeDaten) wird die Nachricht
+        // gesendet - die eigene Registrierung im Konstruktor ladet dadurch
+        // auch neu, zusaetzlich aber jeder andere Bereich mit (Regel 14).
+        _messenger.Send(new BuchungenGeaendertNachricht());
         await ZeigeRueckgaengigHinweisAsync(new[] { zeile.Id }, "Als beglichen markiert.");
     }
 
@@ -192,11 +205,11 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
         if (SchreibFehlerText is not null)
         {
-            LadeDaten();
+            _messenger.Send(new BuchungenGeaendertNachricht());
             return;
         }
 
-        LadeDaten();
+        _messenger.Send(new BuchungenGeaendertNachricht());
         await ZeigeRueckgaengigHinweisAsync(
             ausgewaehlte.Select(z => z.Id).ToList(),
             $"{ausgewaehlte.Count} Posten als beglichen markiert.");
@@ -251,7 +264,7 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
             return;
         }
 
-        LadeDaten();
+        _messenger.Send(new BuchungenGeaendertNachricht());
         await ZeigeRueckgaengigHinweisAsync(new[] { zeile.Id }, "Als beglichen markiert.");
     }
 
@@ -291,13 +304,13 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
         if (SchreibFehlerText is not null)
         {
-            LadeDaten();
+            _messenger.Send(new BuchungenGeaendertNachricht());
             return;
         }
 
         _rueckgaengigIds = Array.Empty<int>();
         RueckgaengigSichtbar = false;
-        LadeDaten();
+        _messenger.Send(new BuchungenGeaendertNachricht());
     }
 
     /// <summary>
@@ -325,7 +338,7 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
             return;
         }
 
-        LadeDaten();
+        _messenger.Send(new BuchungenGeaendertNachricht());
     }
 
     // Bleibt fuer RueckgaengigDauer stehen, damit ein versehentliches

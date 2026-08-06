@@ -11,6 +11,7 @@ using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.People;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -25,6 +26,7 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     private readonly ExpenseRepository _expenseRepository;
     private readonly CategoryRepository _categoryRepository;
     private readonly PersonRepository _personRepository;
+    private readonly IMessenger _messenger;
 
     public event EventHandler? FokusBetragAngefordert;
 
@@ -147,11 +149,13 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     public ErfassenViewModel(
         ExpenseRepository expenseRepository,
         CategoryRepository categoryRepository,
-        PersonRepository personRepository)
+        PersonRepository personRepository,
+        IMessenger messenger)
     {
         _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
         _personRepository = personRepository;
+        _messenger = messenger;
 
         AktualisiereKategorieVorschlaege();
 
@@ -162,6 +166,13 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         _datumText = GermanDateInput.ToText(DateOnly.FromDateTime(DateTime.Now));
 
         LadeLetzteAusgaben();
+
+        // Buchungsaenderungen aus anderen Bereichen (Abhaken in "Offene
+        // Posten", Bearbeiten/Loeschen in der Ausgabenliste, Zusammenfuehren
+        // von Kategorien) sollen hier sofort sichtbar werden, nicht erst
+        // beim naechsten Navigieren zu "Erfassen" (Regel 14).
+        _messenger.Register<ErfassenViewModel, BuchungenGeaendertNachricht>(
+            this, (empfaenger, _) => empfaenger.LadeLetzteAusgaben());
     }
 
     /// <summary>
@@ -330,7 +341,10 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         Bemerkung = null;
         IstEinnahme = false;
 
-        LadeLetzteAusgaben();
+        // Statt nur der eigenen Liste (LadeLetzteAusgaben) wird die
+        // Nachricht gesendet - die eigene Registrierung oben ladet dadurch
+        // auch neu, zusaetzlich aber jeder andere Bereich mit (Regel 14).
+        _messenger.Send(new BuchungenGeaendertNachricht());
         FokusBetragAngefordert?.Invoke(this, EventArgs.Empty);
 
         BestaetigungSichtbar = true;

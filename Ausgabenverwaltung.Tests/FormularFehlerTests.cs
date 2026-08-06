@@ -9,6 +9,7 @@ using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.RecurringExpenses;
 using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.ViewModels;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.Tests;
 
@@ -31,6 +32,11 @@ public class FormularFehlerTests : IDisposable
     private readonly PersonRepository _personen;
     private readonly ExpenseRepository _ausgaben;
 
+    // Eigene Instanz statt WeakReferenceMessenger.Default (Regel 14): sonst
+    // wuerden Registrierungen aus fruehen Tests dieser Klasse in spaetere
+    // hineinwirken, weil der statische Standard prozessweit geteilt ist.
+    private readonly IMessenger _messenger = new WeakReferenceMessenger();
+
     public FormularFehlerTests()
     {
         _connection = SqliteConnectionFactory.OpenConnection("Data Source=:memory:");
@@ -51,7 +57,7 @@ public class FormularFehlerTests : IDisposable
     }
 
     private ErfassenViewModel NeueErfassung()
-        => new(_ausgaben, _kategorien, _personen);
+        => new(_ausgaben, _kategorien, _personen, _messenger);
 
     private int AnzahlAusgaben()
         => _ausgaben.GetRecent(1000).Count;
@@ -374,7 +380,7 @@ public class FormularFehlerTests : IDisposable
     // ================= Hilfsmittel =================
 
     private KategorienViewModel NeuesKategorienViewModel()
-        => new(_kategorien, NeueSicherung());
+        => new(_kategorien, NeueSicherung(), _messenger);
 
     private PersonenViewModel NeuesPersonenViewModel()
         => new(_personen, new OpenItemsRepository(_connection));

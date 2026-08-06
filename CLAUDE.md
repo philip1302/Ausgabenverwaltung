@@ -104,6 +104,22 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
     schliessen oder Listen neu laden. Feldfehler erscheinen am Feld,
     nicht als Dialog.
 
+14. **Jedes ViewModel mit einer Buchungsliste registriert sich auf
+    `BuchungenGeaendertNachricht`.** Wer Ausgaben/Einnahmen anzeigt
+    (`ViewModels/BuchungenGeaendertNachricht.cs`), bekommt ein
+    `CommunityToolkit.Mvvm.Messaging.IMessenger` per DI-Konstruktor
+    injiziert (registriert in `App.axaml.cs`) und meldet sich damit im
+    Konstruktor per `Register<TSelbst, BuchungenGeaendertNachricht>` auf
+    seine eigene Lademethode an. Jede Stelle, die Buchungsdaten
+    schreibt, sendet ueber denselben `IMessenger` nach einem
+    erfolgreichen Schreibvorgang dieselbe Nachricht statt (nur) die
+    eigene Liste neu zu laden — sonst zeigt die neue Ansicht veraltete
+    Betraege oder Farben, bis der Anwender zufaellig dorthin navigiert.
+    Bewusst **nicht** `WeakReferenceMessenger.Default` verwenden: der
+    ist prozessweit geteilt, in Tests braucht jeder Testfall eine eigene
+    `IMessenger`-Instanz, sonst wirken Registrierungen frueherer Tests
+    in spaetere hinein.
+
 ## Stil
 - Kommentare auf Deutsch, Bezeichner auf Englisch
 - Ausfuehrliche Kommentare bei allem, was nicht offensichtlich ist

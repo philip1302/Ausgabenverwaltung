@@ -20,6 +20,7 @@ using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.Core.Startup;
 using Ausgabenverwaltung.ViewModels;
 using Ausgabenverwaltung.Views;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Ausgabenverwaltung;
@@ -278,6 +279,13 @@ public partial class App : Application
         services.AddSingleton(startupResult);
         services.AddSingleton<StartupNoticeViewModel>();
         services.AddSingleton<AktualisierungViewModel>();
+
+        // Eigene Instanz statt WeakReferenceMessenger.Default: die
+        // Bereichs-ViewModels registrieren sich darauf fuer
+        // BuchungenGeaendertNachricht (Regel 14), und eine eigene Instanz
+        // laesst sich in Tests isoliert je Testfall erzeugen, ohne dass
+        // Registrierungen frueherer Tests hineinwirken.
+        services.AddSingleton<IMessenger, WeakReferenceMessenger>();
 
         services.AddSingleton<StartseiteViewModel>();
         services.AddSingleton<ErfassenViewModel>();

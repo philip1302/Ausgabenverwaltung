@@ -13,6 +13,7 @@ using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.Reports;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -32,6 +33,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     private readonly ExpenseRepository _expenseRepository;
     private readonly CategoryRepository _categoryRepository;
     private readonly PersonRepository _personRepository;
+    private readonly IMessenger _messenger;
 
     // Unterdrueckt das Neuladen, solange mehrere Filterwerte auf einmal
     // gesetzt werden (Schnellwahl, Zuruecksetzen, Neuaufbau der
@@ -181,11 +183,13 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     public AusgabenlisteViewModel(
         ExpenseRepository expenseRepository,
         CategoryRepository categoryRepository,
-        PersonRepository personRepository)
+        PersonRepository personRepository,
+        IMessenger messenger)
     {
         _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
         _personRepository = personRepository;
+        _messenger = messenger;
 
         _ausgewaehlterStatus = StatusOptionen[0];
 
@@ -195,6 +199,13 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         _ladenGesperrt = false;
 
         LadeDaten();
+
+        // Buchungsaenderungen aus anderen Bereichen (Anlegen in "Erfassen",
+        // Abhaken in "Offene Posten", Zusammenfuehren von Kategorien) sollen
+        // hier sofort sichtbar werden, nicht erst beim naechsten Navigieren
+        // zur Ausgabenliste (Regel 14).
+        _messenger.Register<AusgabenlisteViewModel, BuchungenGeaendertNachricht>(
+            this, (empfaenger, _) => empfaenger.LadeDaten());
     }
 
     /// <summary>
@@ -486,7 +497,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         }
 
         Bearbeiten = null;
-        LadeDaten();
+        _messenger.Send(new BuchungenGeaendertNachricht());
     }
 
     [RelayCommand]
@@ -543,7 +554,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         _zuLoeschendeIds = Array.Empty<int>();
         LoeschAnfrageText = null;
-        LadeDaten();
+        _messenger.Send(new BuchungenGeaendertNachricht());
     }
 
     [RelayCommand]

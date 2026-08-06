@@ -10,6 +10,7 @@ using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Reports;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -154,7 +155,8 @@ public sealed partial class ReportViewModel : ViewModelBase
     public ReportViewModel(
         ReportRepository reportRepository,
         ExpenseRepository expenseRepository,
-        CategoryRepository categoryRepository)
+        CategoryRepository categoryRepository,
+        IMessenger messenger)
     {
         _reportRepository = reportRepository;
         _expenseRepository = expenseRepository;
@@ -169,6 +171,12 @@ public sealed partial class ReportViewModel : ViewModelBase
         _ladenGesperrt = false;
 
         LadeDaten();
+
+        // Buchungsaenderungen aus anderen Bereichen sollen die Auswertung
+        // sofort aktualisieren, nicht erst beim naechsten Navigieren zum
+        // Report (Regel 14).
+        messenger.Register<ReportViewModel, BuchungenGeaendertNachricht>(
+            this, (empfaenger, _) => empfaenger.AktualisiereAuswertung());
     }
 
     /// <summary>
