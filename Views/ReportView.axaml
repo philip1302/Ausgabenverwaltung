@@ -63,15 +63,6 @@
             <Setter Property="Margin" Value="0,0,0,2" />
         </Style>
 
-        <!-- Knoten der Kategorie-Auswahl: sieht wie eine Beschriftung aus,
-             ist aber die Schaltflaeche, ueber die gewaehlt wird. -->
-        <Style Selector="Button.kategoriewahl">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="4,2" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-        </Style>
     </UserControl.Styles>
 
     <Panel Margin="32,24">
@@ -84,20 +75,35 @@
                  Inhalt ab. -->
             <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16">
                 <StackPanel Spacing="8">
-                    <!-- Zeitraum -->
+                    <!-- Zeitraum
+
+                         Jede Spalte ist ein Raster "Beschriftung, Rest"
+                         statt eines StackPanel: in einem waagerechten
+                         StackPanel dehnen sich die Kinder auf die Hoehe des
+                         hoechsten: hier also auf die der Schnellwahl-Zeile.
+                         Die Sternzeile gibt diese Hoehe an das Eingabefeld
+                         weiter, das damit exakt so hoch wird wie die
+                         Schaltflaechen daneben. Ein StackPanel gaebe jedem
+                         Kind nur seine Wunschhoehe, und eine fest
+                         eingetragene Hoehe waere bei grosser Schrift wieder
+                         falsch (Regel 9). -->
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <StackPanel>
-                            <TextBlock Text="Von" Classes="filterbeschriftung" />
-                            <TextBox Text="{Binding VonText}"
+                        <Grid RowDefinitions="Auto,*">
+                            <TextBlock Grid.Row="0" Text="Von" Classes="filterbeschriftung" />
+                            <TextBox Grid.Row="1" Text="{Binding VonText}"
                                      Width="{anzeige:Breite 110}"
+                                     VerticalAlignment="Stretch"
+                                     VerticalContentAlignment="Center"
                                      PlaceholderText="TT.MM.JJJJ" />
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="Bis" Classes="filterbeschriftung" />
-                            <TextBox Text="{Binding BisText}"
+                        </Grid>
+                        <Grid RowDefinitions="Auto,*">
+                            <TextBlock Grid.Row="0" Text="Bis" Classes="filterbeschriftung" />
+                            <TextBox Grid.Row="1" Text="{Binding BisText}"
                                      Width="{anzeige:Breite 110}"
+                                     VerticalAlignment="Stretch"
+                                     VerticalContentAlignment="Center"
                                      PlaceholderText="TT.MM.JJJJ" />
-                        </StackPanel>
+                        </Grid>
 
                         <StackPanel VerticalAlignment="Bottom">
                             <TextBlock Text="Schnellwahl" Classes="filterbeschriftung" />
@@ -137,37 +143,33 @@
                                    Margin="4,0,0,6" />
                     </StackPanel>
 
-                    <!-- Kategorie, Gruppierung, Zahler, Suche -->
+                    <!-- Kategorie, Gruppierung, Zahler, Status, Sicht, Suche -->
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <StackPanel>
-                            <TextBlock Text="Kategorie-Ast (immer inkl. Unterkategorien)"
-                                       Classes="filterbeschriftung" />
+                            <TextBlock Text="Kategorien" Classes="filterbeschriftung" />
                             <Button x:Name="KategorieAuswahl"
                                     Content="{Binding KategorieFilterText}"
                                     Width="{anzeige:Breite 260}"
                                     HorizontalContentAlignment="Left">
                                 <Button.Flyout>
-                                    <!-- Gewaehlt wird ueber den Knoten-Button, NICHT ueber
-                                         TreeView.SelectedItem - siehe AusgabenlisteView. -->
+                                    <!-- Haekchen statt Auswahl, Flyout bleibt offen -
+                                         siehe AusgabenlisteView. -->
                                     <Flyout Placement="BottomEdgeAlignedLeft">
                                         <StackPanel Width="{anzeige:Breite 320}" Spacing="6">
                                             <Button Content="Alle Kategorien"
                                                     HorizontalAlignment="Stretch"
                                                     HorizontalContentAlignment="Left"
-                                                    Command="{Binding AlleKategorienCommand}"
-                                                    Click="KategorieFlyout_Schliessen" />
+                                                    ToolTip.Tip="Hebt alle Häkchen auf — ohne Auswahl zählen alle Kategorien."
+                                                    Command="{Binding AlleKategorienCommand}" />
                                             <TreeView MaxHeight="{anzeige:Breite 320}"
                                                       ItemsSource="{Binding KategorieWurzeln}">
                                                 <TreeView.ItemTemplate>
                                                     <TreeDataTemplate x:DataType="vm:KategorieFilterKnoten"
                                                                       ItemsSource="{Binding Children}">
-                                                        <Button Classes="kategoriewahl"
-                                                                Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).KategorieWaehlenCommand}"
-                                                                CommandParameter="{Binding}"
-                                                                Click="KategorieFlyout_Schliessen">
+                                                        <CheckBox IsChecked="{Binding IstGewaehlt, Mode=TwoWay}">
                                                             <TextBlock Text="{Binding Name}"
                                                                        Classes.archiviert="{Binding IsArchived}" />
-                                                        </Button>
+                                                        </CheckBox>
                                                     </TreeDataTemplate>
                                                 </TreeView.ItemTemplate>
                                             </TreeView>
@@ -192,16 +194,52 @@
 
                         <StackPanel>
                             <TextBlock Text="Zahler" Classes="filterbeschriftung" />
-                            <ComboBox ItemsSource="{Binding ZahlerBereichOptionen}"
-                                      SelectedItem="{Binding AusgewaehlterZahlerBereich}"
-                                      Width="{anzeige:Breite 260}"
-                                      ToolTip.Tip="„Ich + offene Posten &amp; Einnahmen“ zählt eigene Buchungen, alle noch nicht beglichenen Ausgaben anderer sowie alle bereits beglichenen Einnahmen von anderen im Zeitraum zusammen.">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ZahlerBereichOption">
-                                        <TextBlock Text="{Binding Bezeichnung}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <Button Content="{Binding ZahlerFilterText}"
+                                    Width="{anzeige:Breite 180}"
+                                    HorizontalContentAlignment="Left">
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedLeft">
+                                        <StackPanel Width="{anzeige:Breite 240}" Spacing="6">
+                                            <Button Content="Alle Zahler"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    ToolTip.Tip="Hebt alle Häkchen auf — ohne Auswahl zählen alle Zahler."
+                                                    Command="{Binding AlleZahlerCommand}" />
+                                            <ScrollViewer MaxHeight="{anzeige:Breite 260}">
+                                                <ItemsControl ItemsSource="{Binding ZahlerOptionen}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ZahlerOption">
+                                                            <CheckBox IsChecked="{Binding IstGewaehlt, Mode=TwoWay}"
+                                                                      Content="{Binding Bezeichnung}"
+                                                                      Margin="0,2" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <!-- Zwei unabhaengige Haekchen - siehe AusgabenlisteView. -->
+                            <TextBlock Text="Status" Classes="filterbeschriftung" />
+                            <StackPanel Orientation="Horizontal" Spacing="10"
+                                        VerticalAlignment="Center">
+                                <CheckBox Content="offen"
+                                          IsChecked="{Binding StatusOffen, Mode=TwoWay}" />
+                                <CheckBox Content="beglichen"
+                                          IsChecked="{Binding StatusBeglichen, Mode=TwoWay}"
+                                          ToolTip.Tip="Beide Häkchen zusammen lassen eigene Ausgaben heraus — die haben keinen Status. Ohne Häkchen sind alle Buchungen dabei." />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="Sicht" Classes="filterbeschriftung" />
+                            <CheckBox Content="Meine Kosten"
+                                      IsChecked="{Binding MeineKosten, Mode=TwoWay}"
+                                      ToolTip.Tip="Eigene Buchungen, alle noch nicht beglichenen Ausgaben anderer sowie alle bereits beglichenen Einnahmen von anderen im Zeitraum — was ich getragen habe und noch auf mich zukommt." />
                         </StackPanel>
 
                         <StackPanel>
@@ -210,18 +248,25 @@
                                      Width="{anzeige:Breite 200}"
                                      PlaceholderText="Volltext…" />
                         </StackPanel>
-
-                        <Button Classes="ghost" Content="Filter zurücksetzen"
-                                Command="{Binding FilterZuruecksetzenCommand}"
-                                VerticalAlignment="Bottom" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <!-- ============ Werkzeugleiste ============ -->
+            <!-- ============ Werkzeugleiste ============
+                 "Filter zurücksetzen" steht hier statt in der Filterleiste
+                 selbst: es gehoert zur ganzen Leiste, nicht zu einem
+                 einzelnen Feld darin, und stuende zwischen den Filtern wie
+                 ein weiterer Filter da. Auf derselben Linie wie der
+                 CSV-Export, aber links davon - ein Knopf, der die Anzeige
+                 aendert, gehoert nicht neben einen, der eine Datei
+                 schreibt. -->
             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                <CheckBox Grid.Column="0" Content="Kategorien ohne Ausgaben anzeigen"
-                          IsChecked="{Binding KategorienOhneAusgabenAnzeigen}" />
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
+                    <CheckBox Content="Kategorien ohne Ausgaben anzeigen"
+                              IsChecked="{Binding KategorienOhneAusgabenAnzeigen}" />
+                    <Button Classes="ghost" Content="Filter zurücksetzen"
+                            Command="{Binding FilterZuruecksetzenCommand}" />
+                </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
                     <TextBlock Text="{Binding ExportHinweis}"
                                IsVisible="{Binding ExportHinweis, Converter={x:Static ObjectConverters.IsNotNull}}"

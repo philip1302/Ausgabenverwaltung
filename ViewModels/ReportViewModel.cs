@@ -6,6 +6,7 @@ using System.Linq;
 using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Expenses;
+using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Reports;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -33,6 +34,7 @@ public sealed partial class ReportViewModel : ViewModelBase
     private readonly ReportRepository _reportRepository;
     private readonly ExpenseRepository _expenseRepository;
     private readonly CategoryRepository _categoryRepository;
+    private readonly PersonRepository _personRepository;
 
     // Unterdrueckt das Neuladen, solange mehrere Filterwerte auf einmal
     // gesetzt werden (Schnellwahl, Zuruecksetzen, Neuaufbau der
@@ -69,13 +71,14 @@ public sealed partial class ReportViewModel : ViewModelBase
         new GruppierungOption("Monat", ReportGrouping.Month),
     };
 
-    public IReadOnlyList<ZahlerBereichOption> ZahlerBereichOptionen { get; } = new[]
-    {
-        new ZahlerBereichOption("alle", PayerScope.All),
-        new ZahlerBereichOption("nur ich", PayerScope.Self),
-        new ZahlerBereichOption("nur andere", PayerScope.Others),
-        new ZahlerBereichOption("ich + offene Posten & Einnahmen", PayerScope.SelfAndOpen),
-    };
+    /// <summary>
+    /// Zahler, einzeln an- und abwaehlbar. Die frueheren Gruppen-Optionen
+    /// ("alle", "nur ich", "nur andere") sind entfallen - sie ergeben sich
+    /// aus den Haekchen. Nur "ich + offene Posten" liess sich so nicht
+    /// nachbauen und sitzt jetzt im eigenen Schalter
+    /// <see cref="MeineKosten"/>.
+    /// </summary>
+    public ObservableCollection<ZahlerOption> ZahlerOptionen { get; } = new();
 
     // ---------------- Filter ----------------
 
@@ -93,19 +96,41 @@ public sealed partial class ReportViewModel : ViewModelBase
 
     public bool ZeitraumFehlerSichtbar => !string.IsNullOrEmpty(ZeitraumFehler);
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(KategorieFilterText))]
-    private KategorieFilterKnoten? _ausgewaehlteFilterKategorie;
-
     /// <summary>Beschriftung der Kategorie-Auswahl in der Filterleiste.</summary>
     public string KategorieFilterText =>
-        AusgewaehlteFilterKategorie?.FullPath ?? "Alle Kategorien";
+        FilterCaption.Categories(KategorieAuswahl(), _kategorieNamen);
+
+    /// <summary>Beschriftung der Zahler-Auswahl in der Filterleiste.</summary>
+    public string ZahlerFilterText => FilterCaption.Payers(
+        ZahlerOptionen.Where(option => option.IstGewaehlt)
+                      .Select(option => option.Bezeichnung).ToList());
+
+    // Siehe AusgabenlisteViewModel: Namen fuer die Beschriftung, beim
+    // Aufbau des Baums mitgefuellt.
+    private Dictionary<int, string> _kategorieNamen = new();
 
     [ObservableProperty]
     private GruppierungOption _ausgewaehlteGruppierung;
 
+    /// <summary>
+    /// Status-Haekchen, kombinierbar. Beide aus = keine Einschraenkung;
+    /// beide an ist NICHT dasselbe (Regel 4, siehe SettlementStatus).
+    /// </summary>
     [ObservableProperty]
-    private ZahlerBereichOption _ausgewaehlterZahlerBereich;
+    private bool _statusOffen;
+
+    [ObservableProperty]
+    private bool _statusBeglichen;
+
+    /// <summary>
+    /// "Meine Kosten": eigene Buchungen plus alles, was von anderen noch
+    /// offen ist (<see cref="PayerScope.SelfAndOpen"/>) - die frueher als
+    /// "ich + offene Posten &amp; Einnahmen" gewaehlte Sicht. Bewusst ein
+    /// eigener Schalter: die Bedingung mischt Zahler, Status und
+    /// Buchungstyp und laesst sich aus Zahler-Haekchen nicht bauen.
+    /// </summary>
+    [ObservableProperty]
+    private bool _meineKosten;
 
     [ObservableProperty]
     private string _suchtext = string.Empty;
@@ -156,14 +181,15 @@ public sealed partial class ReportViewModel : ViewModelBase
         ReportRepository reportRepository,
         ExpenseRepository expenseRepository,
         CategoryRepository categoryRepository,
+        PersonRepository personRepository,
         IMessenger messenger)
     {
         _reportRepository = reportRepository;
         _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
+        _personRepository = personRepository;
 
         _ausgewaehlteGruppierung = GruppierungOptionen[2];
-        _ausgewaehlterZahlerBereich = ZahlerBereichOptionen[0];
 
         _ladenGesperrt = true;
         LadeKategorieAuswahl();
@@ -225,10 +251,51 @@ public sealed partial class ReportViewModel : ViewModelBase
 
         LadeDaten();
     }
-    partial void OnAusgewaehlteFilterKategorieChanged(KategorieFilterKnoten? value) => LadeDaten();
     partial void OnAusgewaehlteGruppierungChanged(GruppierungOption value) => LadeDaten();
-    partial void OnAusgewaehlterZahlerBereichChanged(ZahlerBereichOption value) => LadeDaten();
+    partial void OnStatusOffenChanged(bool value) => LadeDaten();
+    partial void OnStatusBeglichenChanged(bool value) => LadeDaten();
+    partial void OnMeineKostenChanged(bool value) => LadeDaten();
     partial void OnSuchtextChanged(string value) => LadeDaten();
+
+    /// <summary>
+    /// Ein Haekchen im Kategorie-Baum oder in der Zahlerliste wurde
+    /// umgestellt - siehe die gleiche Stelle in
+    /// <see cref="AusgabenlisteViewModel"/>.
+    /// </summary>
+    private void FilterAuswahlGeaendert()
+    {
+        OnPropertyChanged(nameof(KategorieFilterText));
+        OnPropertyChanged(nameof(ZahlerFilterText));
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Die angehakten Kategorien als Aeste und Ausschluesse; die
+    /// Umrechnung selbst steht in Core (Regel 7).
+    /// </summary>
+    private CategoryFilterChoice KategorieAuswahl()
+    {
+        var verbindungen = new List<CategoryParentLink>();
+        var angehakt = new HashSet<int>();
+
+        void Sammle(IEnumerable<KategorieFilterKnoten> knoten)
+        {
+            foreach (var k in knoten)
+            {
+                verbindungen.Add(new CategoryParentLink(k.Id, k.ParentId));
+                if (k.IstGewaehlt)
+                {
+                    angehakt.Add(k.Id);
+                }
+
+                Sammle(k.Children);
+            }
+        }
+
+        Sammle(KategorieWurzeln);
+
+        return CategoryFilterSelection.Derive(verbindungen, angehakt);
+    }
 
     // Der Schalter blendet nur aus, was schon ausgewertet ist.
     partial void OnKategorienOhneAusgabenAnzeigenChanged(bool value) => BaueZeilen();
@@ -288,9 +355,8 @@ public sealed partial class ReportViewModel : ViewModelBase
     {
         _ladenGesperrt = true;
         AktiverZeitraumSchluessel = null;
-        AusgewaehlteFilterKategorie = null;
         AusgewaehlteGruppierung = GruppierungOptionen[2];
-        AusgewaehlterZahlerBereich = ZahlerBereichOptionen[0];
+        FilterAuswahlLeeren();
         Suchtext = string.Empty;
         KategorienOhneAusgabenAnzeigen = false;
         SetzeVorgabeZeitraum();
@@ -300,16 +366,51 @@ public sealed partial class ReportViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Waehlt einen Kategorie-Ast als Filter. Bewusst ein Command statt
-    /// einer Bindung an TreeView.SelectedItem - siehe die gleiche Stelle
-    /// in <see cref="AusgabenlisteViewModel.KategorieWaehlen"/>.
+    /// Hebt die Kategorie-Auswahl auf - siehe die gleiche Stelle in
+    /// <see cref="AusgabenlisteViewModel"/>.
     /// </summary>
     [RelayCommand]
-    private void KategorieWaehlen(KategorieFilterKnoten? knoten) =>
-        AusgewaehlteFilterKategorie = knoten;
+    private void AlleKategorien()
+    {
+        foreach (var knoten in KategorieWurzeln)
+        {
+            knoten.SetzeStill(false);
+        }
 
+        FilterAuswahlGeaendert();
+    }
+
+    /// <summary>Hebt die Zahler-Auswahl auf - wieder alle Zahler.</summary>
     [RelayCommand]
-    private void AlleKategorien() => AusgewaehlteFilterKategorie = null;
+    private void AlleZahler()
+    {
+        foreach (var option in ZahlerOptionen)
+        {
+            option.SetzeStill(false);
+        }
+
+        FilterAuswahlGeaendert();
+    }
+
+    private void FilterAuswahlLeeren()
+    {
+        foreach (var knoten in KategorieWurzeln)
+        {
+            knoten.SetzeStill(false);
+        }
+
+        foreach (var option in ZahlerOptionen)
+        {
+            option.SetzeStill(false);
+        }
+
+        StatusOffen = false;
+        StatusBeglichen = false;
+        MeineKosten = false;
+
+        OnPropertyChanged(nameof(KategorieFilterText));
+        OnPropertyChanged(nameof(ZahlerFilterText));
+    }
 
     [RelayCommand]
     private void ZeileUmschalten(ReportZeile? zeile)
@@ -400,12 +501,18 @@ public sealed partial class ReportViewModel : ViewModelBase
         {
             From = von,
             To = bis,
-            // NULL bei Summenzeile und Summenspalte: dort bleibt es beim
-            // Kategoriefilter der Filterleiste.
-            CategoryRootId = zelle.KategorieId ?? basis.CategoryRootId,
+            // Ohne Kategorie bei Summenzeile und Summenspalte: dort bleibt
+            // es beim Kategoriefilter der Filterleiste. Die Ausschluesse
+            // gelten in jedem Fall weiter - wer "Haushalt ohne Restaurant"
+            // eingestellt hat, will in der Detailansicht einer Zelle nicht
+            // ploetzlich doch die Restaurantbuchungen sehen.
+            CategoryRootIds = zelle.KategorieId is int zellenKategorie
+                ? [zellenKategorie]
+                : basis.CategoryRootIds,
+            ExcludedCategoryIds = basis.ExcludedCategoryIds,
             Grouping = basis.Grouping,
             PayerScope = basis.PayerScope,
-            PayerId = basis.PayerId,
+            PayerIds = basis.PayerIds,
             Status = basis.Status,
             SearchText = basis.SearchText,
             RecurringExpenseId = basis.RecurringExpenseId,
@@ -461,13 +568,15 @@ public sealed partial class ReportViewModel : ViewModelBase
         // ausserhalb des gewaehlten Astes liegt.
         _farben = CategoryColors.Resolve(baum);
 
-        // Ist ein Kategorie-Ast gewaehlt, beginnt die Tabelle bei diesem
+        // Sind Kategorie-Aeste gewaehlt, beginnt die Tabelle bei diesen
         // Knoten. Sonst waere die oberste Zeile immer die Oberkategorie mit
-        // exakt derselben Summe - eine Zeile ohne Aussage.
-        var wurzeln = filter.CategoryRootId is int astId
-            ? FindeKnoten(baum, astId) is { } ast
-                ? new List<CategoryNode> { ast }
-                : new List<CategoryNode>()
+        // exakt derselben Summe - eine Zeile ohne Aussage. Bei mehreren
+        // gewaehlten Aesten stehen sie nebeneinander an der Wurzel.
+        var wurzeln = filter.CategoryRootIds.Count > 0
+            ? filter.CategoryRootIds
+                .Select(astId => FindeKnoten(baum, astId))
+                .OfType<CategoryNode>()
+                .ToList()
             : baum;
 
         _matrix = ReportMatrixBuilder.Build(wurzeln, pfade, zellen, filter.Grouping);
@@ -572,13 +681,25 @@ public sealed partial class ReportViewModel : ViewModelBase
 
         ZeitraumFehler = null;
 
+        var kategorien = KategorieAuswahl();
+
         filter = new ReportFilter
         {
             From = zeitraum.From,
             To = zeitraum.ToExclusive,
-            CategoryRootId = AusgewaehlteFilterKategorie?.Id,
+            CategoryRootIds = kategorien.RootIds,
+            ExcludedCategoryIds = kategorien.ExcludedIds,
             Grouping = AusgewaehlteGruppierung.Wert,
-            PayerScope = AusgewaehlterZahlerBereich.Wert,
+
+            // "Meine Kosten" ist der einzige Grund, den PayerScope noch
+            // anzufassen - die Zahler selbst kommen als Liste.
+            PayerScope = MeineKosten ? PayerScope.SelfAndOpen : PayerScope.All,
+            PayerIds = ZahlerOptionen.Where(option => option.IstGewaehlt)
+                                     .Select(option => option.Id).ToList(),
+
+            Status = (StatusOffen ? SettlementStatus.Offene : SettlementStatus.Alle)
+                   | (StatusBeglichen ? SettlementStatus.Beglichene : SettlementStatus.Alle),
+
             SearchText = string.IsNullOrWhiteSpace(Suchtext) ? null : Suchtext.Trim(),
         };
 
@@ -594,23 +715,76 @@ public sealed partial class ReportViewModel : ViewModelBase
 
     private void LadeKategorieAuswahl()
     {
-        var gewaehlteId = AusgewaehlteFilterKategorie?.Id;
+        // Die Auswahl ueber den Neuaufbau retten - siehe die gleiche
+        // Stelle in AusgabenlisteViewModel.
+        var angehakteKategorien = new HashSet<int>();
+        SammleAngehakte(KategorieWurzeln, angehakteKategorien);
+
+        var angehakteZahler = ZahlerOptionen
+            .Where(option => option.IstGewaehlt)
+            .Select(option => option.Id)
+            .ToHashSet();
 
         KategorieWurzeln.Clear();
+        _kategorieNamen = new Dictionary<int, string>();
+
         var baum = _categoryRepository.GetTree();
         var pfade = CategoryPaths.BuildFullPaths(baum);
-        foreach (var knoten in BaueFilterKnoten(baum, pfade))
+        foreach (var knoten in BaueFilterKnoten(baum, pfade, null))
         {
             KategorieWurzeln.Add(knoten);
         }
 
-        AusgewaehlteFilterKategorie = gewaehlteId is int id
-            ? FindeFilterKnoten(KategorieWurzeln, id)
-            : null;
+        StelleHaekchenWiederHer(KategorieWurzeln, angehakteKategorien);
+
+        ZahlerOptionen.Clear();
+        foreach (var person in _personRepository.GetAllActive())
+        {
+            var option = new ZahlerOption(person.Name, person.Id, person.IsSelf)
+            {
+                BeiAenderung = FilterAuswahlGeaendert,
+            };
+
+            if (angehakteZahler.Contains(person.Id))
+            {
+                option.SetzeStill(true);
+            }
+
+            ZahlerOptionen.Add(option);
+        }
+
+        OnPropertyChanged(nameof(KategorieFilterText));
+        OnPropertyChanged(nameof(ZahlerFilterText));
     }
 
-    private static List<KategorieFilterKnoten> BaueFilterKnoten(
-        IReadOnlyList<CategoryNode> nodes, IReadOnlyDictionary<int, string> pfade)
+    private static void SammleAngehakte(
+        IEnumerable<KategorieFilterKnoten> knoten, HashSet<int> ziel)
+    {
+        foreach (var k in knoten)
+        {
+            if (k.IstGewaehlt)
+            {
+                ziel.Add(k.Id);
+            }
+
+            SammleAngehakte(k.Children, ziel);
+        }
+    }
+
+    private static void StelleHaekchenWiederHer(
+        IEnumerable<KategorieFilterKnoten> knoten, IReadOnlySet<int> angehakt)
+    {
+        foreach (var k in knoten)
+        {
+            k.SetzeStill(angehakt.Contains(k.Id));
+            StelleHaekchenWiederHer(k.Children, angehakt);
+        }
+    }
+
+    private List<KategorieFilterKnoten> BaueFilterKnoten(
+        IReadOnlyList<CategoryNode> nodes,
+        IReadOnlyDictionary<int, string> pfade,
+        int? elternId)
     {
         var ergebnis = new List<KategorieFilterKnoten>();
 
@@ -622,33 +796,20 @@ public sealed partial class ReportViewModel : ViewModelBase
                 node.Category.Id,
                 node.Category.Name,
                 pfade[node.Category.Id],
-                node.Category.IsArchived);
+                node.Category.IsArchived,
+                elternId)
+            {
+                BeiAenderung = FilterAuswahlGeaendert,
+            };
 
-            knoten.Children.AddRange(BaueFilterKnoten(node.Children, pfade));
+            _kategorieNamen[node.Category.Id] = node.Category.Name;
+
+            knoten.Children.AddRange(
+                BaueFilterKnoten(node.Children, pfade, node.Category.Id));
             ergebnis.Add(knoten);
         }
 
         return ergebnis;
-    }
-
-    private static KategorieFilterKnoten? FindeFilterKnoten(
-        IEnumerable<KategorieFilterKnoten> knoten, int id)
-    {
-        foreach (var kandidat in knoten)
-        {
-            if (kandidat.Id == id)
-            {
-                return kandidat;
-            }
-
-            var gefunden = FindeFilterKnoten(kandidat.Children, id);
-            if (gefunden is not null)
-            {
-                return gefunden;
-            }
-        }
-
-        return null;
     }
 
     private static CategoryNode? FindeKnoten(IReadOnlyList<CategoryNode> nodes, int id)

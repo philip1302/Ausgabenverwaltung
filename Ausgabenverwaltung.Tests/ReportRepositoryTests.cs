@@ -46,7 +46,7 @@ public class ReportRepositoryTests : IDisposable
         {
             From = new DateOnly(2026, 1, 1),
             To = new DateOnly(2027, 1, 1),
-            CategoryRootId = wohnen.Id,
+            CategoryRootIds = [wohnen.Id],
             Grouping = ReportGrouping.Year,
         });
 
@@ -145,7 +145,7 @@ public class ReportRepositoryTests : IDisposable
         {
             From = new DateOnly(2026, 1, 1),
             To = new DateOnly(2027, 1, 1),
-            CategoryRootId = kategorie.Id,
+            CategoryRootIds = [kategorie.Id],
             Grouping = ReportGrouping.Year,
         });
 
@@ -166,7 +166,7 @@ public class ReportRepositoryTests : IDisposable
         {
             From = new DateOnly(2026, 1, 1),
             To = new DateOnly(2027, 1, 1),
-            PayerId = _otherId,
+            PayerIds = [_otherId],
             Grouping = ReportGrouping.Year,
         });
 
@@ -189,14 +189,14 @@ public class ReportRepositoryTests : IDisposable
         {
             From = new DateOnly(2026, 1, 1),
             To = new DateOnly(2027, 1, 1),
-            Status = SettlementStatus.NurOffene,
+            Status = SettlementStatus.Offene,
             Grouping = ReportGrouping.Year,
         });
         var beglichene = _repository.Evaluate(new ReportFilter
         {
             From = new DateOnly(2026, 1, 1),
             To = new DateOnly(2027, 1, 1),
-            Status = SettlementStatus.NurBeglichene,
+            Status = SettlementStatus.Beglichene,
             Grouping = ReportGrouping.Year,
         });
 

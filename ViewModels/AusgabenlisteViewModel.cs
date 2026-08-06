@@ -48,13 +48,6 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     public ObservableCollection<ZahlerOption> ZahlerOptionen { get; } = new();
 
-    public IReadOnlyList<StatusOption> StatusOptionen { get; } = new[]
-    {
-        new StatusOption("alle", SettlementStatus.Alle),
-        new StatusOption("nur offene", SettlementStatus.NurOffene),
-        new StatusOption("nur beglichene", SettlementStatus.NurBeglichene),
-    };
-
     // ---------------- Filter ----------------
 
     /// <summary>Leer = offene Grenze (siehe <see cref="DateRangePresets.FromInclusiveBounds"/>).</summary>
@@ -71,22 +64,39 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     public bool ZeitraumFehlerSichtbar => !string.IsNullOrEmpty(ZeitraumFehler);
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(KategorieFilterText))]
-    private KategorieFilterKnoten? _ausgewaehlteFilterKategorie;
-
     /// <summary>Beschriftung der Kategorie-Auswahl in der Filterleiste.</summary>
     public string KategorieFilterText =>
-        AusgewaehlteFilterKategorie?.FullPath ?? "Alle Kategorien";
+        FilterCaption.Categories(KategorieAuswahl(), _kategorieNamen);
 
-    // Bewusst nullbar: die ComboBox schreibt beim Neuaufbau von
-    // ZahlerOptionen kurzzeitig null zurueck, weil ihr bisher gewaehltes
-    // Element aus der Liste verschwindet. NULL bedeutet hier "alle".
+    /// <summary>Beschriftung der Zahler-Auswahl in der Filterleiste.</summary>
+    public string ZahlerFilterText => FilterCaption.Payers(
+        ZahlerOptionen.Where(option => option.IstGewaehlt)
+                      .Select(option => option.Bezeichnung).ToList());
+
+    // Namen der Kategorien fuer die Beschriftung oben - beim Aufbau des
+    // Baums mitgefuellt, damit die Beschriftung nicht jedes Mal durch den
+    // Baum laufen muss.
+    private Dictionary<int, string> _kategorieNamen = new();
+
+    /// <summary>
+    /// Status-Haekchen, kombinierbar. Beide aus = keine Einschraenkung;
+    /// beide an ist NICHT dasselbe (Regel 4, siehe SettlementStatus).
+    /// </summary>
     [ObservableProperty]
-    private ZahlerOption? _ausgewaehlterZahler;
+    private bool _statusOffen;
 
     [ObservableProperty]
-    private StatusOption _ausgewaehlterStatus;
+    private bool _statusBeglichen;
+
+    /// <summary>
+    /// "Meine Kosten": eigene Buchungen plus alles, was von anderen noch
+    /// offen ist (<see cref="PayerScope.SelfAndOpen"/>). Bewusst ein
+    /// eigener Schalter und keine Zahler-Haekchen - die Bedingung mischt
+    /// Zahler, Status und Buchungstyp und laesst sich aus einzelnen
+    /// Personen nicht zusammensetzen.
+    /// </summary>
+    [ObservableProperty]
+    private bool _meineKosten;
 
     [ObservableProperty]
     private string _suchtext = string.Empty;
@@ -191,8 +201,6 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         _personRepository = personRepository;
         _messenger = messenger;
 
-        _ausgewaehlterStatus = StatusOptionen[0];
-
         _ladenGesperrt = true;
         LadeAuswahllisten();
         SetzeVorgabeZeitraum();
@@ -255,9 +263,51 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         LadeDaten();
     }
-    partial void OnAusgewaehlteFilterKategorieChanged(KategorieFilterKnoten? value) => LadeDaten();
-    partial void OnAusgewaehlterZahlerChanged(ZahlerOption? value) => LadeDaten();
-    partial void OnAusgewaehlterStatusChanged(StatusOption value) => LadeDaten();
+    partial void OnStatusOffenChanged(bool value) => LadeDaten();
+    partial void OnStatusBeglichenChanged(bool value) => LadeDaten();
+    partial void OnMeineKostenChanged(bool value) => LadeDaten();
+
+    /// <summary>
+    /// Ein Haekchen im Kategorie-Baum oder in der Zahlerliste wurde
+    /// umgestellt. Die beiden Beschriftungen haengen an einer Auswahl, die
+    /// kein einzelnes beobachtbares Feld ist - sie muessen deshalb von
+    /// Hand angestossen werden.
+    /// </summary>
+    private void FilterAuswahlGeaendert()
+    {
+        OnPropertyChanged(nameof(KategorieFilterText));
+        OnPropertyChanged(nameof(ZahlerFilterText));
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Die angehakten Kategorien als Aeste und Ausschluesse. Die
+    /// Umrechnung selbst steht in Core (Regel 7), hier wird nur
+    /// eingesammelt, was im Baum angehakt ist.
+    /// </summary>
+    private CategoryFilterChoice KategorieAuswahl()
+    {
+        var verbindungen = new List<CategoryParentLink>();
+        var angehakt = new HashSet<int>();
+
+        void Sammle(IEnumerable<KategorieFilterKnoten> knoten)
+        {
+            foreach (var k in knoten)
+            {
+                verbindungen.Add(new CategoryParentLink(k.Id, k.ParentId));
+                if (k.IstGewaehlt)
+                {
+                    angehakt.Add(k.Id);
+                }
+
+                Sammle(k.Children);
+            }
+        }
+
+        Sammle(KategorieWurzeln);
+
+        return CategoryFilterSelection.Derive(verbindungen, angehakt);
+    }
     partial void OnSuchtextChanged(string value) => LadeDaten();
 
     [RelayCommand]
@@ -312,9 +362,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     {
         _ladenGesperrt = true;
         AktiverZeitraumSchluessel = null;
-        AusgewaehlteFilterKategorie = null;
-        AusgewaehlterZahler = ZahlerOptionen[0];
-        AusgewaehlterStatus = StatusOptionen[0];
+        FilterAuswahlLeeren();
         Suchtext = string.Empty;
         _vorlageFilterId = null;
         VorlageFilterText = null;
@@ -338,9 +386,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     public void ZeigeVorlagenBuchungen(int vorlageId, string vorlageTitel)
     {
         _ladenGesperrt = true;
-        AusgewaehlteFilterKategorie = null;
-        AusgewaehlterZahler = ZahlerOptionen[0];
-        AusgewaehlterStatus = StatusOptionen[0];
+        FilterAuswahlLeeren();
         Suchtext = string.Empty;
         VonText = string.Empty;
         BisText = string.Empty;
@@ -371,9 +417,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     public void ZeigeZeitraum(DateOnly von, DateOnly bisEinschliesslich)
     {
         _ladenGesperrt = true;
-        AusgewaehlteFilterKategorie = null;
-        AusgewaehlterZahler = ZahlerOptionen[0];
-        AusgewaehlterStatus = StatusOptionen[0];
+        FilterAuswahlLeeren();
         Suchtext = string.Empty;
 
         _vorlageFilterId = null;
@@ -402,18 +446,56 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Waehlt einen Kategorie-Ast als Filter. Bewusst ein Command statt
-    /// einer Bindung an TreeView.SelectedItem: der Baum steckt in einem
-    /// Flyout, und beim Schliessen des Popups setzt der TreeView seine
-    /// Auswahl zurueck - das wuerde ueber eine TwoWay-Bindung sofort
-    /// wieder NULL in den Filter schreiben.
+    /// Hebt die Kategorie-Auswahl auf: kein Haekchen mehr, also wieder
+    /// alle Kategorien. Ein Command statt einer Bindung, weil der Baum in
+    /// einem Flyout steckt und der Knopf daneben steht.
     /// </summary>
     [RelayCommand]
-    private void KategorieWaehlen(KategorieFilterKnoten? knoten) =>
-        AusgewaehlteFilterKategorie = knoten;
+    private void AlleKategorien()
+    {
+        foreach (var knoten in KategorieWurzeln)
+        {
+            knoten.SetzeStill(false);
+        }
 
+        FilterAuswahlGeaendert();
+    }
+
+    /// <summary>Hebt die Zahler-Auswahl auf - wieder alle Zahler.</summary>
     [RelayCommand]
-    private void AlleKategorien() => AusgewaehlteFilterKategorie = null;
+    private void AlleZahler()
+    {
+        foreach (var option in ZahlerOptionen)
+        {
+            option.SetzeStill(false);
+        }
+
+        FilterAuswahlGeaendert();
+    }
+
+    /// <summary>
+    /// Leert die gesamte Auswahl der Filterleiste, ohne dabei je Haekchen
+    /// neu zu laden - die Aufrufer laden anschliessend selbst.
+    /// </summary>
+    private void FilterAuswahlLeeren()
+    {
+        foreach (var knoten in KategorieWurzeln)
+        {
+            knoten.SetzeStill(false);
+        }
+
+        foreach (var option in ZahlerOptionen)
+        {
+            option.SetzeStill(false);
+        }
+
+        StatusOffen = false;
+        StatusBeglichen = false;
+        MeineKosten = false;
+
+        OnPropertyChanged(nameof(KategorieFilterText));
+        OnPropertyChanged(nameof(ZahlerFilterText));
+    }
 
     [RelayCommand]
     private void SpalteSortieren(string? spalte)
@@ -648,13 +730,24 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         ZeitraumFehler = null;
 
+        var kategorien = KategorieAuswahl();
+
         filter = new ReportFilter
         {
             From = zeitraum.From,
             To = zeitraum.ToExclusive,
-            CategoryRootId = AusgewaehlteFilterKategorie?.Id,
-            PayerId = AusgewaehlterZahler?.Id,
-            Status = AusgewaehlterStatus.Wert,
+            CategoryRootIds = kategorien.RootIds,
+            ExcludedCategoryIds = kategorien.ExcludedIds,
+
+            // "Meine Kosten" ist der einzige Grund, den PayerScope noch
+            // anzufassen - die Zahler selbst kommen als Liste.
+            PayerScope = MeineKosten ? PayerScope.SelfAndOpen : PayerScope.All,
+            PayerIds = ZahlerOptionen.Where(option => option.IstGewaehlt)
+                                     .Select(option => option.Id).ToList(),
+
+            Status = (StatusOffen ? SettlementStatus.Offene : SettlementStatus.Alle)
+                   | (StatusBeglichen ? SettlementStatus.Beglichene : SettlementStatus.Alle),
+
             SearchText = string.IsNullOrWhiteSpace(Suchtext) ? null : Suchtext.Trim(),
             RecurringExpenseId = _vorlageFilterId,
         };
@@ -671,38 +764,86 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     private void LadeAuswahllisten()
     {
-        var gewaehlteKategorieId = AusgewaehlteFilterKategorie?.Id;
-        var gewaehlteZahlerId = AusgewaehlterZahler?.Id;
+        // Die Auswahl ueber den Neuaufbau retten: die Listen werden auch
+        // waehrend der Sitzung neu geladen (neue Kategorie, neue Person),
+        // und ein dabei stillschweigend geleerter Filter waere ein Raetsel.
+        var angehakteKategorien = new HashSet<int>();
+        SammleAngehakte(KategorieWurzeln, angehakteKategorien);
+
+        var angehakteZahler = ZahlerOptionen
+            .Where(option => option.IstGewaehlt)
+            .Select(option => option.Id)
+            .ToHashSet();
 
         KategorieWurzeln.Clear();
+        _kategorieNamen = new Dictionary<int, string>();
+
         var baum = _categoryRepository.GetTree();
         var pfade = CategoryPaths.BuildFullPaths(baum);
-        foreach (var knoten in BaueFilterKnoten(baum, pfade))
+        foreach (var knoten in BaueFilterKnoten(baum, pfade, null))
         {
             KategorieWurzeln.Add(knoten);
         }
 
-        AusgewaehlteFilterKategorie = gewaehlteKategorieId is int kategorieId
-            ? FindeKnoten(KategorieWurzeln, kategorieId)
-            : null;
+        // Erst nach dem Aufbau anhaken: das Haekchen kaskadiert in den
+        // Unterbaum, und beim Aufbau von oben nach unten wuerde es die
+        // gerettete Auswahl der Kinder wieder ueberschreiben.
+        StelleHaekchenWiederHer(KategorieWurzeln, angehakteKategorien);
 
         ZahlerOptionen.Clear();
-        ZahlerOptionen.Add(new ZahlerOption("alle", null));
         foreach (var person in _personRepository.GetAllActive())
         {
-            ZahlerOptionen.Add(new ZahlerOption(person.Name, person.Id));
+            var option = new ZahlerOption(person.Name, person.Id, person.IsSelf)
+            {
+                BeiAenderung = FilterAuswahlGeaendert,
+            };
+
+            // Ein inzwischen archivierter Zahler faellt aus der Auswahl -
+            // sein Haekchen verschwindet mit ihm, statt auf einen Eintrag
+            // zu zeigen, den es nicht mehr gibt.
+            if (angehakteZahler.Contains(person.Id))
+            {
+                option.SetzeStill(true);
+            }
+
+            ZahlerOptionen.Add(option);
         }
 
-        // Ein inzwischen archivierter Zahler faellt aus der Auswahl - der
-        // Filter geht dann auf "alle" zurueck, statt auf einen Eintrag zu
-        // zeigen, den es nicht mehr gibt.
-        AusgewaehlterZahler =
-            ZahlerOptionen.FirstOrDefault(option => option.Id == gewaehlteZahlerId)
-            ?? ZahlerOptionen[0];
+        OnPropertyChanged(nameof(KategorieFilterText));
+        OnPropertyChanged(nameof(ZahlerFilterText));
     }
 
-    private static List<KategorieFilterKnoten> BaueFilterKnoten(
-        IReadOnlyList<CategoryNode> nodes, IReadOnlyDictionary<int, string> pfade)
+    private static void SammleAngehakte(
+        IEnumerable<KategorieFilterKnoten> knoten, HashSet<int> ziel)
+    {
+        foreach (var k in knoten)
+        {
+            if (k.IstGewaehlt)
+            {
+                ziel.Add(k.Id);
+            }
+
+            SammleAngehakte(k.Children, ziel);
+        }
+    }
+
+    private static void StelleHaekchenWiederHer(
+        IEnumerable<KategorieFilterKnoten> knoten, IReadOnlySet<int> angehakt)
+    {
+        foreach (var k in knoten)
+        {
+            // Von oben nach unten, aber jeweils still und einzeln: so
+            // bleibt ein abgewaehltes Kind unter einem angehakten
+            // Elternteil abgewaehlt.
+            k.SetzeStill(angehakt.Contains(k.Id));
+            StelleHaekchenWiederHer(k.Children, angehakt);
+        }
+    }
+
+    private List<KategorieFilterKnoten> BaueFilterKnoten(
+        IReadOnlyList<CategoryNode> nodes,
+        IReadOnlyDictionary<int, string> pfade,
+        int? elternId)
     {
         var ergebnis = new List<KategorieFilterKnoten>();
 
@@ -714,9 +855,16 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
                 node.Category.Id,
                 node.Category.Name,
                 pfade[node.Category.Id],
-                node.Category.IsArchived);
+                node.Category.IsArchived,
+                elternId)
+            {
+                BeiAenderung = FilterAuswahlGeaendert,
+            };
 
-            knoten.Children.AddRange(BaueFilterKnoten(node.Children, pfade));
+            _kategorieNamen[node.Category.Id] = node.Category.Name;
+
+            knoten.Children.AddRange(
+                BaueFilterKnoten(node.Children, pfade, node.Category.Id));
             ergebnis.Add(knoten);
         }
 

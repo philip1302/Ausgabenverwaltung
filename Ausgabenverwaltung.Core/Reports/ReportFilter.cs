@@ -4,6 +4,11 @@ namespace Ausgabenverwaltung.Core.Reports;
 /// Stellschrauben fuer eine Auswertung. Bewusst kein fertiger
 /// Einzelreport, sondern ein Filtermodell, aus dem sich verschiedene
 /// Auswertungen zusammensetzen lassen (siehe ReportRepository.Evaluate).
+///
+/// Durchgaengige Regel fuer alle Listenfilter hier: <b>eine leere Liste
+/// schraenkt nicht ein</b>. Das gilt fuer Kategorien, Ausschluesse und
+/// Zahler gleichermassen und ebenso fuer <see cref="SettlementStatus.Alle"/>
+/// - so bedeutet "nichts angehakt" ueberall dasselbe, naemlich "alles".
 /// </summary>
 public sealed class ReportFilter
 {
@@ -14,25 +19,45 @@ public sealed class ReportFilter
     public required DateOnly To { get; init; }
 
     /// <summary>
-    /// Optionaler Kategorie-Knoten. Umfasst immer den Knoten selbst und
-    /// alle Unterkategorien (rekursiv). NULL = keine Einschraenkung.
+    /// Gewaehlte Kategorie-Aeste. Jeder Eintrag umfasst den Knoten selbst
+    /// und alle Unterkategorien (rekursiv). Leer = keine Einschraenkung.
+    ///
+    /// Mehrere Aeste sind ausdruecklich erlaubt ("Haushalt UND Auto"):
+    /// die Bedingungen der einzelnen Aeste sind ODER-verknuepft.
     /// </summary>
-    public int? CategoryRootId { get; init; }
+    public IReadOnlyList<int> CategoryRootIds { get; init; } = [];
+
+    /// <summary>
+    /// Ausgenommene Kategorien. Wie bei <see cref="CategoryRootIds"/> wirkt
+    /// jeder Eintrag auf den ganzen Unter-Ast. Leer = nichts ausgenommen.
+    ///
+    /// Der Ausschluss sticht die Auswahl: "Haushalt, aber ohne Restaurant"
+    /// nimmt auch alles unterhalb von Restaurant heraus. Ein Ausschluss
+    /// ausserhalb jedes gewaehlten Astes ist wirkungslos, aber kein Fehler.
+    /// </summary>
+    public IReadOnlyList<int> ExcludedCategoryIds { get; init; } = [];
 
     public ReportGrouping Grouping { get; init; } = ReportGrouping.Month;
 
+    /// <summary>
+    /// Wirkt zusaetzlich zu <see cref="PayerIds"/> - beide Bedingungen
+    /// muessen erfuellt sein. Die Oberflaeche waehlt Personen inzwischen
+    /// einzeln aus und laesst diesen Wert dabei auf
+    /// <see cref="PayerScope.All"/>; gebraucht wird er noch fuer
+    /// <see cref="PayerScope.SelfAndOpen"/> ("Meine Kosten"), das sich
+    /// aus einzelnen Personen nicht zusammensetzen laesst.
+    /// </summary>
     public PayerScope PayerScope { get; init; } = PayerScope.All;
 
     /// <summary>
-    /// Optionaler einzelner Zahler. NULL = keine Einschraenkung. Wirkt
-    /// zusaetzlich zu <see cref="PayerScope"/> - beide Bedingungen muessen
-    /// erfuellt sein.
+    /// Gewaehlte Zahler. Leer = keine Einschraenkung. Mehrere Eintraege
+    /// sind ODER-verknuepft.
     /// </summary>
-    public int? PayerId { get; init; }
+    public IReadOnlyList<int> PayerIds { get; init; } = [];
 
     /// <summary>
-    /// Einschraenkung auf offene bzw. beglichene Posten. Beachtet Regel 4
-    /// (siehe <see cref="SettlementStatus"/>).
+    /// Einschraenkung auf offene bzw. beglichene Posten, kombinierbar.
+    /// Beachtet Regel 4 (siehe <see cref="SettlementStatus"/>).
     /// </summary>
     public SettlementStatus Status { get; init; } = SettlementStatus.Alle;
 

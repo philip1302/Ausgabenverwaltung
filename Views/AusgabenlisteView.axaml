@@ -78,15 +78,6 @@
             <Setter Property="TextAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-        <!-- Knoten der Kategorie-Auswahl: sieht wie eine Beschriftung aus,
-             ist aber die Schaltflaeche, ueber die gewaehlt wird. -->
-        <Style Selector="Button.kategoriewahl">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="4,2" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-        </Style>
 
         <Style Selector="TextBlock.filterbeschriftung">
             <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
@@ -112,20 +103,35 @@
                  Abschnitt 5.4). -->
             <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16">
                 <StackPanel Spacing="8">
-                    <!-- Zeitraum -->
+                    <!-- Zeitraum
+
+                         Jede Spalte ist ein Raster "Beschriftung, Rest"
+                         statt eines StackPanel: in einem waagerechten
+                         StackPanel dehnen sich die Kinder auf die Hoehe des
+                         hoechsten: hier also auf die der Schnellwahl-Zeile.
+                         Die Sternzeile gibt diese Hoehe an das Eingabefeld
+                         weiter, das damit exakt so hoch wird wie die
+                         Schaltflaechen daneben. Ein StackPanel gaebe jedem
+                         Kind nur seine Wunschhoehe, und eine fest
+                         eingetragene Hoehe waere bei grosser Schrift wieder
+                         falsch (Regel 9). -->
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <StackPanel>
-                            <TextBlock Text="Von" Classes="filterbeschriftung" />
-                            <TextBox Text="{Binding VonText}"
+                        <Grid RowDefinitions="Auto,*">
+                            <TextBlock Grid.Row="0" Text="Von" Classes="filterbeschriftung" />
+                            <TextBox Grid.Row="1" Text="{Binding VonText}"
                                      Width="{anzeige:Breite 110}"
+                                     VerticalAlignment="Stretch"
+                                     VerticalContentAlignment="Center"
                                      PlaceholderText="TT.MM.JJJJ" />
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="Bis" Classes="filterbeschriftung" />
-                            <TextBox Text="{Binding BisText}"
+                        </Grid>
+                        <Grid RowDefinitions="Auto,*">
+                            <TextBlock Grid.Row="0" Text="Bis" Classes="filterbeschriftung" />
+                            <TextBox Grid.Row="1" Text="{Binding BisText}"
                                      Width="{anzeige:Breite 110}"
+                                     VerticalAlignment="Stretch"
+                                     VerticalContentAlignment="Center"
                                      PlaceholderText="TT.MM.JJJJ" />
-                        </StackPanel>
+                        </Grid>
 
                         <StackPanel VerticalAlignment="Bottom">
                             <TextBlock Text="Schnellwahl" Classes="filterbeschriftung" />
@@ -157,41 +163,40 @@
                                    Margin="4,0,0,6" />
                     </StackPanel>
 
-                    <!-- Kategorie, Zahler, Status, Suche -->
+                    <!-- Kategorie, Zahler, Status, Sicht, Suche -->
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <StackPanel>
-                            <TextBlock Text="Kategorie (immer inkl. Unterkategorien)"
-                                       Classes="filterbeschriftung" />
+                            <TextBlock Text="Kategorien" Classes="filterbeschriftung" />
                             <Button x:Name="KategorieAuswahl"
                                     Content="{Binding KategorieFilterText}"
                                     Width="{anzeige:Breite 260}"
                                     HorizontalContentAlignment="Left">
                                 <Button.Flyout>
-                                    <!-- Gewaehlt wird ueber den Knoten-Button, NICHT ueber
-                                         TreeView.SelectedItem: beim Schliessen des Flyouts
-                                         setzt der TreeView seine Auswahl zurueck und wuerde
-                                         den Filter ueber die Bindung sofort wieder leeren.
-                                         Der TreeView liefert hier nur noch die Aufklapp-
-                                         Struktur. -->
+                                    <!-- Haekchen statt Auswahl: mehrere Aeste sind
+                                         gleichzeitig waehlbar, und ein abgewaehltes Kind
+                                         unter einem angehakten Elternteil nimmt seinen
+                                         Unter-Ast wieder heraus. Das Flyout bleibt beim
+                                         Klick bewusst offen - wer mehrere Haekchen setzen
+                                         will, soll es nicht je Haekchen neu aufklappen.
+                                         Der TreeView liefert nur die Aufklapp-Struktur;
+                                         SelectedItem wird nicht gebunden, weil er seine
+                                         Auswahl beim Schliessen ohnehin zuruecksetzt. -->
                                     <Flyout Placement="BottomEdgeAlignedLeft">
                                         <StackPanel Width="{anzeige:Breite 320}" Spacing="6">
                                             <Button Content="Alle Kategorien"
                                                     HorizontalAlignment="Stretch"
                                                     HorizontalContentAlignment="Left"
-                                                    Command="{Binding AlleKategorienCommand}"
-                                                    Click="KategorieFlyout_Schliessen" />
+                                                    ToolTip.Tip="Hebt alle Häkchen auf — ohne Auswahl zählen alle Kategorien."
+                                                    Command="{Binding AlleKategorienCommand}" />
                                             <TreeView MaxHeight="{anzeige:Breite 320}"
                                                       ItemsSource="{Binding KategorieWurzeln}">
                                                 <TreeView.ItemTemplate>
                                                     <TreeDataTemplate x:DataType="vm:KategorieFilterKnoten"
                                                                       ItemsSource="{Binding Children}">
-                                                        <Button Classes="kategoriewahl"
-                                                                Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).KategorieWaehlenCommand}"
-                                                                CommandParameter="{Binding}"
-                                                                Click="KategorieFlyout_Schliessen">
+                                                        <CheckBox IsChecked="{Binding IstGewaehlt, Mode=TwoWay}">
                                                             <TextBlock Text="{Binding Name}"
                                                                        Classes.archiviert="{Binding IsArchived}" />
-                                                        </Button>
+                                                        </CheckBox>
                                                     </TreeDataTemplate>
                                                 </TreeView.ItemTemplate>
                                             </TreeView>
@@ -203,28 +208,55 @@
 
                         <StackPanel>
                             <TextBlock Text="Zahler" Classes="filterbeschriftung" />
-                            <ComboBox ItemsSource="{Binding ZahlerOptionen}"
-                                      SelectedItem="{Binding AusgewaehlterZahler}"
-                                      Width="{anzeige:Breite 160}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ZahlerOption">
-                                        <TextBlock Text="{Binding Bezeichnung}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <Button Content="{Binding ZahlerFilterText}"
+                                    Width="{anzeige:Breite 180}"
+                                    HorizontalContentAlignment="Left">
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedLeft">
+                                        <StackPanel Width="{anzeige:Breite 240}" Spacing="6">
+                                            <Button Content="Alle Zahler"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    ToolTip.Tip="Hebt alle Häkchen auf — ohne Auswahl zählen alle Zahler."
+                                                    Command="{Binding AlleZahlerCommand}" />
+                                            <ScrollViewer MaxHeight="{anzeige:Breite 260}">
+                                                <ItemsControl ItemsSource="{Binding ZahlerOptionen}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ZahlerOption">
+                                                            <CheckBox IsChecked="{Binding IstGewaehlt, Mode=TwoWay}"
+                                                                      Content="{Binding Bezeichnung}"
+                                                                      Margin="0,2" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
                         </StackPanel>
 
                         <StackPanel>
+                            <!-- Zwei unabhaengige Haekchen. Beide aus heisst "jeder
+                                 Status"; beide an ist NICHT dasselbe, weil eine eigene
+                                 Ausgabe nach Regel 4 gar keinen Status hat und dann
+                                 herausfaellt - deshalb der Hilfetext. -->
                             <TextBlock Text="Status" Classes="filterbeschriftung" />
-                            <ComboBox ItemsSource="{Binding StatusOptionen}"
-                                      SelectedItem="{Binding AusgewaehlterStatus}"
-                                      Width="{anzeige:Breite 150}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:StatusOption">
-                                        <TextBlock Text="{Binding Bezeichnung}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <StackPanel Orientation="Horizontal" Spacing="10"
+                                        VerticalAlignment="Center">
+                                <CheckBox Content="offen"
+                                          IsChecked="{Binding StatusOffen, Mode=TwoWay}" />
+                                <CheckBox Content="beglichen"
+                                          IsChecked="{Binding StatusBeglichen, Mode=TwoWay}"
+                                          ToolTip.Tip="Beide Häkchen zusammen lassen eigene Ausgaben heraus — die haben keinen Status. Ohne Häkchen sind alle Buchungen dabei." />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="Sicht" Classes="filterbeschriftung" />
+                            <CheckBox Content="Meine Kosten"
+                                      IsChecked="{Binding MeineKosten, Mode=TwoWay}"
+                                      ToolTip.Tip="Eigene Buchungen plus alles, was von anderen noch offen ist — was ich getragen habe und noch auf mich zukommt." />
                         </StackPanel>
 
                         <StackPanel>
@@ -233,10 +265,6 @@
                                      Width="{anzeige:Breite 220}"
                                      PlaceholderText="Volltext…" />
                         </StackPanel>
-
-                        <Button Classes="ghost" Content="Filter zurücksetzen"
-                                Command="{Binding FilterZuruecksetzenCommand}"
-                                VerticalAlignment="Bottom" />
                     </StackPanel>
 
                     <!-- Einschraenkung auf eine Vorlage. Sie steht in keinem
@@ -258,16 +286,26 @@
                 </StackPanel>
             </Border>
 
-            <!-- ============ Werkzeugleiste ============ -->
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12"
-                        Margin="0,0,0,10">
-                <Button Classes="danger" Content="Ausgewählte löschen"
-                        Command="{Binding AusgewaehlteLoeschenCommand}" />
-                <TextBlock Text="{Binding AnzahlAusgewaehlt, StringFormat='{}{0} ausgewählt'}"
-                           IsVisible="{Binding HatAuswahl}"
-                           Foreground="{DynamicResource TextTertiaerFarbe}"
-                           VerticalAlignment="Center" />
-            </StackPanel>
+            <!-- ============ Werkzeugleiste ============
+                 "Filter zurücksetzen" steht hier statt in der Filterleiste
+                 selbst: es gehoert zur ganzen Leiste, nicht zu einem
+                 einzelnen Feld darin, und stuende zwischen den Filtern wie
+                 ein weiterer Filter da. Rechts, auf derselben Linie wie die
+                 uebrigen Aktionen der Ansicht. -->
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto"
+                  Margin="0,0,0,10">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+                    <Button Classes="danger" Content="Ausgewählte löschen"
+                            Command="{Binding AusgewaehlteLoeschenCommand}" />
+                    <TextBlock Text="{Binding AnzahlAusgewaehlt, StringFormat='{}{0} ausgewählt'}"
+                               IsVisible="{Binding HatAuswahl}"
+                               Foreground="{DynamicResource TextTertiaerFarbe}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Button Grid.Column="2" Classes="ghost" Content="Filter zurücksetzen"
+                        Command="{Binding FilterZuruecksetzenCommand}" />
+            </Grid>
 
             <!-- ============ Fusszeile ============ -->
             <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto"

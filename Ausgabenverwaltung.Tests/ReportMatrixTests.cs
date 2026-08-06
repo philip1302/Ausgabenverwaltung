@@ -200,7 +200,7 @@ public class ReportMatrixTests : IDisposable
             From = new DateOnly(2026, 1, 1),
             To = new DateOnly(2027, 1, 1),
             Grouping = ReportGrouping.Month,
-            CategoryRootId = wohnen.Id,
+            CategoryRootIds = [wohnen.Id],
         };
 
         var matrix = Baue(filter, astId: wohnen.Id);

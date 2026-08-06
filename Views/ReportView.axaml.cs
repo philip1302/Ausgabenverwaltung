@@ -18,15 +18,6 @@ public partial class ReportView : UserControl
         InitializeComponent();
     }
 
-    // Reine Bedienmechanik, keine Fachlogik (Regel 7): nach der Wahl eines
-    // Kategorie-Astes schliesst sich das Flyout, damit die Tabelle sichtbar
-    // wird, deren Filter sich gerade geaendert hat. Die Auswahl selbst
-    // laeuft ueber das Command am Knoten-Button.
-    private void KategorieFlyout_Schliessen(object? sender, RoutedEventArgs e)
-    {
-        KategorieAuswahl.Flyout?.Hide();
-    }
-
     // Dateiauswahl und Schreiben sind Aufgabe der Oberflaeche; der
     // CSV-Text selbst entsteht in Core (Reports.ReportCsv), und der Text
     // einer Fehlermeldung ebenfalls (Errors.FileErrorText) - Regel 7.

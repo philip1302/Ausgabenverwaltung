@@ -56,12 +56,23 @@ public class ExpenseListQueryTests : IDisposable
         SettlementStatus status = SettlementStatus.Alle,
         string? searchText = null,
         int? recurringExpenseId = null,
-        PayerScope payerScope = PayerScope.All) => new()
+        PayerScope payerScope = PayerScope.All,
+        int[]? categoryRootIds = null,
+        int[]? excludedCategoryIds = null,
+        int[]? payerIds = null) => new()
     {
         From = DateOnly.MinValue,
         To = DateOnly.MaxValue,
-        CategoryRootId = categoryRootId,
-        PayerId = payerId,
+
+        // Einzahl UND Mehrzahl, damit die vorhandenen Tests unveraendert
+        // lesbar bleiben ("eine Kategorie") und die neuen die Mehrfach-
+        // auswahl direkt ansprechen koennen. Beides zugleich zu setzen
+        // waere sinnlos, deshalb gewinnt die Mehrzahl, wenn sie da ist.
+        CategoryRootIds = categoryRootIds
+            ?? (categoryRootId is int wurzel ? [wurzel] : []),
+        ExcludedCategoryIds = excludedCategoryIds ?? [],
+        PayerIds = payerIds ?? (payerId is int zahler ? [zahler] : []),
+
         Status = status,
         SearchText = searchText,
         RecurringExpenseId = recurringExpenseId,
@@ -225,6 +236,137 @@ public class ExpenseListQueryTests : IDisposable
         Assert.Equal(300, item.AmountCents);
     }
 
+    // ---------------------------------------------------------------
+    // Mehrfachauswahl: mehrere Aeste, Ausschluesse, mehrere Zahler
+    // ---------------------------------------------------------------
+
+    [Fact]
+    public void Query_mit_mehreren_Kategorie_Aesten_liefert_alle_zusammen()
+    {
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_stromId, 300, new DateOnly(2026, 3, 3), _selfId);
+        _expenses.Create(_pferdeId, 999, new DateOnly(2026, 3, 4), _selfId);
+
+        // Beide Aeste zusammen - die Bedingungen sind ODER-verknuepft.
+        var items = Query(Alles(categoryRootIds: [_wohnenId, _pferdeId]));
+
+        Assert.Equal(3, items.Count);
+    }
+
+    [Fact]
+    public void Query_nimmt_einen_abgewaehlten_Unter_Ast_wieder_heraus()
+    {
+        // Der Fall aus der Anforderung: Oberkategorie waehlen, eine
+        // Unterkategorie davon ausschliessen.
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_nebenkostenId, 200, new DateOnly(2026, 3, 2), _selfId);
+        _expenses.Create(_stromId, 300, new DateOnly(2026, 3, 3), _selfId);
+
+        var items = Query(Alles(
+            categoryRootIds: [_wohnenId],
+            excludedCategoryIds: [_nebenkostenId]));
+
+        var item = Assert.Single(items);
+        Assert.Equal(100, item.AmountCents);
+    }
+
+    [Fact]
+    public void Ein_Ausschluss_wirkt_auf_den_ganzen_Unter_Ast()
+    {
+        // Strom haengt unter Nebenkosten und muss mit weggefallen sein,
+        // ohne dass es eigens aufgezaehlt wurde.
+        _expenses.Create(_stromId, 300, new DateOnly(2026, 3, 3), _selfId);
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _selfId);
+
+        var items = Query(Alles(
+            categoryRootIds: [_wohnenId],
+            excludedCategoryIds: [_nebenkostenId]));
+
+        Assert.DoesNotContain(300, items.Select(i => i.AmountCents));
+    }
+
+    [Fact]
+    public void Ein_Ausschluss_ohne_gewaehlte_Aeste_wirkt_trotzdem()
+    {
+        // Keine Auswahl heisst "alle Kategorien" - der Ausschluss muss
+        // auch dann greifen, sonst haette "alles ausser X" keinen Weg.
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_pferdeId, 999, new DateOnly(2026, 3, 4), _selfId);
+
+        var item = Assert.Single(Query(Alles(excludedCategoryIds: [_pferdeId])));
+
+        Assert.Equal(100, item.AmountCents);
+    }
+
+    [Fact]
+    public void Query_mit_mehreren_Zahlern_liefert_alle_zusammen()
+    {
+        var dritter = new PersonRepository(_connection).Create("Gast").Id;
+
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_wohnenId, 200, new DateOnly(2026, 3, 2), _otherId);
+        _expenses.Create(_wohnenId, 300, new DateOnly(2026, 3, 3), dritter);
+
+        var items = Query(Alles(payerIds: [_selfId, dritter]));
+
+        Assert.Equal(2, items.Count);
+        Assert.DoesNotContain(200, items.Select(i => i.AmountCents));
+    }
+
+    [Fact]
+    public void Leere_Listen_schraenken_nicht_ein()
+    {
+        // Die durchgaengige Regel des Filtermodells - nichts gewaehlt
+        // heisst alles, nicht nichts.
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_pferdeId, 999, new DateOnly(2026, 3, 4), _otherId);
+
+        var items = Query(Alles(categoryRootIds: [], payerIds: []));
+
+        Assert.Equal(2, items.Count);
+    }
+
+    [Fact]
+    public void Summarize_beachtet_Aeste_und_Ausschluesse_genauso_wie_die_Liste()
+    {
+        // Liste und Summe muessen bei gleichem Filter dieselbe Menge
+        // treffen - beide gehen durch ReportFilterSql.
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_stromId, 300, new DateOnly(2026, 3, 3), _selfId);
+        _expenses.Create(_pferdeId, 999, new DateOnly(2026, 3, 4), _selfId);
+
+        var filter = Alles(
+            categoryRootIds: [_wohnenId, _pferdeId],
+            excludedCategoryIds: [_nebenkostenId]);
+
+        var summary = _expenses.Summarize(filter);
+
+        Assert.Equal(Query(filter).Count, summary.Count);
+        Assert.Equal(2, summary.Count);
+    }
+
+    [Fact]
+    public void Offen_und_beglichen_zusammen_laesst_eigene_Ausgaben_heraus()
+    {
+        // Regel 4: eine eigene Ausgabe hat gar keinen Status. Beide
+        // Haekchen zusammen sind deshalb NICHT dasselbe wie "alle" -
+        // genau der Unterschied, der in SettlementStatus dokumentiert ist.
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _selfId);
+        var offen = _expenses.Create(_wohnenId, 200, new DateOnly(2026, 3, 2), _otherId);
+        _expenses.Create(
+            _wohnenId, 300, new DateOnly(2026, 3, 3), _otherId,
+            settledDate: new DateOnly(2026, 3, 4));
+
+        var beide = Query(Alles(status: SettlementStatus.Offene | SettlementStatus.Beglichene));
+
+        Assert.Equal(2, beide.Count);
+        Assert.DoesNotContain(100, beide.Select(i => i.AmountCents));
+        Assert.Contains(offen.Id, beide.Select(i => i.Id));
+
+        // Zum Vergleich: ohne Haekchen sind alle drei dabei.
+        Assert.Equal(3, Query(Alles(status: SettlementStatus.Alle)).Count);
+    }
+
     [Fact]
     public void Query_mit_PayerId_schraenkt_auf_einen_Zahler_ein()
     {
@@ -255,7 +397,7 @@ public class ExpenseListQueryTests : IDisposable
             _wohnenId, 300, new DateOnly(2026, 3, 3), _otherId,
             settledDate: new DateOnly(2026, 3, 5));
 
-        var item = Assert.Single(Query(Alles(status: SettlementStatus.NurOffene)));
+        var item = Assert.Single(Query(Alles(status: SettlementStatus.Offene)));
 
         Assert.Equal(200, item.AmountCents);
     }
@@ -269,7 +411,7 @@ public class ExpenseListQueryTests : IDisposable
             _wohnenId, 300, new DateOnly(2026, 3, 3), _otherId,
             settledDate: new DateOnly(2026, 3, 5));
 
-        var item = Assert.Single(Query(Alles(status: SettlementStatus.NurBeglichene)));
+        var item = Assert.Single(Query(Alles(status: SettlementStatus.Beglichene)));
 
         Assert.Equal(300, item.AmountCents);
         Assert.Equal(new DateOnly(2026, 3, 5), item.SettledDate);
@@ -308,9 +450,9 @@ public class ExpenseListQueryTests : IDisposable
         {
             From = new DateOnly(2026, 1, 1),
             To = new DateOnly(2027, 1, 1),
-            CategoryRootId = _wohnenId,
-            PayerId = _otherId,
-            Status = SettlementStatus.NurOffene,
+            CategoryRootIds = [_wohnenId],
+            PayerIds = [_otherId],
+            Status = SettlementStatus.Offene,
             SearchText = "Strom",
         });
 
