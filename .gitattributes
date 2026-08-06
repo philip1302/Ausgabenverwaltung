@@ -1,0 +1,20 @@
+# Zeilenenden vereinheitlichen.
+#
+# Ohne diese Datei entscheidet die lokale Git-Einstellung (core.autocrlf),
+# wie Zeilenenden gespeichert werden. Wird dasselbe Repository von Windows
+# und Linux/macOS aus bearbeitet, meldet Git dann jede Datei als geaendert,
+# obwohl sich am Inhalt nichts geaendert hat.
+#
+# text=auto: Git erkennt Textdateien selbst, speichert sie IMMER mit LF und
+# checkt sie mit dem Zeilenende des Betriebssystems aus (CRLF unter Windows,
+# LF sonst). Als binaer erkannte Dateien bleiben unangetastet.
+* text=auto
+
+# Binaerdateien ausdruecklich ausnehmen - eine Umwandlung wuerde sie
+# zerstoeren. Die Automatik erkennt das zwar, aber hier steht es sichtbar.
+*.png binary
+*.ico binary
+*.icns binary
+
+# PowerShell-Skripte laufen unter Windows und werden dort auch bearbeitet.
+*.ps1 text eol=crlf
