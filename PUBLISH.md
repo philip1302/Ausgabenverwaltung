@@ -19,7 +19,8 @@ Artefakte.
 ```
 bin\Release\net10.0\publish\
 ├── win-x64\
-│   └── Ausgabenverwaltung.exe
+│   ├── Ausgabenverwaltung.exe
+│   └── Ausgabenverwaltung-win-x64.zip
 ├── linux-x64\
 │   └── Ausgabenverwaltung
 ├── osx-arm64\
@@ -29,6 +30,14 @@ bin\Release\net10.0\publish\
     ├── Ausgabenverwaltung.app\
     └── Ausgabenverwaltung-osx-x64.tar.gz
 ```
+
+**Die Archivnamen sind nicht frei wählbar.** Die Selbstaktualisierung
+sucht am Release nach genau diesen Dateinamen
+(`Ausgabenverwaltung-win-x64.zip`, `Ausgabenverwaltung-osx-arm64.tar.gz`,
+`Ausgabenverwaltung-osx-x64.tar.gz`, siehe
+`Ausgabenverwaltung.Core\Updates\UpdatePlatform.cs`). Wer einen davon
+ändert, muss ihn dort mitändern — sonst findet die Anwendung beim
+Anwender nichts mehr, ohne dass es beim Veröffentlichen auffällt.
 
 Bei den beiden macOS-Zielen entsteht zusätzlich zum App-Bundle ein
 `.tar.gz` desselben Bundles - das ist die Datei, die man tatsächlich
@@ -141,6 +150,38 @@ Windows nicht zur Verfügung steht): `publish.ps1` baut das Bundle
 trotzdem vollständig, nur ohne `CFBundleIconFile` in der `Info.plist`
 und ohne Datei in `Contents\Resources\`. macOS zeigt dann das
 generische App-Symbol, alles andere bleibt unverändert lauffähig.
+
+## Selbstaktualisierung
+
+Die Anwendung sieht bei jedem Start nach, ob es ein neueres Release gibt
+(abschaltbar unter „Verwaltung ▸ Darstellung“). Was dabei zu beachten
+ist, wenn veröffentlicht wird:
+
+- **Die Versionsnummer muss steigen.** Verglichen wird `<Version>` aus der
+  csproj gegen den Namen der Release-Marke (`v1.2.0`). Ein Release, dessen
+  Marke nicht höher ist als die laufende Fassung, löst nichts aus.
+- **Kein Vorab-Release und kein Entwurf.** Beides wird übergangen — das ist
+  der vorgesehene Weg, etwas zu veröffentlichen, ohne dass es beim Bestand
+  ankommt.
+- **Die Archive brauchen ihre Prüfsumme.** GitHub berechnet sie selbst und
+  liefert sie als `digest` an der Datei mit; ohne sie wird nicht
+  ausgetauscht. Zutun ist dafür nichts nötig.
+- **Nicht auf `/releases/latest` verlassen.** GitHub führt ein eigenes
+  „ist die neueste“-Merkmal, das beim Anlegen gesetzt wird und *nicht*
+  nachzieht, wenn ein Vorab-Release später zum regulären erklärt wird.
+  Passiert das, hilft:
+  ```
+  gh api -X PATCH repos/philip1302/Ausgabenverwaltung/releases/<id> -f make_latest=true
+  ```
+  Die Anwendung selbst ist davon unabhängig — sie holt die ganze Liste und
+  nimmt die höchste Version.
+
+Der Austausch selbst passiert nicht im laufenden Betrieb, sondern ganz früh
+beim nächsten Start (`Program.Main` → `Core\Updates\UpdateInstaller.cs`),
+bevor Datenbank, Fenster und Einzelinstanz-Sperre existieren. Die alte
+Fassung bleibt dabei als `.alt` neben der neuen liegen und wird erst beim
+übernächsten Start entfernt — wer eine kaputte Fassung erwischt, kann sie
+von Hand zurückbenennen.
 
 ## Versionsnummer
 

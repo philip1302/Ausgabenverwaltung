@@ -48,4 +48,23 @@ public sealed record AppSettings
     /// Verhalten der Anwendung (<c>RequestedThemeVariant="Default"</c>).
     /// </summary>
     public ThemeMode ThemeMode { get; init; } = ThemeMode.System;
+
+    /// <summary>
+    /// Ob beim Programmstart nachgesehen wird, ob es eine neuere Fassung
+    /// gibt (siehe <see cref="Updates.UpdateDownload"/>).
+    ///
+    /// Vorgabe eingeschaltet - eine Aktualisierung, die erst eingeschaltet
+    /// werden muss, findet nicht statt. Abschaltbar ist sie trotzdem, und
+    /// zwar aus einem handfesten Grund: es ist der EINZIGE Zeitpunkt, zu
+    /// dem diese Anwendung ueberhaupt ins Netz greift. Wer das nicht will,
+    /// soll es abstellen koennen, ohne dafuer eine Firewall zu bemuehen.
+    /// </summary>
+    public bool AutoUpdate { get; init; } = true;
+
+    /// <summary>
+    /// Wann zuletzt nachgesehen wurde. Rein zur Anzeige und fuers
+    /// Protokoll - die Suche wird davon nicht gesteuert, sie laeuft bei
+    /// jedem Start.
+    /// </summary>
+    public DateTime? LastUpdateCheckUtc { get; init; }
 }

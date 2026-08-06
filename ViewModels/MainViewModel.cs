@@ -32,6 +32,13 @@ public sealed partial class MainViewModel : ViewModelBase
 
     public StartupNoticeViewModel StartupNotice { get; }
 
+    /// <summary>
+    /// Das Band zur Selbstaktualisierung - erscheint erst, wenn im
+    /// Hintergrund tatsaechlich eine neue Fassung gefunden wurde (siehe
+    /// <see cref="AktualisierungViewModel"/>).
+    /// </summary>
+    public AktualisierungViewModel Aktualisierung { get; }
+
     public IReadOnlyList<NavigationItem> NavigationItems { get; }
 
     // Vorgefilterte Teillisten je Sidebar-Gruppe (UI/UX-Redesign, Abschnitt
@@ -54,6 +61,7 @@ public sealed partial class MainViewModel : ViewModelBase
 
     public MainViewModel(
         StartupNoticeViewModel startupNotice,
+        AktualisierungViewModel aktualisierung,
         StartseiteViewModel startseite,
         ErfassenViewModel erfassen,
         OffenePostenViewModel offenePosten,
@@ -63,6 +71,7 @@ public sealed partial class MainViewModel : ViewModelBase
         RecurringExpenseScheduler scheduler)
     {
         StartupNotice = startupNotice;
+        Aktualisierung = aktualisierung;
         _startseite = startseite;
         _erfassen = erfassen;
         _offenePosten = offenePosten;

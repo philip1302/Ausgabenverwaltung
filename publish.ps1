@@ -464,6 +464,31 @@ foreach ($target in $Targets) {
             Bytes  = (Get-Item -LiteralPath $executablePath).Length
             Label  = 'Einzeldatei'
         })
+
+        # Windows zusaetzlich als ZIP. Nicht der Bequemlichkeit wegen:
+        # die Selbstaktualisierung sucht am Release nach genau diesem
+        # Dateinamen (siehe Core\Updates\UpdatePlatform.cs). Wird das ZIP
+        # von Hand gepackt, haengt der Name daran, dass jemand ihn richtig
+        # tippt - und ein Vertippen faellt erst auf, wenn beim Anwender
+        # keine Aktualisierung mehr ankommt.
+        #
+        # Anders als bei macOS reicht hier ZIP: eine Windows-EXE kennt
+        # kein Ausfuehrungsrecht, das ein Archiv mitfuehren muesste.
+        if ($target -eq 'win-x64') {
+            $zipPath = Join-Path $publishDir "$ExecutableName-$target.zip"
+            if (Test-Path -LiteralPath $zipPath) {
+                Remove-Item -LiteralPath $zipPath -Force
+            }
+
+            Compress-Archive -LiteralPath $executablePath -DestinationPath $zipPath
+
+            $producedArtifacts.Add([pscustomobject]@{
+                Target = $target
+                Path   = $zipPath
+                Bytes  = (Get-Item -LiteralPath $zipPath).Length
+                Label  = 'zip'
+            })
+        }
     }
 }
 

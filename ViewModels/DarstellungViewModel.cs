@@ -28,11 +28,17 @@ public sealed partial class DarstellungViewModel : ViewModelBase
 {
     private readonly AppSettingsStore _settingsStore;
 
+    // Solange false, loesen gesetzte Eigenschaften kein Speichern aus -
+    // sonst schriebe schon das Laden der Einstellungen sie zurueck.
+    private readonly bool _einstellungenGeladen;
+
     public DarstellungViewModel(AppSettingsStore settingsStore)
     {
         _settingsStore = settingsStore;
 
         var einstellungen = settingsStore.Load();
+
+        AktualisierungAutomatisch = einstellungen.AutoUpdate;
 
         var aktuelleStufe = FontScales.FromFactor(einstellungen.FontScale);
         Stufen = FontScales.Steps
@@ -77,6 +83,9 @@ public sealed partial class DarstellungViewModel : ViewModelBase
         }
 
         AktualisiereFusszeilenText();
+
+        // Ab hier schlagen Aenderungen auf die Einstellungsdatei durch.
+        _einstellungenGeladen = true;
     }
 
     public IReadOnlyList<SchriftgroesseOption> Stufen { get; }
@@ -176,4 +185,34 @@ public sealed partial class DarstellungViewModel : ViewModelBase
     private string? _speicherHinweis;
 
     public bool SpeicherHinweisSichtbar => SpeicherHinweis is not null;
+
+    /// <summary>
+    /// Ob beim Programmstart nach einer neuen Fassung gesehen wird.
+    ///
+    /// Die Einstellung steht hier und nicht in einem eigenen Bereich,
+    /// weil sie sonst einen ganzen Reiter fuer ein Kontrollkaestchen
+    /// braeuchte. Sie gehoert allerdings zum Ernsteren, was sich hier
+    /// einstellen laesst: es ist der einzige Zeitpunkt, zu dem diese
+    /// Anwendung ueberhaupt ins Netz greift.
+    /// </summary>
+    [ObservableProperty]
+    private bool _aktualisierungAutomatisch;
+
+    // Wird vom Erzeuger gesetzt, bevor die Aenderungsmeldung etwas
+    // ausloesen kann - sonst schriebe schon das Laden der Einstellung
+    // dieselbe Einstellung zurueck.
+    partial void OnAktualisierungAutomatischChanged(bool value)
+    {
+        if (!_einstellungenGeladen)
+        {
+            return;
+        }
+
+        SpeicherHinweis = Schreibvorgang.Versuche(
+            "Beim Speichern der Aktualisierungseinstellung",
+            () => _settingsStore.Save(_settingsStore.Load() with { AutoUpdate = value })) is null
+            ? null
+            : "Die Wahl gilt für diese Sitzung, ließ sich aber nicht dauerhaft "
+              + "merken — nach einem Neustart gilt wieder die vorherige.";
+    }
 }

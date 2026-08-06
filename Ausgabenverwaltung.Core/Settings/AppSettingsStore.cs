@@ -77,6 +77,13 @@ public sealed class AppSettingsStore
                     && Enum.TryParse<ThemeMode>(modusText, out var modus)
                     ? modus
                     : ThemeMode.System,
+
+                // Fehlt der Wert (Datei aus einer aelteren Fassung), gilt
+                // die Vorgabe "eingeschaltet". Wer die Suche abgeschaltet
+                // hat, hat das ausdruecklich getan, und dann steht es auch
+                // in der Datei.
+                AutoUpdate = document.AutoUpdate ?? true,
+                LastUpdateCheckUtc = ParseOrNull(document.LastUpdateCheckUtc),
             };
         }
         catch (Exception)
@@ -96,6 +103,10 @@ public sealed class AppSettingsStore
             FontScale = settings.FontScale,
             CategoryColumnWidth = settings.CategoryColumnWidth,
             ThemeMode = settings.ThemeMode.ToString(),
+            AutoUpdate = settings.AutoUpdate,
+            LastUpdateCheckUtc = settings.LastUpdateCheckUtc is DateTime geprueft
+                ? IsoDateTime.ToUtcText(geprueft)
+                : null,
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -139,5 +150,7 @@ public sealed class AppSettingsStore
         public double? FontScale { get; set; }
         public double? CategoryColumnWidth { get; set; }
         public string? ThemeMode { get; set; }
+        public bool? AutoUpdate { get; set; }
+        public string? LastUpdateCheckUtc { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.Startup;
+using Ausgabenverwaltung.Core.Updates;
 
 namespace Ausgabenverwaltung;
 
@@ -40,6 +41,22 @@ sealed class Program
     public static void Main(string[] args)
     {
         StarteProtokoll();
+
+        // Ein Neustart nach einem Austausch: der Vorgaenger endet gerade
+        // erst und haelt die Einzelinstanz-Sperre noch. Ohne dieses
+        // Warten wuerde der Start gleich unten als Doppelstart abgewiesen
+        // und die Anwendung waere nach dem Update schlicht weg.
+        UpdateInstaller.WarteAufVorgaenger(args);
+
+        // Vor allem anderen: liegt eine geladene Fassung bereit? Der
+        // Austausch gehoert genau hierher - vor Datenbank, Fenster und
+        // Einzelinstanz-Sperre haengt nichts daran, was mitten im
+        // Wechsel Schaden nehmen koennte.
+        if (UebernehmeAktualisierungFalls())
+        {
+            return;
+        }
+
         ErmittleDatenbankPfad();
 
         if (DatenbankPfad is not null && !BelegePlatz(DatenbankPfad))
@@ -77,6 +94,50 @@ sealed class Program
         {
             // Ohne Protokollordner laeuft die Anwendung ohne Protokoll
             // weiter. AppLog.Current bleibt dann die stille Ausfuehrung.
+        }
+    }
+
+    /// <summary>
+    /// Uebernimmt eine bereitliegende Fassung. Liefert <c>true</c>, wenn
+    /// dieser Prozess sich daraufhin sofort beenden soll - der Nachfolger
+    /// laeuft dann bereits.
+    ///
+    /// Scheitert irgendetwas, laeuft der Start ganz normal in der
+    /// bisherigen Fassung weiter. Das ist immer die bessere von beiden
+    /// Moeglichkeiten (siehe <see cref="UpdateInstaller"/>).
+    /// </summary>
+    private static bool UebernehmeAktualisierungFalls()
+    {
+        try
+        {
+            var ziel = UpdateInstaller.ZielPfad();
+            if (ziel is null)
+            {
+                return false;
+            }
+
+            // Der Rest des letzten Austauschs. Beim allerersten Start
+            // danach kann er noch gesperrt sein, weil der Vorgaenger eben
+            // erst endete - dann bleibt er liegen und der naechste Start
+            // versucht es erneut.
+            UpdateInstaller.RaeumeAlteAuf(ziel);
+
+            if (UpdateInstaller.TryUebernehmen(ziel) != UpdateInstaller.Ergebnis.Uebernommen)
+            {
+                return false;
+            }
+
+            // Getauscht: den Nachfolger starten und selbst Platz machen.
+            // Laesst er sich nicht starten, laeuft dieser Prozess mit der
+            // BEREITS AUSGETAUSCHTEN Datei weiter - im Speicher steht noch
+            // die alte Fassung, was fuer diese eine Sitzung folgenlos
+            // bleibt; ab dem naechsten Start gilt die neue.
+            return UpdateInstaller.StarteNeuenProzess(ziel);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Current.Exception("Beim Uebernehmen einer Aktualisierung", ex);
+            return false;
         }
     }
 

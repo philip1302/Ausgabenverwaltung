@@ -68,6 +68,15 @@ public class MeldungsGrundsaetzeTests
         Nimm("Unerwartet/Speichern", UnerwarteterBericht(
             new UnauthorizedAccessException("x")).Message);
 
+        // ---- Selbstaktualisierung ----
+        Nimm("Update/Bereitgelegt", UpdateText.Bereitgelegt("1.2.0"));
+        Nimm("Update/Gescheitert", UpdateText.AustauschGescheitert("1.2.0"));
+
+        foreach (var hindernis in Enum.GetValues<UpdateHindernis>())
+        {
+            Nimm($"Update/Hinweis/{hindernis}", UpdateText.NurHinweis("1.2.0", hindernis));
+        }
+
         return daten;
     }
 

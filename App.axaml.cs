@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -146,6 +147,42 @@ public partial class App : Application
         // Fensters kommt dieses hier nach vorn.
         Program.Einzelinstanz?.StartListening(
             () => Dispatcher.UIThread.Post(() => HoleNachVorn(hauptfenster)));
+
+        SucheNachNeuerFassung();
+    }
+
+    /// <summary>
+    /// Stoesst die Suche nach einer neuen Fassung an - bewusst ERST hier,
+    /// wenn das Fenster steht: der Startvorgang selbst haengt damit an
+    /// keiner Netzverbindung, und ein langsames oder nicht erreichbares
+    /// GitHub verzoegert nichts.
+    ///
+    /// Absichtlich ohne await. Die Aufgabe laeuft neben der Oberflaeche
+    /// her; sie meldet sich nur im Erfolgsfall ueber ihr Band und
+    /// schweigt sonst ins Protokoll. Ihre Ausnahmen faengt sie selbst -
+    /// das Auffangnetz aus GlobaleFehlerbehandlung liegt trotzdem
+    /// darunter.
+    /// </summary>
+    private void SucheNachNeuerFassung()
+    {
+        if (_services is null)
+        {
+            return;
+        }
+
+        var aktualisierung = _services.GetRequiredService<AktualisierungViewModel>();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await aktualisierung.SucheUndLegeBereitAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Current.Exception("Beim Suchen nach einer neuen Fassung", ex);
+            }
+        });
     }
 
     private static StartupFailure BeschreibeStartfehler(Exception ex, string databaseFilePath)
@@ -240,6 +277,7 @@ public partial class App : Application
 
         services.AddSingleton(startupResult);
         services.AddSingleton<StartupNoticeViewModel>();
+        services.AddSingleton<AktualisierungViewModel>();
 
         services.AddSingleton<StartseiteViewModel>();
         services.AddSingleton<ErfassenViewModel>();

@@ -51,6 +51,35 @@
              Bleiben oben andockbar ueber der ganzen App, unabhaengig vom
              gewaehlten Bereich (UI/UX-Redesign, Abschnitt 4) - jetzt im
              einheitlichen Banner-Stil statt hart codierter Hex-Farben. -->
+        <!-- Neue Fassung geladen und bereitgelegt. Erscheint nur, wenn
+             tatsaechlich etwas gefunden wurde - "alles aktuell" ist keine
+             Nachricht und bekommt deshalb kein Band. -->
+        <Border DockPanel.Dock="Top"
+                Classes="banner hinweis"
+                CornerRadius="0"
+                BorderThickness="0,0,0,1"
+                IsVisible="{Binding Aktualisierung.BandSichtbar}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding Aktualisierung.BandText}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Classes="secondary"
+                        Content="Veröffentlichungsseite"
+                        IsVisible="{Binding Aktualisierung.SeiteAufrufbar}"
+                        Command="{Binding Aktualisierung.SeiteOeffnenCommand}" />
+                <Button Grid.Column="2"
+                        Classes="primary"
+                        Content="Jetzt beenden"
+                        IsVisible="{Binding Aktualisierung.NeustartMoeglich}"
+                        Command="{Binding Aktualisierung.JetztBeendenCommand}" />
+                <Button Grid.Column="3" Classes="ghost"
+                        Content="Schließen"
+                        Command="{Binding Aktualisierung.SchliessenCommand}" />
+            </Grid>
+        </Border>
+
         <Border DockPanel.Dock="Top"
                 Classes="banner fehler"
                 CornerRadius="0"
