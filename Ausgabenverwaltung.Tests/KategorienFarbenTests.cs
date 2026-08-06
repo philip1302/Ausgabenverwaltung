@@ -75,8 +75,7 @@ public class KategorienFarbenTests : IDisposable
         var hufschmied = _repository.Create("Hufschmied", pferde.Id);
 
         var viewModel = NeuesViewModel();
-        viewModel.AusgewaehlterKnoten = viewModel.Wurzelknoten.Single();
-        viewModel.OeffneFarbwahl();
+        viewModel.OeffneFarbwahlFuer(viewModel.Wurzelknoten.Single());
 
         // Die Baumauswahl geht beim Oeffnen des Aufklappfensters
         // verloren - die Farbwahl muss das aushalten.
@@ -108,8 +107,7 @@ public class KategorienFarbenTests : IDisposable
         _repository.SetColor(pferde.Id, "#2980B9");
 
         var viewModel = NeuesViewModel();
-        viewModel.AusgewaehlterKnoten = viewModel.Wurzelknoten.Single();
-        viewModel.OeffneFarbwahl();
+        viewModel.OeffneFarbwahlFuer(viewModel.Wurzelknoten.Single());
         viewModel.FarbeSetzenCommand.Execute(viewModel.Farboptionen.Single(o => o.IstKeineFarbe));
 
         Assert.Null(_repository.GetTree().Single().Category.Color);
@@ -140,8 +138,7 @@ public class KategorienFarbenTests : IDisposable
         _repository.Create("Pferde", null);
 
         var viewModel = NeuesViewModel();
-        viewModel.AusgewaehlterKnoten = viewModel.Wurzelknoten.Single();
-        viewModel.OeffneFarbwahl();
+        viewModel.OeffneFarbwahlFuer(viewModel.Wurzelknoten.Single());
 
         Assert.Contains("Pferde", viewModel.FarbwahlHinweis);
         Assert.Contains("geerbt", viewModel.FarbwahlHinweis);

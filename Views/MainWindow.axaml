@@ -93,9 +93,14 @@
                     Width="{anzeige:Breite 240}"
                     BorderThickness="0,0,1,0"
                     Padding="12,16">
-                <DockPanel>
+                <!-- Grid mit drei Zeilen statt eines DockPanel: Marke fest oben,
+                     Fusszeile fest unten, die Navigation dazwischen als
+                     einzige sternbemessene (elastische) Zeile - eindeutig
+                     und ohne die Mehrdeutigkeit "welches Kind ist das
+                     fuellende Kind" eines DockPanel. -->
+                <Grid RowDefinitions="Auto,*,Auto">
                     <!-- Marke -->
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8"
                                 Margin="4,0,4,20">
                         <Border Classes="marken-icon" Width="{anzeige:Breite 28}" Height="{anzeige:Breite 28}">
                             <TextBlock Classes="marken-buchstabe" Text="A" />
@@ -104,23 +109,7 @@
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
 
-                    <!-- Fusszeile: Thema und Schriftstufe auf einen Blick,
-                         ohne erst in die Verwaltung wechseln zu muessen
-                         (UI/UX-Redesign, Abschnitt 3). -->
-                    <Border DockPanel.Dock="Bottom" Classes="sidebar-fusszeile"
-                            BorderThickness="0,1,0,0" Padding="8,10,8,0" Margin="0,8,0,0">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Path Data="{DynamicResource IconDarstellung}"
-                                  Width="{anzeige:Breite 14}" Height="{anzeige:Breite 14}"
-                                  Stretch="Uniform" StrokeThickness="1.75"
-                                  StrokeLineCap="Round" StrokeJoin="Round"
-                                  Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}" />
-                            <TextBlock Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}"
-                                       Text="{Binding Darstellung.FusszeilenText}" />
-                        </StackPanel>
-                    </Border>
-
-                    <ScrollViewer>
+                    <ScrollViewer Grid.Row="1">
                         <StackPanel Margin="0,0,0,8">
                             <!-- Startseite: ohne Kopfzeile, direkt ueber den Gruppen -->
                             <ContentControl Content="{Binding StartseiteEintrag}"
@@ -155,7 +144,24 @@
                                           Margin="20,0,0,0" />
                         </StackPanel>
                     </ScrollViewer>
-                </DockPanel>
+
+                    <!-- Fusszeile: Thema und Schriftstufe auf einen Blick,
+                         ohne erst in die Verwaltung wechseln zu muessen
+                         (UI/UX-Redesign, Abschnitt 3). -->
+                    <Border Grid.Row="2" Classes="sidebar-fusszeile"
+                            Height="{anzeige:Breite 44}"
+                            BorderThickness="0,1,0,0" Padding="8,0" Margin="0,8,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Path Data="{DynamicResource IconDarstellung}"
+                                  Width="{anzeige:Breite 14}" Height="{anzeige:Breite 14}"
+                                  Stretch="Uniform" StrokeThickness="1.75"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}" />
+                            <TextBlock Classes="klein" Foreground="{DynamicResource TextTertiaerFarbe}"
+                                       Text="{Binding Darstellung.FusszeilenText}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Border>
 
             <ContentControl Grid.Column="1"

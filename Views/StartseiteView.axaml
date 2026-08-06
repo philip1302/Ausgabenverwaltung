@@ -135,19 +135,27 @@
                              Koordinatenraum (0..600 x 0..160, siehe
                              StartseiteViewModel.TrendLinien) auf die
                              tatsaechliche Kartenbreite. -->
+                        <!-- ItemsPanel MUSS ausdruecklich ein Canvas sein: ohne
+                             diese Angabe legt ItemsControl seine Eintraege in
+                             einem StackPanel ab, und die absoluten Von/Bis-
+                             Koordinaten der Segmente wirken dann nicht mehr -
+                             die Linie erschien dadurch vorher gar nicht. -->
                         <Viewbox Stretch="Fill" Height="{anzeige:Breite 160}">
-                            <Canvas Width="600" Height="160">
-                                <ItemsControl ItemsSource="{Binding TrendLinien}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:TrendSegment">
-                                            <Line StartPoint="{Binding Von}" EndPoint="{Binding Bis}"
-                                                  Stroke="{DynamicResource AccentFarbe}"
-                                                  StrokeThickness="2.5"
-                                                  StrokeLineCap="Round" StrokeJoin="Round" />
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Canvas>
+                            <ItemsControl ItemsSource="{Binding TrendLinien}" Width="600" Height="160">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TrendSegment">
+                                        <Line StartPoint="{Binding Von}" EndPoint="{Binding Bis}"
+                                              Stroke="{DynamicResource AccentFarbe}"
+                                              StrokeThickness="2.5"
+                                              StrokeLineCap="Round" StrokeJoin="Round" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </Viewbox>
                     </DockPanel>
                 </Border>

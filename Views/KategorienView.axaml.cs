@@ -52,14 +52,33 @@ public partial class KategorienView : UserControl
         }
     }
 
-    // Beim Oeffnen der Farbwahl haelt das ViewModel fest, um welche
-    // Kategorie es geht - danach darf der Baum seine Auswahl verlieren,
-    // ohne dass die Farbwahl ins Leere greift.
-    private void Farbwahl_Oeffnen(object? sender, RoutedEventArgs e)
+    // "+ Unter" sitzt jetzt in der Zeile selbst (UI/UX-Redesign, Abschnitt
+    // 5.5) statt an einer Werkzeugleiste, die eine vorherige Baumauswahl
+    // voraussetzt. NeueUnterkategorieCommand haengt weiterhin an
+    // AusgewaehlterKnoten (Regel 7: die Fachlogik bleibt unveraendert) -
+    // hier wird nur diese eine Auswahl aus der Zeile heraus gesetzt, bevor
+    // der bestehende Befehl laeuft.
+    private void NeueUnterkategorieFuerZeile(object? sender, RoutedEventArgs e)
     {
+        if (sender is not Control control || control.DataContext is not KategorieKnoten knoten) return;
         if (DataContext is not KategorienViewModel viewModel) return;
 
-        viewModel.OeffneFarbwahl();
+        viewModel.AusgewaehlterKnoten = knoten;
+        if (viewModel.NeueUnterkategorieCommand.CanExecute(null))
+        {
+            viewModel.NeueUnterkategorieCommand.Execute(null);
+        }
+    }
+
+    // Beim Oeffnen der Farbwahl haelt das ViewModel fest, um welche
+    // Kategorie es geht - der Farbe-Knopf sitzt in der Zeile selbst, sein
+    // DataContext ist deshalb bereits der betroffene Knoten.
+    private void Farbwahl_Oeffnen(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control control || control.DataContext is not KategorieKnoten knoten) return;
+        if (DataContext is not KategorienViewModel viewModel) return;
+
+        viewModel.OeffneFarbwahlFuer(knoten);
     }
 
     // Wahl einer Farbe: Command des ViewModels ausfuehren und die Auswahl

@@ -87,7 +87,13 @@
 
                     <SolidColorBrush x:Key="TextPrimaerFarbe">#EAECEF</SolidColorBrush>
                     <SolidColorBrush x:Key="TextSekundaerFarbe">#A6ADBB</SolidColorBrush>
-                    <SolidColorBrush x:Key="TextTertiaerFarbe">#7A8290</SolidColorBrush>
+                    <!-- Nachgebessert (Praxis-Fund nach Sichtpruefung): #7A8290
+                         erreichte auf der Flaeche SurfaceFarbe nur 4,35:1,
+                         unter WCAG AA (4,5:1) fuer Fliesstext, und war in der
+                         Praxis bei kleiner Schrift (Spaltenkoepfe,
+                         Feldbeschriftungen, KPI-Hinweiszeile) kaum lesbar.
+                         #9AA3B2 erreicht 6,63:1. -->
+                    <SolidColorBrush x:Key="TextTertiaerFarbe">#9AA3B2</SolidColorBrush>
                     <SolidColorBrush x:Key="TextAufAccentFarbe">#0B1220</SolidColorBrush>
 
                     <SolidColorBrush x:Key="BorderDezentFarbe">#2A2D34</SolidColorBrush>
@@ -563,9 +569,12 @@
             <Setter Property="Foreground" Value="{DynamicResource EinnahmeFarbe}" />
         </Style>
 
+        <!-- Opacity bewusst nur noch leicht gedaempft (vorher 0.7): mit der
+             ohnehin schon gedaempften TextTertiaerFarbe kombiniert, drueckte
+             0.7 den Kontrast im Dunkelmodus unter jede lesbare Schwelle. -->
         <Style Selector=":is(TextBlock).archiviert">
             <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
-            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="Opacity" Value="0.85" />
         </Style>
         <Style Selector="TextBlock.fehler">
             <Setter Property="Foreground" Value="{DynamicResource FehlerText}" />
