@@ -1,0 +1,151 @@
+name: Release
+
+# Laeuft bei jedem Push auf master, veroeffentlicht aber nur dann
+# tatsaechlich etwas, wenn <Version> in Ausgabenverwaltung.csproj
+# gegenueber dem letzten "vX.Y.Z"-Tag gestiegen ist (siehe PUBLISH.md,
+# Abschnitt "Selbstaktualisierung": "Die Versionsnummer muss steigen").
+# Ein Commit ohne Versionsbump (Bugfix, Doku, Refactoring) loest also
+# kein Release aus - das entspricht der bisherigen, manuell gepflegten
+# Regel, nur automatisiert.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+# Fuer das Erzeugen von Tag und Release muss GITHUB_TOKEN schreiben
+# duerfen.
+permissions:
+  contents: write
+
+# Verhindert, dass zwei rasch aufeinanderfolgende Pushes auf master
+# gleichzeitig zu bauen und veroeffentlichen versuchen - der zweite
+# Lauf wartet, statt parallel am selben Tag/Release vorbeizuschreiben.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # windows-latest, nicht macos/ubuntu: publish.ps1 baut ALLE Ziele
+    # (win-x64, osx-arm64, osx-x64) von einem einzigen Windows-Rechner
+    # aus - dotnet publish braucht dafuer keinen echten Mac, und das
+    # Skript ist bewusst gegen Windows PowerShell 5.1 geschrieben (siehe
+    # Kopfkommentar in publish.ps1: kein System.Formats.Tar, weil das
+    # dort fehlt). Deshalb -shell: powershell- statt pwsh, um exakt die
+    # Umgebung nachzubilden, in der das Skript lokal auch laeuft.
+    runs-on: windows-latest
+
+    steps:
+      - name: Auschecken
+        uses: actions/checkout@v4
+        with:
+          # Volle Historie und alle Tags: fuer den Versionsvergleich
+          # unten und fuer "gh release create --generate-notes" (das
+          # vergleicht gegen den vorherigen Tag). fetch-tags explizit,
+          # weil actions/checkout das bei fetch-depth 0 sonst nicht
+          # zuverlaessig von selbst tut.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Version aus der csproj lesen und mit dem letzten Tag vergleichen
+        id: version
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Windows PowerShell 5.1 schreibt ">>" standardmaessig als
+          # UTF-16 - GITHUB_OUTPUT erwartet UTF-8 ohne BOM, sonst liest
+          # die Actions-Laufzeit die Zeilen nicht. Deshalb hier wie in
+          # publish.ps1 (Write-InfoPlist) direkt ueber .NET schreiben.
+          function Add-GitHubOutput {
+              param([string] $Line)
+              [System.IO.File]::AppendAllText(
+                  $env:GITHUB_OUTPUT, "$Line`n", (New-Object System.Text.UTF8Encoding($false)))
+          }
+
+          [xml] $csproj = Get-Content -LiteralPath 'Ausgabenverwaltung.csproj'
+          $versionText = $csproj.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if (-not $versionText) {
+              throw "Konnte <Version> nicht aus Ausgabenverwaltung.csproj lesen."
+          }
+
+          $current = [version] $versionText
+
+          $existingTags = git tag --list 'v*'
+          $existingVersions = @(
+              $existingTags | ForEach-Object {
+                  $kandidat = $_.Substring(1)
+                  $parsed = $null
+                  if ([version]::TryParse($kandidat, [ref] $parsed)) { $parsed }
+              }
+          )
+
+          $latest = if ($existingVersions.Count -gt 0) {
+              ($existingVersions | Sort-Object)[-1]
+          } else {
+              [version] '0.0.0'
+          }
+
+          Write-Host "Version in der csproj: $current"
+          Write-Host "Hoechster vorhandener Tag: v$latest"
+
+          $tag = "v$($current.ToString(3))"
+
+          if ($current -le $latest) {
+              Write-Host "Keine neue Version - kein Release."
+              Add-GitHubOutput 'shouldRelease=false'
+          } else {
+              Add-GitHubOutput 'shouldRelease=true'
+              Add-GitHubOutput "tag=$tag"
+          }
+
+      - name: .NET SDK einrichten
+        if: steps.version.outputs.shouldRelease == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Bauen und testen
+        if: steps.version.outputs.shouldRelease == 'true'
+        run: dotnet test
+
+      - name: Veroeffentlichen (win-x64, osx-arm64, osx-x64)
+        if: steps.version.outputs.shouldRelease == 'true'
+        shell: powershell
+        run: .\publish.ps1 -Targets win-x64, osx-arm64, osx-x64
+
+      - name: Release auf GitHub anlegen
+        if: steps.version.outputs.shouldRelease == 'true'
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = '${{ steps.version.outputs.tag }}'
+          $root = 'bin\Release\net10.0\publish'
+
+          # Dieselben drei Dateinamen, die Core\Updates\UpdatePlatform.cs
+          # bei der Selbstaktualisierung sucht - siehe PUBLISH.md,
+          # Abschnitt "Ausgabestruktur". Linux wird gebaut, aber bewusst
+          # nicht veroeffentlicht (keine Selbstaktualisierung dafuer).
+          $assets = @(
+              (Join-Path $root 'win-x64\Ausgabenverwaltung-win-x64.zip'),
+              (Join-Path $root 'osx-arm64\Ausgabenverwaltung-osx-arm64.tar.gz'),
+              (Join-Path $root 'osx-x64\Ausgabenverwaltung-osx-x64.tar.gz')
+          )
+
+          foreach ($asset in $assets) {
+              if (-not (Test-Path -LiteralPath $asset)) {
+                  throw "Erwartetes Release-Asset fehlt: $asset"
+              }
+          }
+
+          # Weder Entwurf noch Vorabversion (Vorgabe von "gh release
+          # create"): Core\Updates\GitHubReleases.cs uebergeht beides bei
+          # der Selbstaktualisierung. --generate-notes fasst die Commits
+          # seit dem vorherigen Tag zusammen. Der Tag existiert noch
+          # nicht - gh legt ihn auf dem aktuellen master-Stand an.
+          gh release create $tag $assets `
+              --title $tag `
+              --target $env:GITHUB_SHA `
+              --generate-notes

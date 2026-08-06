@@ -1,5 +1,30 @@
 # Veröffentlichen
 
+## Automatisch (GitHub Actions)
+
+`.github\workflows\release.yml` läuft bei jedem Push auf `master`. Er
+veröffentlicht aber nur dann tatsächlich etwas, wenn `<Version>` in
+`Ausgabenverwaltung.csproj` gegenüber dem höchsten vorhandenen
+`vX.Y.Z`-Tag gestiegen ist — ein Commit ohne Versionsbump (Bugfix,
+Doku, Refactoring) läuft durch den Workflow, löst aber kein Release
+aus. Das ist dieselbe Regel wie im Abschnitt "Selbstaktualisierung"
+unten, nur automatisiert statt von Hand geprüft.
+
+Ist die Version gestiegen, macht der Workflow auf einem
+`windows-latest`-Runner genau das, was hier manuell beschrieben ist:
+`dotnet test`, danach `publish.ps1 -Targets win-x64, osx-arm64,
+osx-x64` (Linux entfällt, siehe unten), und legt anschließend per
+`gh release create` einen Tag `vX.Y.Z` und ein Release mit allen drei
+Archiven an — weder Entwurf noch Vorabversion, damit die
+Selbstaktualisierung es findet. Ein neues Release veröffentlichen
+heißt also nur noch: `<Version>` in der csproj erhöhen, committen,
+nach `master` pushen.
+
+Zum lokalen Ausprobieren oder für Ziele, die nicht auf GitHub landen
+sollen, bleibt `publish.ps1` direkt aufrufbar:
+
+## Manuell (`publish.ps1`)
+
 Alle vier Ziele entstehen mit einem einzigen Aufruf von `publish.ps1`
 im Repository-Wurzelverzeichnis. Jedes Ziel ist eine einzelne,
 selbstständig lauffähige Datei (self-contained, PublishSingleFile) -
