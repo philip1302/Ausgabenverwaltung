@@ -72,8 +72,8 @@ else {
 
 $RepoRoot = $PSScriptRoot
 $ProjectFile = Join-Path $RepoRoot 'Ausgabenverwaltung.csproj'
-$PublishRoot = Join-Path $RepoRoot 'bin\Release\net10.0\publish'
-$IconIcnsPath = Join-Path $RepoRoot 'Assets\AppIcon.icns'
+$PublishRoot = Join-Path $RepoRoot 'bin/Release/net10.0/publish'
+$IconIcnsPath = Join-Path $RepoRoot 'Assets/AppIcon.icns'
 $ExecutableName = 'Ausgabenverwaltung'
 $DisplayName = 'Ausgabenverwaltung'
 $BundleIdentifier = 'de.benni.ausgabenverwaltung'
@@ -369,8 +369,8 @@ function New-MacAppBundle {
         Remove-Item -LiteralPath $bundlePath -Recurse -Force
     }
 
-    $macOsDir = Join-Path $bundlePath 'Contents\MacOS'
-    $resourcesDir = Join-Path $bundlePath 'Contents\Resources'
+    $macOsDir = Join-Path $bundlePath 'Contents/MacOS'
+    $resourcesDir = Join-Path $bundlePath 'Contents/Resources'
     New-Item -ItemType Directory -Force -Path $macOsDir | Out-Null
     New-Item -ItemType Directory -Force -Path $resourcesDir | Out-Null
 
@@ -388,7 +388,7 @@ function New-MacAppBundle {
         Write-Warning "Kein Symbol gefunden ($IconIcnsPath) - das Bundle entsteht ohne CFBundleIconFile. Siehe PUBLISH.md, Abschnitt Symbol, fuer den manuellen Weg."
     }
 
-    Write-InfoPlist -Path (Join-Path $bundlePath 'Contents\Info.plist') `
+    Write-InfoPlist -Path (Join-Path $bundlePath 'Contents/Info.plist') `
         -ExecutableName $ExecutableName -BundleIdentifier $BundleIdentifier -DisplayName $DisplayName `
         -Version $Version -MinimumSystemVersion $MinimumSystemVersion -IncludeIcon:$hasIcon
 
