@@ -167,11 +167,20 @@
                         </Expander>
 
                         <TextBlock Text="Aktive Datenbank:" Margin="0,8,0,0" />
-                        <Grid ColumnDefinitions="*,8,Auto">
+                        <Grid ColumnDefinitions="*,8,Auto,8,Auto">
                             <TextBlock Grid.Column="0" Text="{Binding DatenbankPfad}"
                                        Classes="pfad" VerticalAlignment="Center" />
                             <Button Grid.Column="2" Classes="secondary" Content="Pfad kopieren"
                                     Click="DatenbankPfadKopieren_Click" />
+                            <!-- Der zweite Schritt der Anleitung oben ist
+                                 "Datei an den Ort der aktiven Datenbank
+                                 kopieren" - genau dorthin fuehrt dieser
+                                 Knopf, statt den Pfad von Hand nachzugehen.
+                                 Beschriftung bewusst ohne "Explorer": unter
+                                 macOS heisst dasselbe Finder. -->
+                            <Button Grid.Column="4" Classes="secondary" Content="Ordner öffnen"
+                                    ToolTip.Tip="Öffnet den Ordner der aktiven Datenbank im Dateimanager."
+                                    Click="DatenbankOrdnerOeffnen_Click" />
                         </Grid>
                     </StackPanel>
                 </Border>

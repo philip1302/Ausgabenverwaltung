@@ -108,6 +108,28 @@ public partial class DatensicherungView : UserControl
         }
     }
 
+    // Geoeffnet wird der ORDNER, nicht die Datenbankdatei selbst: ein
+    // Doppelklick auf eine .db-Datei fuehrt je nach Rechner zu einem
+    // Dialog "Womit oeffnen?" oder einem Programm, das die Datei anfasst,
+    // waehrend die Anwendung sie benutzt.
+    private void DatenbankOrdnerOeffnen_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DatensicherungViewModel viewModel)
+        {
+            return;
+        }
+
+        if (!Ordner.Oeffne(viewModel.DatenbankOrdnerPfad))
+        {
+            viewModel.MeldeFehler(
+                "Der Ordner der aktiven Datenbank ließ sich nicht im Dateimanager "
+                + "öffnen.\n\nAn den Daten ändert das nichts — die Datenbank liegt "
+                + "unverändert an ihrem Ort. Bitte rufen Sie diesen Pfad von Hand "
+                + "auf:\n"
+                + (viewModel.DatenbankOrdnerPfad ?? viewModel.DatenbankPfad));
+        }
+    }
+
     private async void DatenbankPfadKopieren_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not DatensicherungViewModel viewModel)

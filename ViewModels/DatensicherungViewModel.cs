@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Errors;
 using Ausgabenverwaltung.Core.Logging;
@@ -57,6 +58,17 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
 
     /// <summary>Pfad der aktiven Datenbankdatei - fuer den Kopieren-Knopf.</summary>
     public string DatenbankPfad { get; }
+
+    /// <summary>
+    /// Der Ordner, in dem die aktive Datenbank liegt - fuer den Knopf, der
+    /// ihn im Dateimanager oeffnet. Abgeleitet aus dem tatsaechlich
+    /// benutzten Dateipfad und nicht aus AppPaths neu berechnet: geoeffnet
+    /// werden soll der Ordner der Datei, die gerade wirklich offen ist.
+    ///
+    /// NULL, wenn sich aus dem Pfad kein Ordner ergibt (etwa bei einem
+    /// blossen Dateinamen ohne Verzeichnis).
+    /// </summary>
+    public string? DatenbankOrdnerPfad => Path.GetDirectoryName(DatenbankPfad);
 
     /// <summary>Ziel 1, fest und immer aktiv.</summary>
     public string SicherungsordnerPfad { get; }
