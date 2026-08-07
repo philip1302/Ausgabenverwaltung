@@ -231,6 +231,34 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     partial void OnIstEinnahmeChanged(bool value) => AktualisiereZahlerAuswahl();
 
     /// <summary>
+    /// Schreibt den ausgerechneten Betrag in Normalform zurueck, sobald
+    /// das Feld den Fokus verliert ("12,50+3,20" wird zu "15,70",
+    /// "12.5" zu "12,50"). Der Anwender sieht damit vor dem Speichern,
+    /// was verstanden wurde. Ist die Eingabe nicht auswertbar, bleibt sie
+    /// unangetastet stehen - die Pruefung beim Speichern erklaert warum.
+    /// Gerechnet wird in Core (<see cref="BetragsAusdruck"/>, Regel 7).
+    /// </summary>
+    public void BetragNormalisieren()
+    {
+        if (BetragsAusdruck.Normalform(BetragText) is string normalform)
+        {
+            BetragText = normalform;
+        }
+    }
+
+    /// <summary>
+    /// Dasselbe fuer das Datumsfeld: "heute" wird zu "07.08.2026". Siehe
+    /// <see cref="GermanDateInput.Normalize"/>.
+    /// </summary>
+    public void DatumNormalisieren()
+    {
+        if (GermanDateInput.Normalize(DatumText, DateOnly.FromDateTime(DateTime.Now)) is string normalform)
+        {
+            DatumText = normalform;
+        }
+    }
+
+    /// <summary>
     /// Baut ZahlerOptionen aus _allePersonen neu auf: bei einer Einnahme
     /// faellt die Ich-Person heraus, eine Einnahme kommt immer von jemand
     /// anderem (siehe Feldkommentar bei _allePersonen). Eine bereits

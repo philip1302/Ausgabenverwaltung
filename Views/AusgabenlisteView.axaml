@@ -593,7 +593,10 @@
                     <!-- Das €-Zeichen steht in der Beschriftung, nicht im
                          Feld: eingegeben wird die blanke Zahl. -->
                     <TextBlock Text="Betrag (€)" />
-                    <TextBox Text="{Binding BetragText}" PlaceholderText="0,00" />
+                    <TextBox Text="{Binding BetragText}"
+                             PlaceholderText="0,00 (auch 12,50+3,20)"
+                             ToolTip.Tip="Mehrere Posten lassen sich zusammenzählen: 12,50+3,20"
+                             LostFocus="BetragLostFocus" />
                     <TextBlock Text="{Binding BetragFehler}"
                                IsVisible="{Binding BetragFehlerSichtbar}"
                                Foreground="{DynamicResource FehlerText}" />
@@ -625,7 +628,10 @@
                                Foreground="{DynamicResource FehlerText}" />
 
                     <TextBlock Text="Datum" Margin="0,10,0,0" />
-                    <TextBox Text="{Binding DatumText}" PlaceholderText="TT.MM.JJJJ" />
+                    <TextBox Text="{Binding DatumText}"
+                             PlaceholderText="TT.MM.JJJJ oder heute"
+                             ToolTip.Tip="Kurzformen: heute, gestern, vorgestern, -3 (vor drei Tagen), 15. (der 15. dieses Monats)"
+                             LostFocus="DatumLostFocus" />
                     <TextBlock Text="{Binding DatumFehler}"
                                IsVisible="{Binding DatumFehlerSichtbar}"
                                Foreground="{DynamicResource FehlerText}" />

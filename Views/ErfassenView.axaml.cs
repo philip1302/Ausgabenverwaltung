@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Ausgabenverwaltung.ViewModels;
 
 namespace Ausgabenverwaltung.Views;
@@ -23,4 +24,14 @@ public partial class ErfassenView : UserControl
             viewModel.FokusBetragAngefordert += (_, _) => BetragBox.Focus();
         }
     }
+
+    // Verlaesst der Anwender das Feld, steht dort die ausgerechnete
+    // Normalform ("12,50+3,20" wird zu "15,70", "heute" zum Datum). Auch
+    // das ist reine Verdrahtung: gerechnet wird in Core, das ViewModel
+    // schreibt nur zurueck (Regel 7).
+    private void BetragLostFocus(object? sender, RoutedEventArgs e) =>
+        (DataContext as ErfassenViewModel)?.BetragNormalisieren();
+
+    private void DatumLostFocus(object? sender, RoutedEventArgs e) =>
+        (DataContext as ErfassenViewModel)?.DatumNormalisieren();
 }

@@ -37,7 +37,7 @@ public class ExpenseValidatorTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("abc")]
-    [InlineData("12.50")]   // Punkt bewusst abgelehnt - sonst wuerde aus 12.50 still 1250
+    [InlineData("1.500")]   // mehrdeutig: 1500 oder 1,50? Bleibt abgelehnt
     [InlineData("12,,5")]
     public void Ein_ungueltiger_Betrag_wird_bemaengelt(string text)
     {
@@ -45,6 +45,47 @@ public class ExpenseValidatorTests
 
         Assert.False(ergebnis.IsValid);
         Assert.NotNull(ergebnis.AmountError);
+    }
+
+    [Fact]
+    public void Das_Betragsfeld_rechnet()
+    {
+        // Mehrere Posten eines Belegs zusammenzaehlen, ohne zwischendurch
+        // den Taschenrechner zu bemuehen (siehe BetragsAusdruck).
+        var ergebnis = ExpenseValidator.Validate(Eingabe() with { AmountText = "12,50+3,20" });
+
+        Assert.True(ergebnis.IsValid);
+        Assert.Equal(1570L, ergebnis.AmountCents);
+    }
+
+    [Fact]
+    public void Ein_Punkt_als_Dezimaltrennzeichen_wird_verstanden()
+    {
+        // Frueher abgelehnt, damit aus "12.50" nicht still 1250 wird.
+        // Eindeutig ist die Eingabe trotzdem - eine Tausendergruppe ist
+        // immer dreistellig -, und was verstanden wurde, schreibt die
+        // Oberflaeche beim Verlassen des Feldes zurueck (siehe
+        // BetragsAusdruck.Normalform). Mehrdeutiges wie "1.500" bleibt
+        // abgelehnt, siehe Ein_ungueltiger_Betrag_wird_bemaengelt.
+        var ergebnis = ExpenseValidator.Validate(Eingabe() with { AmountText = "12.50" });
+
+        Assert.True(ergebnis.IsValid);
+        Assert.Equal(1250L, ergebnis.AmountCents);
+    }
+
+    [Theory]
+    [InlineData("heute", 2026, 7, 31)]
+    [InlineData("gestern", 2026, 7, 30)]
+    [InlineData("-3", 2026, 7, 28)]
+    [InlineData("15.", 2026, 7, 15)]
+    public void Das_Datumsfeld_versteht_Kurzformen(string text, int jahr, int monat, int tag)
+    {
+        // Gerechnet wird vom Today der Eingabe aus, nicht von der
+        // Systemuhr (siehe GermanDateInput.TryParse mit Bezugstag).
+        var ergebnis = ExpenseValidator.Validate(Eingabe() with { DateText = text });
+
+        Assert.True(ergebnis.IsValid);
+        Assert.Equal(new DateOnly(jahr, monat, tag), ergebnis.Date);
     }
 
     [Theory]

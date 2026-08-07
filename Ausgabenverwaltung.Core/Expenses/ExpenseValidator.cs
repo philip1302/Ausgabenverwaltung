@@ -55,9 +55,14 @@ public static class ExpenseValidator
             return (0, "Bitte einen Betrag eingeben.");
         }
 
-        if (!Money.TryParseEuroText(amountText, out var cents))
+        // BetragsAusdruck statt Money.TryParseEuroText: dasselbe fuer eine
+        // einzelne Zahl, zusaetzlich "12,50+3,20" fuer mehrere Posten auf
+        // einem Beleg. Was verstanden wurde, schreibt die Oberflaeche beim
+        // Verlassen des Feldes in Normalform zurueck (siehe
+        // BetragsAusdruck.Normalform).
+        if (BetragsAusdruck.Auswerten(amountText) is not long cents)
         {
-            return (0, "Das ist kein gültiger Betrag. Beispiel: 12,50");
+            return (0, "Das ist kein gültiger Betrag. Beispiele: 12,50 oder 12,50+3,20");
         }
 
         // Null ausdruecklich abgelehnt: eine Ausgabe ueber 0,00 € ist
@@ -91,9 +96,15 @@ public static class ExpenseValidator
             return (default, "Bitte ein Datum eingeben (TT.MM.JJJJ).", null);
         }
 
-        if (!GermanDateInput.TryParse(dateText.Trim(), out var date))
+        // Mit Bezugstag, damit die Kurzformen gelten ("heute", "gestern",
+        // "-3", "15."). Das vollstaendige Datum hat dabei Vorrang, siehe
+        // GermanDateInput.TryParse.
+        if (!GermanDateInput.TryParse(dateText.Trim(), today, out var date))
         {
-            return (default, "Das ist kein gültiges Datum. Beispiel: 05.03.2026", null);
+            return (default,
+                "Das ist kein gültiges Datum. Beispiele: 05.03.2026, heute, gestern, "
+                + "-3 (vor drei Tagen) oder 15. (der 15. dieses Monats).",
+                null);
         }
 
         // Erst die harte Grenze (Tippfehler im Jahr), dann die Rueckfrage.

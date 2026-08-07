@@ -33,8 +33,10 @@
                         <TextBlock Text="BETRAG (€)" Classes="feldbeschriftung" Margin="0,0,0,3" />
                         <TextBox x:Name="BetragBox"
                                  Text="{Binding BetragText}"
-                                 PlaceholderText="0,00"
+                                 PlaceholderText="0,00 (auch 12,50+3,20)"
+                                 ToolTip.Tip="Mehrere Posten lassen sich zusammenzählen: 12,50+3,20"
                                  FontSize="{DynamicResource SchriftUeberschrift}"
+                                 LostFocus="BetragLostFocus"
                                  TabIndex="1" />
                         <TextBlock Text="{Binding BetragFehler}"
                                    IsVisible="{Binding BetragFehlerSichtbar}"
@@ -76,7 +78,9 @@
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="DATUM" Classes="feldbeschriftung" />
                                 <TextBox Text="{Binding DatumText}"
-                                         PlaceholderText="TT.MM.JJJJ"
+                                         PlaceholderText="TT.MM.JJJJ oder heute"
+                                         ToolTip.Tip="Kurzformen: heute, gestern, vorgestern, -3 (vor drei Tagen), 15. (der 15. dieses Monats)"
+                                         LostFocus="DatumLostFocus"
                                          TabIndex="4" />
                                 <TextBlock Text="{Binding DatumFehler}"
                                            IsVisible="{Binding DatumFehlerSichtbar}"

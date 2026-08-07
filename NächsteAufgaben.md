@@ -602,10 +602,30 @@ und Build und Tests sind grün.
 
 ## Batch 3 — Erfassen mit weniger Tipparbeit (Punkte 7–11)
 
-### [ ] 7. Betragsfeld rechnet, Datumsfeld versteht Kurzformen
+### [x] 7. Betragsfeld rechnet, Datumsfeld versteht Kurzformen
+
+**Erledigt in:** Betragsfeld rechnet, Datumsfeld versteht Kurzformen
 
 **Ziel:** Weniger Kopfrechnen und weniger Tippen an den beiden Feldern,
 die bei jeder Erfassung angefasst werden.
+
+**Abweichungen von der Vorgabe, bewusst:**
+
+- **Der Punkt gilt jetzt als Dezimaltrennzeichen** (`12.50` → 12,50 €),
+  aber nur, wo er kein Tausendertrennzeichen sein *kann*: `1.500` und
+  `1.234,56` bleiben abgelehnt. Möglich wird das erst durch das
+  Zurückschreiben der Normalform — der Anwender sieht sofort, was
+  verstanden wurde. `Money.TryParseEuroText` bleibt unverändert streng,
+  weil dort (Vorlagenbetrag) kein Zurückschreiben stattfindet.
+- **Negative Ergebnisse liefert `BetragsAusdruck` als negativen Wert
+  zurück**, nicht als `null`. Die Regel „Beträge sind immer positiv"
+  steht weiterhin nur an einer Stelle, im `ExpenseValidator` — nur von
+  dort kommt die Meldung, die den Grund nennt.
+- Die Kurzformen gelten **nur dort, wo es einen Bezugstag gibt** (das
+  Datumsfeld von Erfassungsmaske und Bearbeiten-Dialog, beide über
+  `ExpenseValidator`). Im Von/Bis eines Zeitraums bleibt es beim
+  vollständigen Datum: eine zweite `TryParse`-Überladung mit Bezugstag
+  trennt beides.
 
 **Vorgehen**
 

@@ -238,6 +238,31 @@ public sealed partial class AusgabeBearbeitenViewModel : ObservableObject
     partial void OnIstEinnahmeChanged(bool value) => AktualisiereZahlerAuswahl();
 
     /// <summary>
+    /// Schreibt den ausgerechneten Betrag in Normalform zurueck, sobald
+    /// das Feld den Fokus verliert - dieselbe Mechanik wie in der
+    /// Erfassungsmaske (siehe
+    /// <see cref="ErfassenViewModel.BetragNormalisieren"/>). Beide Felder
+    /// verstehen dieselben Eingaben, also zeigen sie auch dasselbe
+    /// zurueck.
+    /// </summary>
+    public void BetragNormalisieren()
+    {
+        if (BetragsAusdruck.Normalform(BetragText) is string normalform)
+        {
+            BetragText = normalform;
+        }
+    }
+
+    /// <summary>Dasselbe fuer das Datumsfeld ("heute" wird zu "07.08.2026").</summary>
+    public void DatumNormalisieren()
+    {
+        if (GermanDateInput.Normalize(DatumText, DateOnly.FromDateTime(DateTime.Now)) is string normalform)
+        {
+            DatumText = normalform;
+        }
+    }
+
+    /// <summary>
     /// Baut ZahlerOptionen aus _allePersonen neu auf - dasselbe Verfahren
     /// wie in der Erfassungsmaske (siehe
     /// <see cref="ErfassenViewModel.AktualisiereZahlerAuswahl"/>): bei
