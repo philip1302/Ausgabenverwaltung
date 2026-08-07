@@ -69,6 +69,33 @@ public sealed record AppSettings
     public DateTime? LastUpdateCheckUtc { get; init; }
 
     /// <summary>
+    /// Die zuletzt gesehene Fassung der Anwendung ("1.2.0"). Steigt sie
+    /// zwischen zwei Starts, erscheint einmalig die Seite "Was ist neu"
+    /// (siehe <see cref="Updates.WasIstNeu"/>).
+    ///
+    /// NULL heisst "erste Ausfuehrung" - dann bleibt es still, denn wer
+    /// noch keinen alten Stand kennt, braucht keine Liste der Aenderungen
+    /// daran.
+    /// </summary>
+    public string? LastSeenVersion { get; init; }
+
+    /// <summary>
+    /// Zu welcher Fassung <see cref="PendingReleaseNotes"/> gehoert
+    /// ("v1.2.0"). Passt der Wert nicht zur laufenden Fassung, wird der
+    /// Text nicht gezeigt: er beschriebe dann etwas anderes als das, was
+    /// gerade laeuft.
+    /// </summary>
+    public string? PendingReleaseNotesVersion { get; init; }
+
+    /// <summary>
+    /// Der Beschreibungstext der geladenen Veroeffentlichung, abgelegt
+    /// beim Bereitlegen und gezeigt nach dem Neustart. Er steht hier und
+    /// nicht in der Datenbank, weil er zur Anwendung gehoert und nicht zu
+    /// den Buchungen - eine Sicherung braucht ihn nicht.
+    /// </summary>
+    public string? PendingReleaseNotes { get; init; }
+
+    /// <summary>
     /// Ob die Erfassungsmaske nach dem Speichern Kategorie, Zahler und
     /// Datum stehen laesst (siehe ErfassenViewModel). Fuer das Erfassen
     /// mehrerer Belege am Stueck.

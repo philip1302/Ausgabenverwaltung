@@ -297,6 +297,17 @@ public static class LogEvents
     public static string UpdateUebernommen(string version)
         => $"Fassung {version} uebernommen, die Anwendung startet neu.";
 
+    public static string UpdateNeuerungenGemerkt(string version, int zeichen)
+        => $"Beschreibungstext zu Fassung {version} gemerkt ({zeichen} Zeichen) - "
+           + "er wird nach dem naechsten Start einmal gezeigt.";
+
+    public static string UpdateNeuerungenGezeigt(string version, int abschnitte)
+        => $"Seite \"Was ist neu\" zu Fassung {version} gezeigt ({abschnitte} Abschnitte).";
+
+    public static string UpdateNeuerungenUebersprungen(string version)
+        => $"Seite \"Was ist neu\" uebersprungen - zu Fassung {version} liegt kein "
+           + "verwertbarer Beschreibungstext vor.";
+
     /// <summary>
     /// Warum nichts gefunden wurde - als eigener Aufzaehlungstyp, damit
     /// der Protokolltext nicht aus dem Aufrufer hereingereicht wird und

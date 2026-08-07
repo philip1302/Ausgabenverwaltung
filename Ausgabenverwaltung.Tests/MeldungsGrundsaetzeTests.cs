@@ -81,6 +81,7 @@ public class MeldungsGrundsaetzeTests
         // ---- Selbstaktualisierung ----
         Nimm("Update/Bereitgelegt", UpdateText.Bereitgelegt("1.2.0"));
         Nimm("Update/Gescheitert", UpdateText.AustauschGescheitert("1.2.0"));
+        Nimm("Update/WasIstNeu", UpdateText.WasIstNeuEinleitung("1.2.0"));
 
         foreach (var hindernis in Enum.GetValues<UpdateHindernis>())
         {

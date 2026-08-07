@@ -89,6 +89,15 @@ public sealed class AppSettingsStore
                 // die Vorgabe "aus" - ein leeres Formular nach dem
                 // Speichern, wie bisher.
                 KeepEntryValues = document.KeepEntryValues ?? false,
+
+                // Leerer Text und fehlender Eintrag sind hier dasselbe:
+                // "nichts gemerkt". Eine Datei aus einer aelteren Fassung
+                // hat die drei Werte nicht, und dann bleibt die Seite
+                // "Was ist neu" beim naechsten Start still (siehe
+                // Updates.WasIstNeu).
+                LastSeenVersion = LeerAlsNull(document.LastSeenVersion),
+                PendingReleaseNotesVersion = LeerAlsNull(document.PendingReleaseNotesVersion),
+                PendingReleaseNotes = LeerAlsNull(document.PendingReleaseNotes),
             };
         }
         catch (Exception)
@@ -113,6 +122,9 @@ public sealed class AppSettingsStore
                 ? IsoDateTime.ToUtcText(geprueft)
                 : null,
             KeepEntryValues = settings.KeepEntryValues,
+            LastSeenVersion = settings.LastSeenVersion,
+            PendingReleaseNotesVersion = settings.PendingReleaseNotesVersion,
+            PendingReleaseNotes = settings.PendingReleaseNotes,
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -123,6 +135,9 @@ public sealed class AppSettingsStore
 
         File.WriteAllText(_filePath, JsonSerializer.Serialize(document, SerializerOptions));
     }
+
+    private static string? LeerAlsNull(string? text)
+        => string.IsNullOrWhiteSpace(text) ? null : text;
 
     private static DateTime? ParseOrNull(string? text)
     {
@@ -159,5 +174,8 @@ public sealed class AppSettingsStore
         public bool? AutoUpdate { get; set; }
         public string? LastUpdateCheckUtc { get; set; }
         public bool? KeepEntryValues { get; set; }
+        public string? LastSeenVersion { get; set; }
+        public string? PendingReleaseNotesVersion { get; set; }
+        public string? PendingReleaseNotes { get; set; }
     }
 }

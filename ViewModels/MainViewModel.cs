@@ -35,6 +35,13 @@ namespace Ausgabenverwaltung.ViewModels;
 /// (Views/MainWindow.axaml) waehlt den Eintrag ueber
 /// <see cref="OeffneDarstellungCommand"/> an und wechselt damit ganz normal
 /// den Hauptinhalt statt ein Flyout zu oeffnen.
+///
+/// Dasselbe gilt fuer "Was ist neu": ein gewoehnlicher Bereich ohne
+/// Sidebar-Platz, der beim ersten Start nach einer Aktualisierung
+/// vorausgewaehlt ist (siehe <see cref="WasIstNeuViewModel"/>) und beim
+/// Weiterklicken der Startseite Platz macht. Bewusst kein Dialogfenster:
+/// eine Seite laesst sich lesen, rollen und in der eingestellten
+/// Schriftgroesse anzeigen, ohne dass sie den Start blockiert.
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase
 {
@@ -85,6 +92,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public MainViewModel(
         StartupNoticeViewModel startupNotice,
         AktualisierungViewModel aktualisierung,
+        WasIstNeuViewModel wasIstNeu,
         StartseiteViewModel startseite,
         ErfassenViewModel erfassen,
         OffenePostenViewModel offenePosten,
@@ -126,15 +134,36 @@ public sealed partial class MainViewModel : ViewModelBase
             // Ebenfalls eigenstaendig - nur ohne Sidebar-Platz, angewaehlt
             // ueber die Fusszeile (OeffneDarstellungCommand).
             new("Darstellung", verwaltung.Darstellung, "IconDarstellung", NavigationGruppe.Keine),
+
+            // Ohne Sidebar-Platz und ohne Kommando: diesen Bereich waehlt
+            // nur der Start aus, und zwar hoechstens einmal je Fassung.
+            new("Was ist neu", wasIstNeu, "IconDarstellung", NavigationGruppe.Keine),
         };
 
         StartseiteEintrag = NavigationItems[0];
         ErfassenUndVerwaltenEintraege = NavigationItems.Where(i => i.Gruppe == NavigationGruppe.ErfassenUndVerwalten).ToList();
         AuswertungEintraege = NavigationItems.Where(i => i.Gruppe == NavigationGruppe.Auswertung).ToList();
         EinstellungenEintraege = NavigationItems.Where(i => i.Gruppe == NavigationGruppe.Einstellungen).ToList();
-        _darstellungEintrag = NavigationItems.Last();
+        // Ueber die ViewModel-Instanz und nicht ueber die Position in der
+        // Liste: seit "Was ist neu" daneben steht, waere "der letzte
+        // Eintrag" der falsche.
+        _darstellungEintrag = NavigationItems
+            .First(item => ReferenceEquals(item.ViewModel, verwaltung.Darstellung));
 
-        _selectedNavigationItem = NavigationItems[0];
+        var wasIstNeuEintrag = NavigationItems
+            .First(item => ReferenceEquals(item.ViewModel, wasIstNeu));
+
+        // Beim ersten Start nach einer Aktualisierung steht "Was ist neu"
+        // vorn, sonst wie immer die Startseite. Direkte Feldzuweisung wie
+        // bisher - der Aenderungshandler soll hier noch nicht laufen, die
+        // Bereiche sind gerade erst erzeugt.
+        _selectedNavigationItem = wasIstNeu.Sichtbar
+            ? wasIstNeuEintrag
+            : NavigationItems[0];
+
+        // Die Seite kennt die Navigation nicht, sie meldet nur, dass sie
+        // fertig ist - dasselbe Muster wie bei den Spruengen unten.
+        wasIstNeu.Geschlossen += (_, _) => SelectedNavigationItem = StartseiteEintrag;
 
         // Wird sonst erst beim naechsten Wechsel gesetzt (siehe
         // OnSelectedNavigationItemChanged) - die direkte Feldzuweisung

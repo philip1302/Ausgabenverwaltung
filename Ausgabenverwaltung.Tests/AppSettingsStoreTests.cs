@@ -210,4 +210,48 @@ public class AppSettingsStoreTests : IDisposable
 
         Assert.Equal(zuletzt, speicher.Load().LastUpdateCheckUtc);
     }
+
+    /// <summary>
+    /// Die drei Werte hinter der Seite "Was ist neu": die gesehene Fassung
+    /// und der Beschreibungstext, der vor dem Neustart abgelegt und nach
+    /// dem Neustart gezeigt wird (siehe Core.Updates.WasIstNeu).
+    /// </summary>
+    [Fact]
+    public void Gesehene_Fassung_und_gemerkte_Neuerungen_ueberstehen_den_Neustart()
+    {
+        var speicher = new AppSettingsStore(SettingsPath);
+
+        speicher.Save(new AppSettings
+        {
+            LastSeenVersion = "1.1.0",
+            PendingReleaseNotesVersion = "v1.2.0",
+            PendingReleaseNotes = "## What's Changed\n* Etwas Neues",
+        });
+
+        var gelesen = speicher.Load();
+
+        Assert.Equal("1.1.0", gelesen.LastSeenVersion);
+        Assert.Equal("v1.2.0", gelesen.PendingReleaseNotesVersion);
+        Assert.Equal("## What's Changed\n* Etwas Neues", gelesen.PendingReleaseNotes);
+    }
+
+    // Eine Datei aus einer aelteren Fassung kennt die Felder nicht. Sie
+    // muessen dann leer sein und nicht etwa als leerer Text gelten - sonst
+    // erschiene die Seite "Was ist neu" mit nichts darauf.
+    [Fact]
+    public void Ohne_die_Felder_bleibt_nichts_gemerkt()
+    {
+        File.WriteAllText(SettingsPath, """
+            {
+              "FontScale": 1,
+              "LastSeenVersion": "   "
+            }
+            """);
+
+        var gelesen = new AppSettingsStore(SettingsPath).Load();
+
+        Assert.Null(gelesen.LastSeenVersion);
+        Assert.Null(gelesen.PendingReleaseNotesVersion);
+        Assert.Null(gelesen.PendingReleaseNotes);
+    }
 }

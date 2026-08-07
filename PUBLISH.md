@@ -201,6 +201,16 @@ ist, wenn veröffentlicht wird:
   Die Anwendung selbst ist davon unabhängig — sie holt die ganze Liste und
   nimmt die höchste Version.
 
+- **Der Beschreibungstext des Releases wird dem Anwender gezeigt.** Beim
+  ersten Start nach dem Austausch erscheint einmalig die Seite „Was ist
+  neu" mit dem Text der übernommenen Veröffentlichung
+  (`Core\Updates\ReleaseNotes.cs`). Weil dieser Text bei
+  `--generate-notes` aus den **Commit-Betreffs** entsteht, landen sie
+  damit vor den Augen des Anwenders — ein Grund mehr für den deutschen
+  Aussagesatz. Anmeldename und Adresse hinter jeder Zeile („by @… in
+  https://…") werden entfernt; ein Release ohne Text lässt die Seite
+  ausfallen, statt sie leer zu zeigen.
+
 Der Austausch selbst passiert nicht im laufenden Betrieb, sondern ganz früh
 beim nächsten Start (`Program.Main` → `Core\Updates\UpdateInstaller.cs`),
 bevor Datenbank, Fenster und Einzelinstanz-Sperre existieren. Die alte

@@ -68,6 +68,22 @@ public static class UpdateText
     }
 
     /// <summary>
+    /// Die Einleitung ueber der Liste der Neuerungen - die einzige Stelle,
+    /// an der ein Austausch der Programmdatei ueberhaupt sichtbar wird.
+    /// Deshalb steht auch hier ausdruecklich, was mit den Daten ist:
+    /// zwischen "das Programm ist ein anderes" und "meine Buchungen sind
+    /// noch da" liegt genau die Frage, die sich sonst niemand beantwortet.
+    /// </summary>
+    public static string WasIstNeuEinleitung(string version)
+    {
+        return $"Die Anwendung läuft jetzt in der Fassung {version}. "
+            + "Darunter steht, was sich gegenüber der bisherigen Fassung geändert hat. "
+            + "Ihre Daten sind davon nicht betroffen: Buchungen, Sicherungen und "
+            + "Einstellungen liegen getrennt von der Programmdatei und sind unverändert. "
+            + "Diese Seite erscheint einmalig; weiter geht es mit „Weiter zur Startseite“.";
+    }
+
+    /// <summary>
     /// Der Austausch beim Start ist misslungen. Der Anwender merkt davon
     /// im Regelfall nichts (die Anwendung startet ja), aber wenn er es
     /// erfaehrt, soll er wissen, dass nichts kaputt ist.

@@ -96,6 +96,11 @@ public static class GitHubReleases
             TagName = tagName,
             Version = version,
             HtmlUrl = Text(eintrag, "html_url") ?? string.Empty,
+
+            // Der Beschreibungstext wird hier nur mitgenommen, nicht
+            // ausgewertet - aufbereitet wird er erst dort, wo er
+            // tatsaechlich gezeigt wird (siehe ReleaseNotes).
+            Body = Text(eintrag, "body"),
             Assets = LiesAssets(eintrag),
         };
     }

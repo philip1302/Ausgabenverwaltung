@@ -139,6 +139,13 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
 
             if (bereit)
             {
+                // Der Beschreibungstext wird JETZT gemerkt, nicht erst
+                // beim naechsten Start: dort gibt es keinen Netzzugriff
+                // mehr, und die Seite "Was ist neu" soll auch dann
+                // dastehen, wenn GitHub gerade nicht erreichbar ist
+                // (siehe Core.Updates.WasIstNeu).
+                MerkeNeuerungen(entscheidung.Release!);
+
                 BandText = UpdateText.Bereitgelegt(neueVersion);
                 NeustartMoeglich = true;
                 SeiteAufrufbar = _seitenAdresse is not null;
@@ -214,6 +221,31 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
         catch (Exception ex)
         {
             AppLog.Current.Exception("Beim Merken der letzten Aktualisierungssuche", ex);
+        }
+    }
+
+    /// <summary>
+    /// Legt den Beschreibungstext der bereitgelegten Fassung ab. Wie beim
+    /// Zeitpunkt oben gilt: das ist Beiwerk. Laesst es sich nicht
+    /// schreiben, unterbleibt spaeter nur die Seite "Was ist neu" - die
+    /// Aktualisierung selbst haengt daran nicht.
+    /// </summary>
+    private void MerkeNeuerungen(ReleaseInfo release)
+    {
+        try
+        {
+            _einstellungen.Save(_einstellungen.Load() with
+            {
+                PendingReleaseNotesVersion = release.TagName,
+                PendingReleaseNotes = release.Body,
+            });
+
+            AppLog.Current.Info(LogEvents.UpdateNeuerungenGemerkt(
+                release.TagName, release.Body?.Length ?? 0));
+        }
+        catch (Exception ex)
+        {
+            AppLog.Current.Exception("Beim Merken der Neuerungen", ex);
         }
     }
 

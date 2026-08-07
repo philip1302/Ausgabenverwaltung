@@ -843,8 +843,36 @@ vorhanden", „Keine offenen Posten", leere Ausgabenliste): Satz plus der
 Knopf, der den Zustand auflöst. Die Datensicherung macht das an einer
 Stelle schon vor.
 
-### [ ] 20. „Was ist neu" nach einem Update
+### [x] 20. „Was ist neu" nach einem Update
+
+**Erledigt in:** Nach einer Aktualisierung zeigt die Anwendung, was neu ist
+
 `AktualisierungViewModel` weiß, wann eine neue Fassung übernommen wurde.
 Beim ersten Start danach eine Seite mit den Änderungen zeigen, gespeist
 aus dem Text des GitHub-Releases, den `GitHubReleases` ohnehin schon
 liest.
+
+**Abweichungen von der Vorgabe, bewusst:**
+
+- `GitHubReleases` las den Beschreibungstext bisher **nicht** — der
+  Kommentar am Kopf von `ReleaseInfo` schloss ihn ausdrücklich aus. Er
+  wird jetzt als `Body` mitgenommen (ausgewertet wird er erst dort, wo er
+  gezeigt wird).
+- Der Text wird **vor** dem Neustart in den Einstellungen abgelegt
+  (`PendingReleaseNotes`) und **nach** dem Neustart gezeigt. So braucht
+  der erste Start nach dem Austausch keinen Netzzugriff, und die Seite
+  steht auch bei nicht erreichbarem GitHub sofort da.
+- **Kein Markdown-Darsteller**: gezeigt werden Überschrift,
+  Aufzählungspunkt und Absatz. Der Anhang „by @… in https://…", den
+  `--generate-notes` an jede Zeile hängt, fällt weg — er sagt dem
+  Anwender nichts.
+- Die Seite bleibt in drei Fällen bewusst **aus**: bei der ersten
+  Ausführung überhaupt, bei einer von Hand ausgetauschten Programmdatei
+  (kein Text vorhanden) und bei einem Text, der zu einer anderen Fassung
+  gehört als der laufenden. Eine leere Seite „Was ist neu" ist schlechter
+  als keine.
+- Die gesehene Fassung wird **sofort** gemerkt, nicht erst beim
+  Wegklicken — sonst ginge die Seite nach einem Absturz erneut auf.
+- Ein eigener Bereich ohne Sidebar-Platz (`NavigationGruppe.Keine`, wie
+  „Darstellung"), kein Dialogfenster: eine Seite lässt sich rollen und in
+  der eingestellten Schriftgröße lesen, ohne den Start aufzuhalten.

@@ -280,6 +280,15 @@ public partial class App : Application
         services.AddSingleton<StartupNoticeViewModel>();
         services.AddSingleton<AktualisierungViewModel>();
 
+        // Fragt beim Erzeugen einmal nach, ob seit dem letzten Start eine
+        // neue Fassung uebernommen wurde - deshalb vor MainViewModel, das
+        // die Antwort fuer die Bereichsauswahl braucht. Die laufende
+        // Version kommt von hier und wird nicht dort gelesen, damit sich
+        // der Ablauf pruefen laesst.
+        services.AddSingleton(provider => new WasIstNeuViewModel(
+            provider.GetRequiredService<AppSettingsStore>(),
+            GlobaleFehlerbehandlung.Version));
+
         // Eigene Instanz statt WeakReferenceMessenger.Default: die
         // Bereichs-ViewModels registrieren sich darauf fuer
         // BuchungenGeaendertNachricht (Regel 14), und eine eigene Instanz

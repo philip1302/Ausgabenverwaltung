@@ -19,6 +19,7 @@ public class GitHubReleasesTests
             "draft": false,
             "prerelease": false,
             "html_url": "https://github.com/philip1302/Ausgabenverwaltung/releases/tag/v1.1.0",
+            "body": "## What's Changed\n* Kacheln der Startseite fuehren in die Ausgabenliste by @philip1302 in https://github.com/philip1302/Ausgabenverwaltung/pull/11\n\n**Full Changelog**: https://github.com/philip1302/Ausgabenverwaltung/compare/v1.0.0...v1.1.0",
             "assets": [
               {
                 "name": "Ausgabenverwaltung-osx-arm64.tar.gz",
@@ -62,6 +63,32 @@ public class GitHubReleasesTests
         Assert.Equal(
             "https://github.com/philip1302/Ausgabenverwaltung/releases/tag/v1.1.0",
             releases[0].HtmlUrl);
+    }
+
+    /// <summary>
+    /// Der Beschreibungstext wird nur mitgenommen, nicht ausgewertet -
+    /// aufbereitet wird er erst dort, wo er gezeigt wird
+    /// (siehe <see cref="ReleaseNotes"/>).
+    /// </summary>
+    [Fact]
+    public void Der_Beschreibungstext_kommt_unveraendert_mit()
+    {
+        var releases = GitHubReleases.Lies(EchteAntwort);
+
+        Assert.StartsWith("## What's Changed", releases[0].Body, StringComparison.Ordinal);
+        Assert.Contains("by @philip1302", releases[0].Body!, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Eine Veroeffentlichung ohne Text ist kein Sonderfall, sondern
+    /// bedeutet schlicht: es gibt spaeter nichts zu zeigen.
+    /// </summary>
+    [Fact]
+    public void Ohne_Beschreibungstext_bleibt_das_Feld_leer()
+    {
+        var releases = GitHubReleases.Lies(EchteAntwort);
+
+        Assert.Null(releases[1].Body);
     }
 
     [Fact]

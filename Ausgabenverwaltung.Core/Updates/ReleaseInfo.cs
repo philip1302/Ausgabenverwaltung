@@ -3,8 +3,8 @@ namespace Ausgabenverwaltung.Core.Updates;
 /// <summary>
 /// Eine Veroeffentlichung, wie sie die GitHub-Schnittstelle beschreibt -
 /// heruntergebrochen auf das, was fuer die Entscheidung "aktualisieren
-/// oder nicht" gebraucht wird. Alles andere aus der Antwort (Autor,
-/// Beschreibungstext, Zeitpunkte) bleibt bewusst aussen vor.
+/// oder nicht" und fuer die Seite "Was ist neu" gebraucht wird. Alles
+/// andere aus der Antwort (Autor, Zeitpunkte) bleibt bewusst aussen vor.
 /// </summary>
 public sealed record ReleaseInfo
 {
@@ -18,6 +18,18 @@ public sealed record ReleaseInfo
     /// automatisch aktualisiert werden kann und nur ein Hinweis
     /// bleibt.</summary>
     public required string HtmlUrl { get; init; }
+
+    /// <summary>
+    /// Der Beschreibungstext der Veroeffentlichung, so wie GitHub ihn
+    /// liefert - Markdown, bei diesem Vorhaben aus
+    /// <c>gh release create --generate-notes</c> (siehe PUBLISH.md).
+    ///
+    /// Er spielt fuer die Entscheidung "aktualisieren oder nicht" keine
+    /// Rolle, sondern wird nach dem Austausch einmal als "Was ist neu"
+    /// gezeigt (<see cref="ReleaseNotes"/>, <see cref="WasIstNeu"/>).
+    /// <c>null</c>, wenn die Veroeffentlichung keinen Text traegt.
+    /// </summary>
+    public string? Body { get; init; }
 
     /// <summary>
     /// Die anhaengenden Dateien. Welche davon zur laufenden Plattform

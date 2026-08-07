@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+             x:Class="Ausgabenverwaltung.Views.WasIstNeuView"
+             x:DataType="vm:WasIstNeuViewModel">
+
+    <UserControl.Styles>
+        <!-- Eine Zwischenueberschrift aus dem Beschreibungstext bekommt
+             Luft nach oben, damit die Gruppen darunter zusammenbleiben.
+             Keine feste Schriftgroesse - die Klasse "ueberschrift" aus
+             App.axaml haengt an der eingestellten Stufe (Regel 9). -->
+        <Style Selector="TextBlock.neuerung-ueberschrift">
+            <Setter Property="Margin" Value="0,12,0,2" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Margin="32,24">
+        <TextBlock DockPanel.Dock="Top" Classes="seitentitel"
+                   Text="{Binding Titel}" Margin="0,0,0,20" />
+
+        <!-- Der Weiter-Knopf steht fest unten und nicht am Ende der
+             Liste: eine lange Aufzaehlung soll den einzigen Weg von
+             dieser Seite herunter nicht aus dem Blick schieben. -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                    Spacing="8" Margin="0,16,0,0">
+            <Button Classes="primary"
+                    Content="Weiter zur Startseite"
+                    Command="{Binding WeiterCommand}" />
+        </StackPanel>
+
+        <ScrollViewer>
+            <StackPanel Spacing="16">
+                <Border Classes="banner hinweis">
+                    <TextBlock Text="{Binding Einleitung}" TextWrapping="Wrap" />
+                </Border>
+
+                <Border Classes="karte">
+                    <ItemsControl ItemsSource="{Binding Abschnitte}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:NeuerungZeile">
+                                <Grid ColumnDefinitions="Auto,*" Margin="0,2">
+                                    <!-- Das Aufzaehlungszeichen steht in
+                                         einer eigenen Spalte, damit
+                                         umgebrochener Text darunter
+                                         eingerueckt bleibt. -->
+                                    <TextBlock Grid.Column="0" Text="•"
+                                               IsVisible="{Binding IstPunkt}"
+                                               Margin="0,0,8,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Text}"
+                                               TextWrapping="Wrap"
+                                               Classes.ueberschrift="{Binding IstUeberschrift}"
+                                               Classes.neuerung-ueberschrift="{Binding IstUeberschrift}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>
