@@ -45,7 +45,17 @@ public class MeldungsGrundsaetzeTests
             Nimm($"Sicherung/{problem}", FileErrorText.ForBackup(problem));
             Nimm($"Ziel2/{problem}", FileErrorText.ForExternalBackup(problem, @"D:\Stick"));
             Nimm($"Zielwahl/{problem}", FileErrorText.ForBackupTargetChoice(problem));
+            Nimm($"Pruefung/{problem}", FileErrorText.ForBackupVerification(problem, "ausgaben-2026-08-07.zip"));
             Nimm($"Schreibfehler/{problem}", DatabaseErrorText.WriteFailed(problem));
+        }
+
+        Nimm("PruefungZuNeu", FileErrorText.ForBackupFromNewerVersion("ausgaben-2026-08-07.zip", 5, 4));
+
+        // ---- Zustand der Datensicherung ----
+        foreach (var stufe in Enum.GetValues<BackupHealthLevel>())
+        {
+            Nimm($"ZustandTitel/{stufe}", BackupHealthText.Ueberschrift(stufe));
+            Nimm($"Zustand/{stufe}", BackupHealthText.Erklaerung(stufe));
         }
 
         // ---- Datenbank ----
@@ -102,7 +112,7 @@ public class MeldungsGrundsaetzeTests
 
         // Ueberschriften duerfen und sollen kurz sein - sie benennen den
         // Fall, erklaeren tut ihn der Haupttext darunter.
-        if (name.StartsWith("StartTitel/", StringComparison.Ordinal))
+        if (IstUeberschrift(name))
         {
             return;
         }
@@ -136,7 +146,7 @@ public class MeldungsGrundsaetzeTests
     {
         // Ueberschriften sind absichtlich kurz und tragen die Aussage
         // nicht - sie sind hier ausgenommen.
-        if (name.StartsWith("StartTitel/", StringComparison.Ordinal) || text.Length < 120)
+        if (IstUeberschrift(name) || text.Length < 120)
         {
             return;
         }
@@ -222,6 +232,17 @@ public class MeldungsGrundsaetzeTests
     }
 
     // ================= Hilfsmittel =================
+
+    /// <summary>
+    /// Ueberschriften benennen einen Fall, sie erklaeren ihn nicht: der
+    /// Titel eines Startabbruchs ebenso wie die Ueberschrift der
+    /// Zustandskarte in der Datensicherung. An sie gilt die Mindestlaenge
+    /// nicht - der Text darunter traegt die Aussage, und dass ER etwas
+    /// ueber die Daten sagt, prueft dieselbe Testreihe.
+    /// </summary>
+    private static bool IstUeberschrift(string name)
+        => name.StartsWith("StartTitel/", StringComparison.Ordinal)
+           || name.StartsWith("ZustandTitel/", StringComparison.Ordinal);
 
     private static ErrorReport UnerwarteterBericht(Exception ausnahme)
         => UnexpectedErrorText.Describe("beim Aufbau der Ansicht", ausnahme, @"C:\Logs", "1.0.0-test");

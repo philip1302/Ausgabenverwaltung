@@ -27,9 +27,21 @@ public static class DatabaseHealth
     /// in den aufklappbaren Bereich, nicht in den Haupttext einer Meldung).
     /// </summary>
     public static string? QuickCheck(IDbConnection connection)
-    {
-        var findings = connection.Query<string>("PRAGMA quick_check").ToList();
+        => Beurteile(connection.Query<string>("PRAGMA quick_check").ToList());
 
+    /// <summary>
+    /// Die gruendliche Pruefung: zusaetzlich zu allem, was
+    /// <see cref="QuickCheck"/> findet, werden alle Indizes gegen ihre
+    /// Tabellen gehalten. Zu langsam fuer jeden Start, aber genau richtig,
+    /// wenn der Anwender EINE Sicherungsdatei ausdruecklich pruefen laesst -
+    /// dort zaehlt Gruendlichkeit, nicht Tempo.
+    /// </summary>
+    public static string? IntegrityCheck(IDbConnection connection)
+        => Beurteile(connection.Query<string>("PRAGMA integrity_check").ToList());
+
+    // Beide Pragmas antworten in derselben Form, deshalb eine Auswertung.
+    private static string? Beurteile(List<string> findings)
+    {
         // Ist alles in Ordnung, liefert SQLite genau eine Zeile mit "ok".
         if (findings.Count == 1
             && string.Equals(findings[0], "ok", StringComparison.OrdinalIgnoreCase))

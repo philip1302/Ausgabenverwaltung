@@ -468,6 +468,55 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentFarbe}" />
         </Style>
 
+        <!-- ==== Zustandskarte + Statuspunkt ====
+             Eine Karte, die EINEN Gesamtzustand traegt (Datensicherung;
+             spaeter ebenso fuer andere Bereiche, die eine einzige Frage
+             beantworten). Sie sieht aus wie Border.karte, faerbt aber
+             Flaeche und Rahmen nach dem Zustand.
+
+             Die Farbe ist immer ein ZUSATZ zum Text, nie sein Ersatz
+             (Regel 10 sinngemaess): neben dem Punkt steht in jedem Fall
+             eine Ueberschrift, die dasselbe in Worten sagt. -->
+        <Style Selector="Border.zustandskarte">
+            <Setter Property="Background" Value="{DynamicResource SurfaceFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="20" />
+        </Style>
+        <Style Selector="Border.zustandskarte.gut">
+            <Setter Property="Background" Value="{DynamicResource ErfolgFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ErfolgRahmen}" />
+        </Style>
+        <Style Selector="Border.zustandskarte.eingeschraenkt">
+            <Setter Property="Background" Value="{DynamicResource HinweisFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HinweisRahmen}" />
+        </Style>
+        <Style Selector="Border.zustandskarte.schlecht">
+            <Setter Property="Background" Value="{DynamicResource WarnungFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource WarnungRahmen}" />
+        </Style>
+
+        <!-- Der Punkt selbst. Groesse in Pixeln ist hier ausdruecklich in
+             Ordnung: er traegt keinen Text und muss deshalb mit der
+             Schriftstufe nicht mitwachsen (Regel 9 betrifft Layout, das
+             Text abschneidet). -->
+        <Style Selector="Ellipse.statuspunkt">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource TextTertiaerFarbe}" />
+        </Style>
+        <Style Selector="Ellipse.statuspunkt.gut">
+            <Setter Property="Fill" Value="{DynamicResource ErfolgText}" />
+        </Style>
+        <Style Selector="Ellipse.statuspunkt.eingeschraenkt">
+            <Setter Property="Fill" Value="{DynamicResource HinweisText}" />
+        </Style>
+        <Style Selector="Ellipse.statuspunkt.schlecht">
+            <Setter Property="Fill" Value="{DynamicResource WarnungText}" />
+        </Style>
+
         <!-- ==== Badge ==== -->
         <Style Selector="Border.badge">
             <Setter Property="CornerRadius" Value="999" />

@@ -423,7 +423,9 @@ gesichert, und Regel 6 in CLAUDE.md ist entsprechend ergänzt.
 
 ## Batch 2 — Datensicherung (Punkt 6)
 
-### [ ] 6. Bereich „Datensicherung" neu bauen
+### [x] 6. Bereich „Datensicherung" neu bauen
+
+**Erledigt in:** Datensicherung zeigt einen Zustand, Sicherungen lassen sich pruefen
 
 **Ziel:** Die Seite beantwortet auf einen Blick eine einzige Frage — „bin
 ich abgesichert?" — und stellt alles andere dahinter.

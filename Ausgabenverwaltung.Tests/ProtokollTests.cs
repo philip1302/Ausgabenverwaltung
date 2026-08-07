@@ -221,6 +221,24 @@ public class ProtokollTests : IDisposable
     }
 
     [Fact]
+    public void Die_Pruefung_einer_Sicherung_nennt_Dateiname_und_Ergebnis_und_sonst_nichts()
+    {
+        var lesbar = LogEvents.BackupVerified("ausgaben_2026-08-07_0814.zip", readable: true, 4);
+
+        Assert.Contains("ausgaben_2026-08-07_0814.zip", lesbar);
+        Assert.Contains("4", lesbar);
+
+        // Die gezaehlten Buchungen bleiben draussen - sie gehoeren zu
+        // nichts, was das Protokoll beantworten muesste.
+        Assert.DoesNotContain("Buchung", lesbar);
+        Assert.DoesNotContain("€", lesbar);
+
+        var unlesbar = LogEvents.BackupVerified("kaputt.zip", readable: false, null);
+
+        Assert.Contains("NICHT lesbar", unlesbar);
+    }
+
+    [Fact]
     public void Der_Programmstart_nennt_Version_und_Datenbankpfad()
     {
         // Beides ausdruecklich gewollt: ohne den Pfad laesst sich nicht

@@ -67,6 +67,17 @@ public static class LogEvents
     }
 
     /// <summary>
+    /// Die vom Anwender ausgeloeste Pruefung einer Sicherungsdatei. Der
+    /// Dateiname ist ein reiner Zeitstempel und darf mit (Regel 11), die
+    /// gezaehlten Buchungen bleiben draussen - eine Anzahl sagt zwar
+    /// nichts ueber Betraege, gehoert hier aber auch zu nichts.
+    /// </summary>
+    public static string BackupVerified(string fileName, bool readable, int? schemaVersion)
+        => readable
+            ? $"Sicherung geprueft: {fileName} ist lesbar, Schema-Version {schemaVersion}."
+            : $"Sicherung geprueft: {fileName} ist NICHT lesbar.";
+
+    /// <summary>
     /// Erzeugung wiederkehrender Buchungen. Nur die Anzahl - Titel,
     /// Betrag und Bemerkung der erzeugten Buchungen bleiben draussen.
     /// </summary>

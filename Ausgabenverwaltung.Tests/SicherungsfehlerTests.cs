@@ -104,11 +104,18 @@ public class SicherungsfehlerTests : IDisposable
 
         var vm = new DatensicherungViewModel(dienst, einstellungen, startergebnis);
 
-        Assert.True(vm.Ziel1FehlerSichtbar);
-        Assert.Contains("Datensicherung konnte nicht angelegt werden", vm.Ziel1FehlerText);
+        // Der Fehlertext steht seit dem Umbau nicht mehr in einem eigenen
+        // Kasten je Ziel, sondern in der Zeile des betroffenen Ziels -
+        // eine Bauform statt dreier. Der Inhalt ist derselbe geblieben.
+        Assert.True(vm.Ziel1.ProblemSichtbar);
+        Assert.Contains("Datensicherung konnte nicht angelegt werden", vm.Ziel1.ProblemText);
 
         // Und was das fuer die Daten bedeutet.
-        Assert.Contains("nicht betroffen und unverändert", vm.Ziel1FehlerText);
+        Assert.Contains("nicht betroffen und unverändert", vm.Ziel1.ProblemText);
+
+        // Der Gesamtzustand der Seite sagt dasselbe in einem Wort - ein
+        // gescheitertes Ziel 1 ist der ernste Fall.
+        Assert.Equal(BackupHealthLevel.NichtGesichert, vm.Zustand);
     }
 
     [Fact]
@@ -132,12 +139,16 @@ public class SicherungsfehlerTests : IDisposable
             Backup = kaputt.RunNow(DateTime.Now),
         });
 
-        Assert.True(vm.Ziel1FehlerSichtbar);
+        Assert.True(vm.Ziel1.ProblemSichtbar);
 
         vm.SicherungJetztCommand.Execute(null);
 
-        Assert.False(vm.Ziel1FehlerSichtbar);
+        Assert.False(vm.Ziel1.ProblemSichtbar);
         Assert.Contains("Sicherung erstellt", vm.MeldungText);
+
+        // Ziel 1 laeuft wieder, Ziel 2 ist nicht eingerichtet: gesichert
+        // wird, aber alles liegt auf einer Platte.
+        Assert.Equal(BackupHealthLevel.Eingeschraenkt, vm.Zustand);
     }
 
     [Fact]
@@ -191,8 +202,115 @@ public class SicherungsfehlerTests : IDisposable
         Assert.Contains("nicht als zweites Ziel übernommen", vm.MeldungText);
 
         // Nichts gespeichert: das Ziel bleibt uneingerichtet.
-        Assert.False(vm.Ziel2Eingerichtet);
+        Assert.False(vm.Ziel2.IstEingerichtet);
         Assert.Null(einstellungen.Load().ExternalFolderPath);
+    }
+
+    [Fact]
+    public void Ein_nicht_erreichbares_Ziel_2_erscheint_in_seiner_Zeile_und_nicht_als_Gesamtausfall()
+    {
+        using var connection = SqliteConnectionFactory.OpenConnection($"Data Source={DbPfad}");
+        DatabaseInitializer.Initialize(connection);
+
+        var einstellungen = new AppSettingsStore(EinstellungenPfad);
+        einstellungen.Save(einstellungen.Load() with
+        {
+            ExternalFolderPath = UnbeschreibbarerOrdner,
+        });
+
+        var dienst = new BackupService(
+            connection, Path.Combine(_tempDir.FullName, "Backups"), einstellungen);
+
+        var vm = new DatensicherungViewModel(dienst, einstellungen, new StartupResult
+        {
+            DatabaseFilePath = DbPfad,
+            IsFirstStart = false,
+            GeneratedExpenses = [],
+        });
+
+        vm.SicherungJetztCommand.Execute(null);
+
+        // Ziel 1 hat funktioniert - also kein Gesamtausfall, sondern der
+        // mittlere Zustand. Frueher stand oben trotzdem eine Warnung ueber
+        // das zweite Ziel, waehrend ein gescheitertes Ziel 1 dort gar
+        // nicht vorkam.
+        Assert.Equal(BackupHealthLevel.Eingeschraenkt, vm.Zustand);
+        Assert.False(vm.Ziel1.ProblemSichtbar);
+
+        Assert.True(vm.Ziel2.ProblemSichtbar);
+        Assert.Contains("nur die zweite Kopie", vm.Ziel2.ProblemText);
+    }
+
+    [Fact]
+    public void Das_Entfernen_des_zweiten_Ziels_laesst_sich_rueckgaengig_machen()
+    {
+        using var connection = SqliteConnectionFactory.OpenConnection($"Data Source={DbPfad}");
+        DatabaseInitializer.Initialize(connection);
+
+        var zweitesZiel = Path.Combine(_tempDir.FullName, "Stick");
+        Directory.CreateDirectory(zweitesZiel);
+
+        var einstellungen = new AppSettingsStore(EinstellungenPfad);
+        var dienst = new BackupService(
+            connection, Path.Combine(_tempDir.FullName, "Backups"), einstellungen);
+
+        var vm = new DatensicherungViewModel(dienst, einstellungen, new StartupResult
+        {
+            DatabaseFilePath = DbPfad,
+            IsFirstStart = false,
+            GeneratedExpenses = [],
+        });
+
+        vm.SetzeZweitesZiel(zweitesZiel);
+        vm.SicherungJetztCommand.Execute(null);
+
+        var zeitstempel = einstellungen.Load().LastExternalBackupUtc;
+        Assert.NotNull(zeitstempel);
+
+        vm.ZweitesZielEntfernenCommand.Execute(null);
+
+        Assert.False(vm.Ziel2.IstEingerichtet);
+        Assert.True(vm.RueckgaengigSichtbar);
+        Assert.Null(einstellungen.Load().ExternalFolderPath);
+
+        vm.ZweitesZielWiederherstellenCommand.Execute(null);
+
+        // Pfad UND Zeitstempel kommen zurueck: der Pfad allein liesse das
+        // Ziel als "noch nie beschrieben" dastehen.
+        Assert.True(vm.Ziel2.IstEingerichtet);
+        Assert.False(vm.RueckgaengigSichtbar);
+        Assert.Equal(zweitesZiel, einstellungen.Load().ExternalFolderPath);
+        Assert.Equal(zeitstempel, einstellungen.Load().LastExternalBackupUtc);
+    }
+
+    [Fact]
+    public void Eine_gepruefte_Sicherung_traegt_ihr_Ergebnis_an_der_Zeile()
+    {
+        using var connection = SqliteConnectionFactory.OpenConnection($"Data Source={DbPfad}");
+        DatabaseInitializer.Initialize(connection);
+
+        var einstellungen = new AppSettingsStore(EinstellungenPfad);
+        var dienst = new BackupService(
+            connection, Path.Combine(_tempDir.FullName, "Backups"), einstellungen);
+
+        var vm = new DatensicherungViewModel(dienst, einstellungen, new StartupResult
+        {
+            DatabaseFilePath = DbPfad,
+            IsFirstStart = false,
+            GeneratedExpenses = [],
+        });
+
+        vm.SicherungJetztCommand.Execute(null);
+
+        var zeile = Assert.Single(vm.Sicherungen);
+        Assert.Null(zeile.PruefungText);
+
+        vm.SicherungPruefenCommand.Execute(zeile);
+
+        Assert.False(zeile.PruefungIstFehler);
+        Assert.Contains("geprüft", zeile.PruefungText);
+        Assert.Contains($"Schema {DatabaseInitializer.ExpectedSchemaVersion}", zeile.PruefungText);
+        Assert.False(vm.MeldungIstFehler);
     }
 
     // ================= Einordnung der Ursachen =================

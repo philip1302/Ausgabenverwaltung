@@ -9,10 +9,22 @@
              x:Name="Wurzel"
              x:DataType="vm:DatensicherungViewModel">
 
-    <!-- Spaltenraster "*,16,150,16,100" gilt fuer Kopfzeile UND Zeilen:
-         Dateiname, Datum, Groesse. Dazwischen feste Gutter-Spalten
-         (ungerade Indizes), damit die Spaltengrenzen exakt aufeinander
-         fallen - dasselbe Muster wie in VorlagenView und PersonenView.
+    <!-- Aufbau der Seite: Zustand zuerst, EINE Aussage.
+         ┌──────────────────────────────────────────────┐
+         │ ●  <Überschrift>                             │  aus BackupHealth
+         │    <Zeitangabe über beide Ziele>             │  berechnet, nicht
+         │    <Was das bedeutet, was zu tun ist>        │  hier
+         │                          [ Jetzt sichern ]   │
+         └──────────────────────────────────────────────┘
+           Ziele          (Karte, je Ziel EINE Zeile)
+           Sicherungen    (Karte, je Zeile ein „Prüfen“)
+           ▸ Hilfe        (Expander, im Normalfall zu)
+
+         Vorher trugen Banner, Meldungsband, zwei Statustexte und zwei
+         verschieden gebaute Fehlerkaesten Teilaussagen nebeneinander.
+         Jetzt gibt es genau eine Zustandskarte, eine Bauform je Ziel und
+         genau EINEN Meldungsweg.
+
          Sicherungen sind hoechstens ein paar Dutzend, deshalb bewusst
          ScrollViewer + ItemsControl statt einer virtualisierenden ListBox. -->
     <UserControl.Styles>
@@ -20,65 +32,60 @@
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Margin" Value="0,0,0,6" />
         </Style>
-        <Style Selector="TextBlock.pfad">
-            <Setter Property="FontFamily" Value="Consolas, Courier New, monospace" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
         <!-- Farben bewusst hier und nicht als Attribut am Element: ein
              direkt gesetzter Wert schlaegt jeden Style, die Umschaltung
-             auf .fehler bzw. .veraltet griffe dann nie. -->
-        <Style Selector="Border.meldung">
-            <Setter Property="Background" Value="{DynamicResource ErfolgFlaeche}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource ErfolgRahmen}" />
-        </Style>
-        <Style Selector="Border.meldung.fehler">
-            <Setter Property="Background" Value="{DynamicResource WarnungFlaeche}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource WarnungRahmen}" />
-        </Style>
-
-        <!-- "Dezent hervorheben" bei laenger zurueckliegender externer
-             Sicherung: derselbe Text, nur nicht mehr in Grau. -->
-        <Style Selector="TextBlock.zielstatus">
+             auf .fehler griffe dann nie. Aus demselben Grund haben die
+             beiden frueheren Inline-Fehlerkaesten dieser Seite keine
+             Nachfolger - ihr Inhalt steht jetzt in der Zielzeile. -->
+        <Style Selector="TextBlock.zielzeit">
             <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
         </Style>
-        <Style Selector="TextBlock.zielstatus.veraltet">
+        <Style Selector="TextBlock.pruefmerkmal">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="Foreground" Value="{DynamicResource ErfolgText}" />
+        </Style>
+        <Style Selector="TextBlock.pruefmerkmal.fehler">
             <Setter Property="Foreground" Value="{DynamicResource WarnungText}" />
-            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
     </UserControl.Styles>
 
     <DockPanel>
-        <!-- ============ Status der externen Sicherung ============
-             Ganz oben als Banner statt einer separaten Textzeile
-             (UI/UX-Redesign, Abschnitt 5.8): die wichtigste Frage der
-             Seite ("bin ich gerade abgesichert?") faellt so zuerst auf. -->
-        <Border DockPanel.Dock="Top" Classes="banner" Margin="0,0,0,12"
-                Classes.erfolg="{Binding ExterneSicherungIstAktuell}"
-                Classes.warnung="{Binding ExterneSicherungIstVeraltet}"
-                Classes.hinweis="{Binding ExterneSicherungFehlt}">
-            <StackPanel Spacing="2">
-                <TextBlock FontWeight="SemiBold" Text="Externe Sicherung aktuell" IsVisible="{Binding ExterneSicherungIstAktuell}" />
-                <TextBlock FontWeight="SemiBold" Text="Externe Sicherung veraltet" IsVisible="{Binding ExterneSicherungIstVeraltet}" />
-                <TextBlock FontWeight="SemiBold" Text="Kein zweites Sicherungsziel" IsVisible="{Binding ExterneSicherungFehlt}" />
-                <TextBlock Text="{Binding ExterneSicherungBannerText}" TextWrapping="Wrap" />
-            </StackPanel>
+        <!-- ============ Zustand ============
+             Die einzige Statusaussage der Seite. Der Punkt ist Zusatz zum
+             Text, nicht sein Ersatz - die Ueberschrift daneben sagt
+             dasselbe in Worten. -->
+        <Border DockPanel.Dock="Top" Classes="zustandskarte" Margin="0,0,0,12"
+                Classes.gut="{Binding ZustandGut}"
+                Classes.eingeschraenkt="{Binding ZustandEingeschraenkt}"
+                Classes.schlecht="{Binding ZustandSchlecht}">
+            <Grid ColumnDefinitions="Auto,12,*,16,Auto">
+                <Ellipse Grid.Column="0" Classes="statuspunkt"
+                         Classes.gut="{Binding ZustandGut}"
+                         Classes.eingeschraenkt="{Binding ZustandEingeschraenkt}"
+                         Classes.schlecht="{Binding ZustandSchlecht}"
+                         VerticalAlignment="Top" Margin="0,6,0,0" />
+
+                <StackPanel Grid.Column="2" Spacing="4">
+                    <TextBlock Text="{Binding ZustandUeberschrift}"
+                               FontWeight="Bold"
+                               FontSize="{DynamicResource SchriftUeberschrift}"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ZustandZeitangabe}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ZustandText}" TextWrapping="Wrap"
+                               Margin="0,4,0,0" />
+                </StackPanel>
+
+                <Button Grid.Column="4" Classes="primary" Content="Jetzt sichern"
+                        VerticalAlignment="Top"
+                        Command="{Binding SicherungJetztCommand}"
+                        ToolTip.Tip="Sichert sofort, unabhängig davon, ob heute schon gesichert wurde." />
+            </Grid>
         </Border>
 
-        <!-- ============ Werkzeugleiste ============ -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
-                    Margin="0,0,0,8">
-            <Button Classes="primary" Content="Sicherung jetzt"
-                    Command="{Binding SicherungJetztCommand}"
-                    ToolTip.Tip="Sichert sofort, unabhängig davon, ob heute schon gesichert wurde." />
-            <Button Classes="secondary" Content="Sicherungsordner öffnen"
-                    Click="SicherungsordnerOeffnen_Click" />
-            <Button Classes="secondary" Content="Protokollordner öffnen"
-                    IsVisible="{Binding ProtokollordnerVerfuegbar}"
-                    Click="ProtokollordnerOeffnen_Click"
-                    ToolTip.Tip="Enthält das Protokoll der letzten 30 Tage — Programmstarts, Sicherungen, Fehler. Es enthält keine Beträge, Bemerkungen oder Namen und lässt sich deshalb weitergeben." />
-        </StackPanel>
-
-        <!-- ============ Band: Meldung ============ -->
+        <!-- ============ Band: Meldung ============
+             Der EINZIGE Meldungsweg. Was dauerhaft gilt, steht in der
+             Zustandskarte bzw. der Zielzeile; hier steht nur, was gerade
+             auf eine Handlung hin passiert ist. -->
         <Border DockPanel.Dock="Top"
                 IsVisible="{Binding MeldungSichtbar}"
                 Classes="banner"
@@ -93,113 +100,150 @@
             </Grid>
         </Border>
 
+        <!-- ============ Band: Rueckgaengig ============
+             Reibung nach Schadensausmass: das Entfernen des zweiten Ziels
+             loescht nichts und ist umkehrbar, ein Bestaetigungsdialog
+             waere zu viel. Das Band bleibt fuer die Dauer der Sitzung. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding RueckgaengigSichtbar}"
+                Classes="banner hinweis"
+                Margin="0,0,0,8">
+            <Grid ColumnDefinitions="*,Auto,8,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding RueckgaengigText}"
+                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="secondary" Content="Rückgängig"
+                        Command="{Binding ZweitesZielWiederherstellenCommand}" />
+                <Button Grid.Column="3" Classes="ghost" Content="Schliessen"
+                        Command="{Binding RueckgaengigSchliessenCommand}" />
+            </Grid>
+        </Border>
+
         <ScrollViewer>
             <StackPanel Spacing="16">
 
-                <!-- ============ Ziel 1 ============
-                     Die dauerhafte Erklaerung dazu ("laeuft immer, braucht
-                     keine Einrichtung") steht nicht mehr fest im Bild,
-                     sondern als Hilfetext an der Ueberschrift. -->
+                <!-- ============ Ziele ============
+                     Je Ziel EINE Zeile in derselben Bauform: Punkt, Name,
+                     Zeitpunkt, gekuerzter Pfad, Aktionen. Der volle Pfad
+                     steht im Hilfetext und hinter den Knoepfen - als
+                     Dauerinhalt in Monospace hat er die wichtigen Zeilen
+                     verdraengt. -->
                 <Border Classes="karte">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="Ziel 1 — dieser Rechner" Classes="abschnitt"
-                                   ToolTip.Tip="Läuft immer und braucht keine Einrichtung. Beim Programmstart wird höchstens einmal pro Tag gesichert." />
-                        <TextBlock Text="{Binding SicherungsordnerPfad}" Classes="pfad" />
-                        <TextBlock Text="{Binding Ziel1StatusText}" Foreground="{DynamicResource TextTertiaerFarbe}"
-                                   TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBlock Text="Ziele" Classes="abschnitt" />
 
-                        <!-- Eine beim Start gescheiterte Sicherung hält den
-                             Start nicht auf — sichtbar bleiben muss sie
-                             trotzdem, und zwar hier und dauerhaft, nicht
-                             nur als wegklickbares Band im Hauptfenster. -->
-                        <Border IsVisible="{Binding Ziel1FehlerSichtbar}"
-                                Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
-                                Padding="8" Margin="0,8,0,0">
-                            <TextBlock Text="{Binding Ziel1FehlerText}" TextWrapping="Wrap" />
-                        </Border>
-                    </StackPanel>
-                </Border>
-
-                <!-- ============ Ziel 2 ============ -->
-                <Border Classes="karte">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Ziel 2 — zusätzlicher Ordner (optional)" Classes="abschnitt"
-                                   ToolTip.Tip="Ein beliebiger Ordner — ob dahinter ein Cloud-Ordner, ein USB-Stick oder ein Netzlaufwerk steckt, spielt keine Rolle. Beim Auswählen wird einmal testweise geschrieben, damit fehlende Berechtigungen sofort auffallen. Ist das Ziel beim Start nicht erreichbar, läuft die Anwendung ohne Meldung weiter." />
-
-                        <TextBlock Text="{Binding Ziel2Pfad}" Classes="pfad"
-                                   IsVisible="{Binding Ziel2Eingerichtet}" />
-
-                        <!-- Der Alterungshinweis ist der einzige Ort, an dem
-                             ein dauerhaft nicht erreichbares zweites Ziel
-                             auffaellt - beim Start wird es still uebergangen. -->
-                        <TextBlock Text="{Binding Ziel2StatusText}"
-                                   Classes="zielstatus"
-                                   Classes.veraltet="{Binding Ziel2Veraltet}"
-                                   TextWrapping="Wrap" Margin="0,4,0,0" />
-
-                        <!-- Ein nicht erreichbares zweites Ziel: eigener
-                             Text, ruhiger im Ton — Ziel 1 hat ja
-                             funktioniert, es fehlt nur die Kopie. -->
-                        <Border IsVisible="{Binding Ziel2FehlerSichtbar}"
-                                Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
-                                Padding="8" Margin="0,8,0,0">
-                            <TextBlock Text="{Binding Ziel2FehlerText}" TextWrapping="Wrap" />
-                        </Border>
-
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                            <Button Classes="secondary" Content="Ordner wählen..." Click="ZweitesZielWaehlen_Click" />
-                            <Button Classes="ghost" Content="Ziel entfernen"
-                                    IsVisible="{Binding Ziel2Eingerichtet}"
-                                    Command="{Binding ZweitesZielEntfernenCommand}" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- ============ Wiederherstellen ============
-                     Die Anleitung steht nicht mehr dauerhaft im Bild,
-                     sondern eingeklappt - verfuegbar, wenn sie gebraucht
-                     wird, sonst nicht im Weg. -->
-                <Border Classes="karte">
-                    <StackPanel Spacing="6">
-                        <TextBlock Text="Wiederherstellen" Classes="abschnitt" />
-                        <Expander Header="Anleitung anzeigen">
-                            <TextBlock Text="{Binding WiederherstellungHinweis}" TextWrapping="Wrap" Margin="0,8,0,0" />
-                        </Expander>
-
-                        <TextBlock Text="Aktive Datenbank:" Margin="0,8,0,0" />
-                        <Grid ColumnDefinitions="*,8,Auto,8,Auto">
-                            <TextBlock Grid.Column="0" Text="{Binding DatenbankPfad}"
-                                       Classes="pfad" VerticalAlignment="Center" />
-                            <Button Grid.Column="2" Classes="secondary" Content="Pfad kopieren"
-                                    Click="DatenbankPfadKopieren_Click" />
-                            <!-- Der zweite Schritt der Anleitung oben ist
-                                 "Datei an den Ort der aktiven Datenbank
-                                 kopieren" - genau dorthin fuehrt dieser
-                                 Knopf, statt den Pfad von Hand nachzugehen.
-                                 Beschriftung bewusst ohne "Explorer": unter
-                                 macOS heisst dasselbe Finder. -->
-                            <Button Grid.Column="4" Classes="secondary" Content="Ordner öffnen"
-                                    ToolTip.Tip="Öffnet den Ordner der aktiven Datenbank im Dateimanager."
-                                    Click="DatenbankOrdnerOeffnen_Click" />
+                        <!-- Ziel 1 -->
+                        <Grid anzeige:Raster.Spalten="Auto,10,180,16,*,16,Auto"
+                              Margin="0,4">
+                            <Ellipse Grid.Column="0" Classes="statuspunkt"
+                                     Classes.gut="{Binding Ziel1.PunktGut}"
+                                     Classes.eingeschraenkt="{Binding Ziel1.PunktEingeschraenkt}"
+                                     Classes.schlecht="{Binding Ziel1.PunktSchlecht}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Ziel1.Name}"
+                                       Classes="tabellenzelle"
+                                       ToolTip.Tip="Läuft immer und braucht keine Einrichtung. Beim Programmstart wird höchstens einmal pro Tag gesichert." />
+                            <TextBlock Grid.Column="4" Text="{Binding Ziel1.ZeitpunktText}"
+                                       Classes="tabellenzelle zielzeit" />
+                            <!-- Der volle Pfad steckt hinter diesen beiden
+                                 Eintraegen und im Hilfetext - als
+                                 Dauerinhalt in Monospace hat er vorher
+                                 die wichtigen Zeilen verdraengt. -->
+                            <Button Grid.Column="6" Classes="ghost klein" Content="⋯"
+                                    HorizontalAlignment="Right"
+                                    ToolTip.Tip="Pfad kopieren, Ordner öffnen">
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuItem Header="Pfad kopieren"
+                                                  Click="Ziel1PfadKopieren_Click" />
+                                        <MenuItem Header="Ordner öffnen"
+                                                  Click="SicherungsordnerOeffnen_Click" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
                         </Grid>
+                        <TextBlock Text="{Binding Ziel1.PfadKurz}" Classes="zielzeit"
+                                   FontSize="{DynamicResource SchriftKlein}"
+                                   ToolTip.Tip="{Binding Ziel1.Pfad}"
+                                   Margin="22,0,0,4" />
+                        <Border IsVisible="{Binding Ziel1.ProblemSichtbar}"
+                                Classes="banner warnung" Margin="22,0,0,8">
+                            <TextBlock Text="{Binding Ziel1.ProblemText}" TextWrapping="Wrap" />
+                        </Border>
+
+                        <!-- Ziel 2 -->
+                        <Grid anzeige:Raster.Spalten="Auto,10,180,16,*,16,Auto"
+                              Margin="0,4">
+                            <Ellipse Grid.Column="0" Classes="statuspunkt"
+                                     Classes.gut="{Binding Ziel2.PunktGut}"
+                                     Classes.eingeschraenkt="{Binding Ziel2.PunktEingeschraenkt}"
+                                     Classes.schlecht="{Binding Ziel2.PunktSchlecht}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Ziel2.Name}"
+                                       Classes="tabellenzelle"
+                                       ToolTip.Tip="Ein beliebiger Ordner — ob dahinter ein Cloud-Ordner, ein USB-Stick oder ein Netzlaufwerk steckt, spielt keine Rolle. Beim Auswählen wird einmal testweise geschrieben, damit fehlende Berechtigungen sofort auffallen. Ist das Ziel beim Start nicht erreichbar, läuft die Anwendung ohne Meldung weiter." />
+                            <TextBlock Grid.Column="4" Text="{Binding Ziel2.ZeitpunktText}"
+                                       Classes="tabellenzelle zielzeit" />
+                            <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8">
+                                <Button Classes="secondary klein" Content="Ordner wählen..."
+                                        Click="ZweitesZielWaehlen_Click" />
+                                <Button Classes="ghost klein" Content="Entfernen"
+                                        IsVisible="{Binding Ziel2.IstEingerichtet}"
+                                        Command="{Binding ZweitesZielEntfernenCommand}" />
+                                <Button Classes="ghost klein" Content="⋯"
+                                        IsVisible="{Binding Ziel2.IstEingerichtet}"
+                                        ToolTip.Tip="Pfad kopieren, Ordner öffnen">
+                                    <Button.Flyout>
+                                        <MenuFlyout>
+                                            <MenuItem Header="Pfad kopieren"
+                                                      Click="Ziel2PfadKopieren_Click" />
+                                            <MenuItem Header="Ordner öffnen"
+                                                      Click="Ziel2OrdnerOeffnen_Click" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{Binding Ziel2.PfadKurz}" Classes="zielzeit"
+                                   FontSize="{DynamicResource SchriftKlein}"
+                                   IsVisible="{Binding Ziel2.PfadVorhanden}"
+                                   ToolTip.Tip="{Binding Ziel2.Pfad}"
+                                   Margin="22,0,0,4" />
+                        <Border IsVisible="{Binding Ziel2.ProblemSichtbar}"
+                                Classes="banner warnung" Margin="22,0,0,8">
+                            <TextBlock Text="{Binding Ziel2.ProblemText}" TextWrapping="Wrap" />
+                        </Border>
+
+                        <!-- Der eine Satz, der erklaert, warum das zweite
+                             Ziel ueberhaupt da ist - eingeklappt, weil er
+                             nach dem ersten Lesen nichts mehr beitraegt. -->
+                        <Expander Header="Kein zweites Ziel? Dann liegt alles auf einer Platte."
+                                  IsVisible="{Binding !Ziel2.IstEingerichtet}">
+                            <TextBlock TextWrapping="Wrap" Margin="0,8,0,0"
+                                       Text="Sicherungen auf demselben Rechner helfen gegen versehentliches Löschen und gegen eine beschädigte Datei — nicht aber gegen einen Defekt der Platte, einen Diebstahl oder einen Wasserschaden. Ein zweiter Ordner auf einem USB-Stick, einem Netzlaufwerk oder in einem Cloud-Ordner deckt genau diesen Fall ab." />
+                        </Expander>
                     </StackPanel>
                 </Border>
 
-                <!-- ============ Vorhandene Sicherungen ============ -->
+                <!-- ============ Vorhandene Sicherungen ============
+                     Neu: jede Zeile laesst sich pruefen. Eine Sicherung
+                     ist nur so viel wert wie ihre Wiederherstellbarkeit -
+                     eine Liste von Dateinamen belegt gar nichts. -->
                 <Border Classes="karte">
                     <StackPanel Spacing="4">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="Vorhandene Sicherungen" Classes="abschnitt"
+                            <TextBlock Grid.Column="0" Text="Sicherungen" Classes="abschnitt"
                                        ToolTip.Tip="Behalten werden die letzten zehn Sicherungen und zusätzlich, dauerhaft, die jeweils letzte Sicherung jedes Monats. Alles andere wird beim nächsten Lauf gelöscht." />
                             <TextBlock Grid.Column="1" Text="{Binding AnzahlText}"
                                        Foreground="{DynamicResource TextTertiaerFarbe}" VerticalAlignment="Center" />
                         </Grid>
 
-                        <TextBlock Text="Noch keine Sicherung vorhanden. „Sicherung jetzt“ erstellt die erste."
+                        <TextBlock Text="Noch keine Sicherung vorhanden. „Jetzt sichern“ erstellt die erste."
                                    IsVisible="{Binding KeineSicherungen}"
                                    Foreground="{DynamicResource TextTertiaerFarbe}" FontStyle="Italic" Margin="0,8" />
 
-                        <Grid anzeige:Raster.Spalten="*,16,150,16,100" Margin="0,8,0,0">
+                        <!-- Spaltenraster gilt fuer Kopfzeile UND Zeilen:
+                             Dateiname, Datum, Groesse, Aktion. Dazwischen
+                             feste Gutter-Spalten (ungerade Indizes), damit
+                             die Spaltengrenzen exakt aufeinander fallen. -->
+                        <Grid anzeige:Raster.Spalten="*,16,150,16,100,16,90" Margin="0,8,0,0">
                             <TextBlock Grid.Column="0" Text="Datei"   Classes="tabellenkopf" />
                             <TextBlock Grid.Column="2" Text="Datum"   Classes="tabellenkopf" />
                             <TextBlock Grid.Column="4" Text="Größe"   Classes="tabellenkopf zahl" />
@@ -209,21 +253,78 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:SicherungZeile">
                                     <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="0,6">
-                                        <Grid anzeige:Raster.Spalten="*,16,150,16,100">
-                                            <!-- Einzeilig und notfalls gekuerzt, damit ein
-                                                 langer Dateiname weder umbricht noch die
-                                                 beiden Spalten dahinter verschiebt. -->
-                                            <anzeige:Textzelle Grid.Column="0" Inhalt="{Binding Dateiname}"
-                                                               Classes="tabellenzelle" />
-                                            <TextBlock Grid.Column="2" Text="{Binding DatumText}"
-                                                       Classes="tabellenzelle" />
-                                            <TextBlock Grid.Column="4" Text="{Binding GroesseText}"
-                                                       Classes="tabellenzelle zahl" />
-                                        </Grid>
+                                        <StackPanel Spacing="2">
+                                            <Grid anzeige:Raster.Spalten="*,16,150,16,100,16,90">
+                                                <!-- Einzeilig und notfalls gekuerzt, damit ein
+                                                     langer Dateiname weder umbricht noch die
+                                                     Spalten dahinter verschiebt. -->
+                                                <anzeige:Textzelle Grid.Column="0" Inhalt="{Binding Dateiname}"
+                                                                   Classes="tabellenzelle" />
+                                                <TextBlock Grid.Column="2" Text="{Binding DatumText}"
+                                                           Classes="tabellenzelle" />
+                                                <TextBlock Grid.Column="4" Text="{Binding GroesseText}"
+                                                           Classes="tabellenzelle zahl" />
+                                                <Button Grid.Column="6" Classes="secondary klein" Content="Prüfen"
+                                                        HorizontalAlignment="Right"
+                                                        ToolTip.Tip="Entpackt die Sicherung, öffnet die Datenbank darin und zählt die Buchungen — ohne die aktiven Daten anzufassen."
+                                                        Command="{Binding #Wurzel.((vm:DatensicherungViewModel)DataContext).SicherungPruefenCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </Grid>
+                                            <TextBlock Text="{Binding PruefungText}"
+                                                       IsVisible="{Binding PruefungSichtbar}"
+                                                       Classes="pruefmerkmal"
+                                                       Classes.fehler="{Binding PruefungIstFehler}" />
+                                        </StackPanel>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ Hilfe ============
+                     Selten Gebrauchtes eingeklappt: die Anleitung zum
+                     Wiederherstellen und die Pfade. Beides wird im
+                     Normalfall nie gebraucht und belegte vorher als
+                     eigene Karte dauerhaft Platz. -->
+                <Border Classes="karte">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Hilfe" Classes="abschnitt" />
+
+                        <Expander Header="Wie stelle ich eine Sicherung wieder her?">
+                            <TextBlock Text="{Binding WiederherstellungHinweis}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                        </Expander>
+
+                        <Expander Header="Wo liegen meine Dateien?">
+                            <StackPanel Spacing="8" Margin="0,8,0,0">
+                                <TextBlock Text="Aktive Datenbank" FontWeight="SemiBold" />
+                                <Grid ColumnDefinitions="*,8,Auto,8,Auto">
+                                    <TextBlock Grid.Column="0" Text="{Binding DatenbankPfad}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Column="2" Classes="secondary klein" Content="Pfad kopieren"
+                                            Click="DatenbankPfadKopieren_Click" />
+                                    <!-- Geoeffnet wird der ORDNER, nicht die
+                                         Datei. Beschriftung bewusst ohne
+                                         "Explorer": unter macOS heisst
+                                         dasselbe Finder. -->
+                                    <Button Grid.Column="4" Classes="secondary klein" Content="Ordner öffnen"
+                                            ToolTip.Tip="Öffnet den Ordner der aktiven Datenbank im Dateimanager."
+                                            Click="DatenbankOrdnerOeffnen_Click" />
+                                </Grid>
+
+                                <TextBlock Text="Protokoll" FontWeight="SemiBold"
+                                           IsVisible="{Binding ProtokollordnerVerfuegbar}"
+                                           Margin="0,8,0,0" />
+                                <Grid ColumnDefinitions="*,8,Auto"
+                                      IsVisible="{Binding ProtokollordnerVerfuegbar}">
+                                    <TextBlock Grid.Column="0" Text="{Binding ProtokollordnerPfad}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Column="2" Classes="secondary klein" Content="Ordner öffnen"
+                                            Click="ProtokollordnerOeffnen_Click"
+                                            ToolTip.Tip="Enthält das Protokoll der letzten 30 Tage — Programmstarts, Sicherungen, Fehler. Es enthält keine Beträge, Bemerkungen oder Namen und lässt sich deshalb weitergeben." />
+                                </Grid>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </Border>
             </StackPanel>

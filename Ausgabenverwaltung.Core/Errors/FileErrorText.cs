@@ -133,6 +133,63 @@ public static class FileErrorText
     }
 
     /// <summary>
+    /// Die Pruefung einer vorhandenen Sicherungsdatei. Sie sagt nichts
+    /// ueber die aktiven Daten aus - das muss der Text ausdruecklich
+    /// klarstellen, sonst liest sich "nicht lesbar" wie ein Schaden an
+    /// der laufenden Datenbank.
+    /// </summary>
+    public static string ForBackupVerification(StorageProblem problem, string fileName)
+    {
+        var erklaerung = problem switch
+        {
+            StorageProblem.DatabaseCorrupt =>
+                "Die Datei lässt sich zwar öffnen, enthält aber keine vollständige, "
+                + "unbeschädigte Datenbank. Zum Zurückspielen taugt sie nicht.",
+
+            StorageProblem.PathNotFound =>
+                "Die Datei ist nicht mehr erreichbar. Möglicherweise wurde ein "
+                + "Wechseldatenträger abgezogen oder ein Netzlaufwerk getrennt.",
+
+            StorageProblem.AccessDenied =>
+                "Die Datei darf nicht gelesen werden.",
+
+            StorageProblem.FileInUse =>
+                "Die Datei ist von einem anderen Programm geöffnet. Bitte dieses "
+                + "schließen und die Prüfung noch einmal starten.",
+
+            StorageProblem.DiskFull =>
+                "Zum Prüfen wird die Sicherung kurz entpackt, und dafür ist auf dem "
+                + "Datenträger kein Platz mehr frei. Bitte Platz schaffen und die "
+                + "Prüfung noch einmal starten.",
+
+            _ =>
+                "Der Grund lässt sich nicht genauer bestimmen.",
+        };
+
+        return $"Die Sicherung „{fileName}“ konnte nicht geprüft werden. " + erklaerung + "\n\n"
+             + "Die erfassten Daten sind davon nicht betroffen und unverändert — geprüft "
+             + "wurde nur eine Kopie. Bitte prüfen Sie eine ältere Sicherung; findet sich "
+             + "keine brauchbare, hilft „Jetzt sichern“ zu einem frischen Stand.";
+    }
+
+    /// <summary>
+    /// Eine Sicherung, die zwar lesbar ist, aber aus einer neueren
+    /// Programmversion stammt. Kein Fehler an der Datei - sie taugt nur
+    /// nicht zum Zurueckspielen mit dieser Fassung, und das sieht man ihr
+    /// von aussen nicht an.
+    /// </summary>
+    public static string ForBackupFromNewerVersion(
+        string fileName, int schemaVersion, int expectedVersion)
+    {
+        return $"Die Sicherung „{fileName}“ ist lesbar, stammt aber aus einer neueren "
+             + $"Programmversion (Stand {schemaVersion} statt {expectedVersion}).\n\n"
+             + "Die erfassten Daten sind davon nicht betroffen und unverändert. "
+             + "Zurückspielen ließe sich diese Sicherung mit der laufenden Fassung "
+             + "aber nicht — dafür müsste erst die neuere Programmversion installiert "
+             + "werden.";
+    }
+
+    /// <summary>
     /// Die Schreibprobe beim Auswaehlen des zweiten Ziels. Der Anwender
     /// steht hier gerade im Ordnerdialog und kann sofort etwas anderes
     /// waehlen - der Text bleibt deshalb kurz.

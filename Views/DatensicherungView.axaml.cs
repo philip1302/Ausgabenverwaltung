@@ -92,6 +92,43 @@ public partial class DatensicherungView : UserControl
         }
     }
 
+    private void Ziel2OrdnerOeffnen_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DatensicherungViewModel viewModel)
+        {
+            return;
+        }
+
+        if (!Ordner.Oeffne(viewModel.Ziel2.Pfad))
+        {
+            viewModel.MeldeFehler(
+                "Der zusätzliche Sicherungsordner ließ sich nicht im Dateimanager "
+                + "öffnen. Möglicherweise ist der Datenträger gerade nicht "
+                + "verbunden.\n\nAn den Sicherungen ändert das nichts — sie liegen "
+                + "unverändert an ihrem Ort. Bitte rufen Sie diesen Pfad von Hand "
+                + $"auf:\n{viewModel.Ziel2.Pfad}");
+        }
+    }
+
+    // Die Pfade der beiden Ziele stehen nicht mehr dauerhaft im Bild,
+    // sondern hinter diesen Eintraegen. Beide Handler gehen durch
+    // dieselbe Kopierroutine wie der Datenbankpfad - eine Bauform.
+    private async void Ziel1PfadKopieren_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is DatensicherungViewModel viewModel)
+        {
+            await KopierePfad(viewModel, viewModel.SicherungsordnerPfad, "Der Sicherungsordner");
+        }
+    }
+
+    private async void Ziel2PfadKopieren_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is DatensicherungViewModel viewModel)
+        {
+            await KopierePfad(viewModel, viewModel.Ziel2.Pfad, "Der zusätzliche Ordner");
+        }
+    }
+
     private void ProtokollordnerOeffnen_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not DatensicherungViewModel viewModel)
@@ -132,7 +169,16 @@ public partial class DatensicherungView : UserControl
 
     private async void DatenbankPfadKopieren_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not DatensicherungViewModel viewModel)
+        if (DataContext is DatensicherungViewModel viewModel)
+        {
+            await KopierePfad(viewModel, viewModel.DatenbankPfad, "Der Pfad der aktiven Datenbank");
+        }
+    }
+
+    private async Task KopierePfad(
+        DatensicherungViewModel viewModel, string? pfad, string bezeichnung)
+    {
+        if (string.IsNullOrEmpty(pfad))
         {
             return;
         }
@@ -145,18 +191,18 @@ public partial class DatensicherungView : UserControl
 
         try
         {
-            await zwischenablage.SetTextAsync(viewModel.DatenbankPfad);
-            viewModel.MeldeErfolg("Der Pfad der aktiven Datenbank liegt in der Zwischenablage.");
+            await zwischenablage.SetTextAsync(pfad);
+            viewModel.MeldeErfolg($"{bezeichnung} liegt in der Zwischenablage.");
         }
         catch (Exception ex)
         {
-            AppLog.Current.Exception("Beim Kopieren des Datenbankpfads", ex);
+            AppLog.Current.Exception("Beim Kopieren eines Pfads", ex);
 
             viewModel.MeldeFehler(
                 "Der Pfad ließ sich nicht in die Zwischenablage legen. Möglicherweise "
                 + "hält ein anderes Programm die Zwischenablage gerade besetzt.\n\n"
                 + "Es wurde nichts verändert. Der Pfad steht hier zum Abtippen:\n"
-                + viewModel.DatenbankPfad);
+                + pfad);
         }
     }
 }
