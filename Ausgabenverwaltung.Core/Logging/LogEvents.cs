@@ -164,6 +164,25 @@ public static class LogEvents
     public static string ExpenseDuplicated(int sourceId, int newId)
         => $"Ausgabe dupliziert (Id {sourceId} -> Id {newId}).";
 
+    // Sammelaenderungen: Anzahl und Ziel-Id, keine Betraege und keine
+    // Namen (Regel 11). Die Anzahl ist der Punkt - sie erklaert spaeter,
+    // warum sich viele Zeilen auf einmal bewegt haben.
+    public static string ExpensesCategoryChanged(int count, int categoryId)
+        => $"{count} Ausgaben auf Kategorie Id {categoryId} umgebucht.";
+
+    public static string ExpensesPayerChanged(int count, int payerId)
+        => $"{count} Ausgaben auf Zahler Id {payerId} umgebucht.";
+
+    /// <summary>
+    /// <paramref name="count"/> zaehlt die tatsaechlich geaenderten
+    /// Zeilen - eigene Ausgaben bleiben unberuehrt (Regel 4) und koennen
+    /// die Zahl kleiner ausfallen lassen als die Auswahl war.
+    /// </summary>
+    public static string ExpensesSettled(int count, bool settled)
+        => settled
+            ? $"{count} Ausgaben als beglichen markiert."
+            : $"{count} Ausgaben wieder als offen markiert.";
+
     // ---------------- Offene Posten ----------------
     public static string OpenItemSettled(int id, bool settled)
         => settled

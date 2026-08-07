@@ -195,10 +195,25 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HatAuswahl))]
+    [NotifyPropertyChangedFor(nameof(AuswahlText))]
     [NotifyCanExecuteChangedFor(nameof(AusgewaehlteLoeschenCommand))]
     private int _anzahlAusgewaehlt;
 
     public bool HatAuswahl => AnzahlAusgewaehlt > 0;
+
+    /// <summary>Beschriftung der Aktionsleiste ueber der Tabelle.</summary>
+    public string AuswahlText => AnzahlAusgewaehlt == 1
+        ? "1 markiert"
+        : $"{AnzahlAusgewaehlt} markiert";
+
+    /// <summary>
+    /// Die waehlbaren Ziele der Sammelaktion "Kategorie ändern" - nur
+    /// Blattknoten, nicht archiviert, genau wie im Bearbeiten-Dialog. Eine
+    /// eigene Liste neben <see cref="KategorieWurzeln"/>: die dient dem
+    /// FILTER und enthaelt deshalb auch Ober- und Zwischenkategorien, auf
+    /// die sich eine Buchung gar nicht buchen laesst.
+    /// </summary>
+    public ObservableCollection<CategoryOption> SammelKategorien { get; } = new();
 
     // ---------------- Overlays ----------------
 
@@ -228,12 +243,12 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     public bool SchreibFehlerSichtbar => SchreibFehlerText is not null;
 
     /// <summary>
-    /// Derselbe Text als Band ueber der Tabelle - aber nur, solange die
-    /// Loesch-Nachfrage NICHT offen ist. Die zeigt ihn selbst, und zweimal
-    /// derselbe Satz auf einem Bildschirm liest sich wie zwei Fehler.
+    /// Derselbe Text als Band ueber der Tabelle - aber nur, solange keine
+    /// Nachfrage offen ist. Die zeigen ihn selbst, und zweimal derselbe
+    /// Satz auf einem Bildschirm liest sich wie zwei Fehler.
     /// </summary>
     public bool SchreibFehlerAlsBand =>
-        SchreibFehlerText is not null && LoeschAnfrageText is null;
+        SchreibFehlerText is not null && LoeschAnfrageText is null && SammelAnfrageText is null;
 
     [RelayCommand]
     private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
@@ -885,6 +900,170 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         LoeschAnfrageText = null;
     }
 
+    // ---------------- Sammelaktionen ----------------
+    //
+    // Was fuer das Loeschen laengst geht, geht auch fuer das Aendern.
+    // Gerechnet und geschrieben wird in Core (die drei ...Many-Methoden
+    // von ExpenseRepository, jede in einer Transaktion) - hier bleibt die
+    // Frage, ob vorher nachgefragt wird, und der Satz danach.
+
+    /// <summary>
+    /// Ab wie vielen betroffenen Zeilen vor der Sammelaktion nachgefragt
+    /// wird. Darunter gibt es keinen Dialog: drei Zeilen umzubuchen ist in
+    /// drei Klicks wieder geradegerueckt, und eine Nachfrage bei jedem
+    /// Handgriff wird ohnehin weggeklickt. Reibung nach Schadensausmass.
+    /// </summary>
+    private const int SammelBestaetigungSchwelle = 20;
+
+    /// <summary>
+    /// Eine angestossene, noch nicht ausgefuehrte Sammelaktion. Steht
+    /// zwischen Nachfrage und Bestaetigung.
+    /// </summary>
+    private sealed record Sammelaktion(
+        string Frage,
+        string Anlass,
+        Func<int> Ausfuehren,
+        Func<int, string> Erfolgstext);
+
+    private Sammelaktion? _offeneSammelaktion;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SammelAnfrageAktiv))]
+    [NotifyPropertyChangedFor(nameof(SchreibFehlerAlsBand))]
+    private string? _sammelAnfrageText;
+
+    public bool SammelAnfrageAktiv => SammelAnfrageText is not null;
+
+    [RelayCommand]
+    private void SammelKategorieSetzen(CategoryOption? ziel)
+    {
+        var ids = AusgewaehlteIds();
+        if (ziel is null || ids.Count == 0)
+        {
+            return;
+        }
+
+        StosseSammelaktionAn(new Sammelaktion(
+            $"{ZeilenText(ids.Count)} auf die Kategorie „{ziel.FullPath}“ umbuchen?",
+            "Beim Aendern der Kategorie mehrerer Ausgaben",
+            () => _expenseRepository.SetCategoryMany(ids, ziel.Id),
+            anzahl => $"{ZeilenText(anzahl)} auf „{ziel.FullPath}“ umgebucht."),
+            ids.Count);
+    }
+
+    [RelayCommand]
+    private void SammelZahlerSetzen(ZahlerOption? ziel)
+    {
+        var ids = AusgewaehlteIds();
+        if (ziel is null || ids.Count == 0)
+        {
+            return;
+        }
+
+        StosseSammelaktionAn(new Sammelaktion(
+            $"{ZeilenText(ids.Count)} auf den Zahler „{ziel.Bezeichnung}“ umbuchen?",
+            "Beim Aendern des Zahlers mehrerer Ausgaben",
+            () => _expenseRepository.SetPayerMany(ids, ziel.Id),
+            anzahl => $"{ZeilenText(anzahl)} auf „{ziel.Bezeichnung}“ umgebucht."),
+            ids.Count);
+    }
+
+    /// <summary>
+    /// Markiert die Auswahl als beglichen (mit dem heutigen Datum).
+    ///
+    /// Eigene Ausgaben bleiben dabei unberuehrt (Regel 4) - der
+    /// Erfolgstext sagt das ausdruecklich, wenn weniger Zeilen gewandert
+    /// sind als markiert waren. Ohne diesen Satz saehe es aus, als haette
+    /// die Aktion die Haelfte vergessen.
+    /// </summary>
+    [RelayCommand]
+    private void SammelAlsBeglichen()
+    {
+        var ids = AusgewaehlteIds();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        var markiert = ids.Count;
+
+        StosseSammelaktionAn(new Sammelaktion(
+            $"{ZeilenText(markiert)} als beglichen markieren?",
+            "Beim Markieren mehrerer Ausgaben als beglichen",
+            () => _expenseRepository.SetSettledMany(ids, heute),
+            anzahl => anzahl == markiert
+                ? $"{ZeilenText(anzahl)} als beglichen markiert."
+                : $"{ZeilenText(anzahl)} als beglichen markiert. "
+                  + $"{ZeilenText(markiert - anzahl)} blieben unverändert: "
+                  + "bei eigenen Ausgaben gibt es keinen Beglichen-Status."),
+            markiert);
+    }
+
+    [RelayCommand]
+    private void SammelBestaetigen()
+    {
+        if (_offeneSammelaktion is { } aktion)
+        {
+            FuehreSammelaktionAus(aktion);
+        }
+    }
+
+    [RelayCommand]
+    private void SammelAbbrechen()
+    {
+        _offeneSammelaktion = null;
+        SammelAnfrageText = null;
+    }
+
+    private void StosseSammelaktionAn(Sammelaktion aktion, int betroffene)
+    {
+        Bearbeiten = null;
+        ErfolgText = null;
+        SchreibFehlerText = null;
+
+        if (betroffene >= SammelBestaetigungSchwelle)
+        {
+            _offeneSammelaktion = aktion;
+            SammelAnfrageText = aktion.Frage;
+            return;
+        }
+
+        FuehreSammelaktionAus(aktion);
+    }
+
+    private void FuehreSammelaktionAus(Sammelaktion aktion)
+    {
+        var geaendert = 0;
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            aktion.Anlass, () => geaendert = aktion.Ausfuehren());
+
+        if (SchreibFehlerText is not null)
+        {
+            // Regel 13: die Nachfrage bleibt stehen, die Liste unveraendert
+            // darunter - der Versuch laesst sich gleich wiederholen, ohne
+            // die Auswahl neu zu treffen.
+            return;
+        }
+
+        _offeneSammelaktion = null;
+        SammelAnfrageText = null;
+        ErfolgText = aktion.Erfolgstext(geaendert);
+
+        // Betrag, Kategorie, Zahler oder Status mehrerer Buchungen haben
+        // sich geaendert - jede Liste und jede Auswertung zeigt sonst
+        // veraltete Werte (Regel 14). Die eigene Liste laedt darueber mit
+        // neu, die Auswahl faellt dabei weg.
+        _messenger.Send(new BuchungenGeaendertNachricht());
+    }
+
+    private IReadOnlyList<int> AusgewaehlteIds() =>
+        Zeilen.Where(zeile => zeile.IstAusgewaehlt).Select(zeile => zeile.Id).ToList();
+
+    private static string ZeilenText(int anzahl) =>
+        anzahl == 1 ? "1 Buchung" : $"{anzahl} Buchungen";
+
     // ---------------- Als Vorlage ----------------
 
     /// <summary>
@@ -1054,6 +1233,15 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         // Unterbaum, und beim Aufbau von oben nach unten wuerde es die
         // gerettete Auswahl der Kinder wieder ueberschreiben.
         StelleHaekchenWiederHer(KategorieWurzeln, angehakteKategorien);
+
+        // Die Ziele der Sammelaktion "Kategorie ändern": nur Blattknoten,
+        // nicht archiviert - genau die, auf die sich eine Buchung ueberhaupt
+        // buchen laesst.
+        SammelKategorien.Clear();
+        foreach (var option in _categoryRepository.GetSelectableLeaves())
+        {
+            SammelKategorien.Add(option);
+        }
 
         ZahlerOptionen.Clear();
         foreach (var person in _personRepository.GetAllActive())

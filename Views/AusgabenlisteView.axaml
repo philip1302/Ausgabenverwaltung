@@ -329,14 +329,78 @@
                  uebrigen Aktionen der Ansicht. -->
             <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto"
                   Margin="0,0,0,10">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
-                    <Button Classes="danger" Content="Ausgewählte löschen"
-                            Command="{Binding AusgewaehlteLoeschenCommand}" />
-                    <TextBlock Text="{Binding AnzahlAusgewaehlt, StringFormat='{}{0} ausgewählt'}"
-                               IsVisible="{Binding HatAuswahl}"
+                <!-- Die Aktionsleiste erscheint erst mit der Auswahl: ohne
+                     markierte Zeile hat keiner ihrer Knoepfe einen
+                     Gegenstand. Ein WrapPanel, damit die Reihe bei grosser
+                     Schriftstufe umbricht statt abzuschneiden (Regel 9). -->
+                <WrapPanel Grid.Column="0" Orientation="Horizontal"
+                           IsVisible="{Binding HatAuswahl}">
+                    <TextBlock Text="{Binding AuswahlText}"
                                Foreground="{DynamicResource TextTertiaerFarbe}"
-                               VerticalAlignment="Center" />
-                </StackPanel>
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0" />
+
+                    <Button Classes="secondary" Content="Kategorie ändern"
+                            Margin="0,0,8,4"
+                            ToolTip.Tip="Bucht alle markierten Buchungen auf eine andere Kategorie um">
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <ScrollViewer MaxHeight="{anzeige:Breite 320}">
+                                    <ItemsControl ItemsSource="{Binding SammelKategorien}"
+                                                  Width="{anzeige:Breite 320}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="categories:CategoryOption">
+                                                <Button Classes="ghost"
+                                                        HorizontalAlignment="Stretch"
+                                                        HorizontalContentAlignment="Left"
+                                                        Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).SammelKategorieSetzenCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <!-- Farbe als Zusatz zum Text (Regel 10). -->
+                                                        <Border Classes="farbpunkt"
+                                                                Background="{Binding Color, Converter={x:Static anzeige:FarbeZuPinsel.Instanz}}" />
+                                                        <TextBlock Text="{Binding FullPath}" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Button Classes="secondary" Content="Zahler ändern"
+                            Margin="0,0,8,4"
+                            ToolTip.Tip="Bucht alle markierten Buchungen auf einen anderen Zahler um">
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <ItemsControl ItemsSource="{Binding ZahlerOptionen}"
+                                              Width="{anzeige:Breite 220}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ZahlerOption">
+                                            <Button Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    Content="{Binding Bezeichnung}"
+                                                    Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).SammelZahlerSetzenCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Button Classes="secondary" Content="Als beglichen markieren"
+                            Margin="0,0,8,4"
+                            ToolTip.Tip="Trägt das heutige Datum ein. Eigene Ausgaben haben keinen Beglichen-Status und bleiben unverändert."
+                            Command="{Binding SammelAlsBeglichenCommand}" />
+
+                    <Button Classes="danger" Content="Löschen"
+                            Margin="0,0,0,4"
+                            Command="{Binding AusgewaehlteLoeschenCommand}" />
+                </WrapPanel>
 
                 <Button Grid.Column="2" Classes="ghost" Content="Filter zurücksetzen"
                         Command="{Binding FilterZuruecksetzenCommand}" />
@@ -569,6 +633,37 @@
                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                         <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
                         <Button Classes="danger" Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============ Overlay: Sammelaktion bestätigen ============
+             Erst ab 20 betroffenen Zeilen (siehe
+             AusgabenlisteViewModel.SammelBestaetigungSchwelle). Darunter
+             läuft die Aktion sofort - Reibung nach Schadensausmaß. -->
+        <Panel IsVisible="{Binding SammelAnfrageAktiv}" Background="#60000000">
+            <Border Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
+                    CornerRadius="8" Padding="16" Margin="24"
+                    MaxWidth="{anzeige:Breite 520}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding SammelAnfrageText}" TextWrapping="Wrap" />
+
+                    <!-- Ein Schreibfehler: die Nachfrage bleibt offen,
+                         damit sich der Versuch ohne neue Auswahl
+                         wiederholen lässt (Regel 13). -->
+                    <Border IsVisible="{Binding SchreibFehlerSichtbar}"
+                            Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
+                            Padding="8">
+                        <TextBlock Text="{Binding SchreibFehlerText}" TextWrapping="Wrap" />
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Classes="ghost" Content="Abbrechen"
+                                Command="{Binding SammelAbbrechenCommand}" />
+                        <Button Classes="primary" Content="Übernehmen"
+                                Command="{Binding SammelBestaetigenCommand}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

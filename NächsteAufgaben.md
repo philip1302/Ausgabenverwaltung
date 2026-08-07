@@ -757,9 +757,16 @@ jüngste Buchung gewinnt, keine Treffer → `null`.
 
 ---
 
-### [ ] 11. Sammelaktionen in der Ausgabenliste
+### [x] 11. Sammelaktionen in der Ausgabenliste
+
+**Erledigt in:** Markierte Buchungen lassen sich gemeinsam aendern
 
 **Ziel:** Was heute nur fürs Löschen geht, geht auch fürs Ändern.
+
+**Ergänzung:** Alle drei Methoden liefern die Zahl der tatsächlich
+geänderten Zeilen (nicht nur `SetSettledMany`) — die Aktionsleiste
+formuliert ihren Erfolgstext daraus und benennt ausdrücklich, wenn
+weniger Zeilen gewandert sind als markiert waren.
 
 **Vorgehen**
 

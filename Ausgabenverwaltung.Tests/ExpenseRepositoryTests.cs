@@ -313,4 +313,139 @@ public class ExpenseRepositoryTests : IDisposable
 
         Assert.True(_repository.SuggestFor("Gehalt")!.IsIncome);
     }
+
+    // ================= Sammelaenderungen =================
+
+    [Fact]
+    public void SetCategoryMany_bucht_nur_die_genannten_Zeilen_um()
+    {
+        var ziel = new CategoryRepository(_connection).Create("Freizeit", null).Id;
+
+        var eins = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        var zwei = _repository.Create(_categoryId, 2000, new DateOnly(2026, 3, 2), _selfId);
+        var kontrolle = _repository.Create(_categoryId, 3000, new DateOnly(2026, 3, 3), _selfId);
+
+        var geaendert = _repository.SetCategoryMany(new[] { eins.Id, zwei.Id }, ziel);
+
+        Assert.Equal(2, geaendert);
+        Assert.Equal(ziel, _repository.GetById(eins.Id)!.CategoryId);
+        Assert.Equal(ziel, _repository.GetById(zwei.Id)!.CategoryId);
+        Assert.Equal(_categoryId, _repository.GetById(kontrolle.Id)!.CategoryId);
+    }
+
+    [Fact]
+    public void SetCategoryMany_zieht_ModifiedUtc_mit()
+    {
+        var ziel = new CategoryRepository(_connection).Create("Freizeit", null).Id;
+        var eins = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        var vorher = _repository.GetById(eins.Id)!;
+
+        Thread.Sleep(1100); // der Zeitstempel ist auf die Sekunde genau (Regel 3)
+        _repository.SetCategoryMany(new[] { eins.Id }, ziel);
+
+        var nachher = _repository.GetById(eins.Id)!;
+        Assert.True(nachher.ModifiedUtc > vorher.ModifiedUtc);
+
+        // CreatedUtc bleibt unberuehrt - erfasst wurde die Buchung damals.
+        Assert.Equal(vorher.CreatedUtc, nachher.CreatedUtc);
+    }
+
+    [Fact]
+    public void SetPayerMany_bucht_nur_die_genannten_Zeilen_um()
+    {
+        var eins = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        var kontrolle = _repository.Create(_categoryId, 2000, new DateOnly(2026, 3, 2), _selfId);
+
+        var geaendert = _repository.SetPayerMany(new[] { eins.Id }, _otherId);
+
+        Assert.Equal(1, geaendert);
+        Assert.Equal(_otherId, _repository.GetById(eins.Id)!.PayerId);
+        Assert.Equal(_selfId, _repository.GetById(kontrolle.Id)!.PayerId);
+    }
+
+    [Fact]
+    public void SetPayerMany_laesst_ein_gesetztes_Beglichen_Datum_stehen()
+    {
+        // Es gehoert der einzelnen Buchung (Regel 4) - wandert sie auf die
+        // eigene Person, wird es nur nicht mehr ausgewertet.
+        var eins = _repository.Create(
+            _categoryId, 1000, new DateOnly(2026, 3, 1), _otherId,
+            settledDate: new DateOnly(2026, 3, 5));
+
+        _repository.SetPayerMany(new[] { eins.Id }, _selfId);
+
+        Assert.Equal(new DateOnly(2026, 3, 5), _repository.GetById(eins.Id)!.SettledDate);
+    }
+
+    [Fact]
+    public void SetSettledMany_setzt_das_Datum_bei_fremden_Zahlern()
+    {
+        var eins = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _otherId);
+        var kontrolle = _repository.Create(_categoryId, 2000, new DateOnly(2026, 3, 2), _otherId);
+
+        var geaendert = _repository.SetSettledMany(new[] { eins.Id }, new DateOnly(2026, 3, 10));
+
+        Assert.Equal(1, geaendert);
+        Assert.Equal(new DateOnly(2026, 3, 10), _repository.GetById(eins.Id)!.SettledDate);
+        Assert.Null(_repository.GetById(kontrolle.Id)!.SettledDate);
+    }
+
+    [Fact]
+    public void SetSettledMany_ueberspringt_eigene_Ausgaben()
+    {
+        // Regel 4: bei einer eigenen Ausgabe bedeutet SettledDate nichts.
+        // Die Zeile bleibt unberuehrt und zaehlt nicht mit.
+        var eigene = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        var fremde = _repository.Create(_categoryId, 2000, new DateOnly(2026, 3, 2), _otherId);
+
+        var geaendert = _repository.SetSettledMany(
+            new[] { eigene.Id, fremde.Id }, new DateOnly(2026, 3, 10));
+
+        Assert.Equal(1, geaendert);
+        Assert.Null(_repository.GetById(eigene.Id)!.SettledDate);
+        Assert.Equal(new DateOnly(2026, 3, 10), _repository.GetById(fremde.Id)!.SettledDate);
+    }
+
+    [Fact]
+    public void SetSettledMany_mit_NULL_macht_wieder_offen()
+    {
+        var eins = _repository.Create(
+            _categoryId, 1000, new DateOnly(2026, 3, 1), _otherId,
+            settledDate: new DateOnly(2026, 3, 5));
+
+        var geaendert = _repository.SetSettledMany(new[] { eins.Id }, null);
+
+        Assert.Equal(1, geaendert);
+        Assert.Null(_repository.GetById(eins.Id)!.SettledDate);
+    }
+
+    [Fact]
+    public void Eine_leere_Auswahl_veraendert_nichts()
+    {
+        var eins = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _otherId);
+        var leer = Array.Empty<int>();
+
+        Assert.Equal(0, _repository.SetCategoryMany(leer, _categoryId));
+        Assert.Equal(0, _repository.SetPayerMany(leer, _selfId));
+        Assert.Equal(0, _repository.SetSettledMany(leer, new DateOnly(2026, 3, 10)));
+
+        Assert.Equal(_otherId, _repository.GetById(eins.Id)!.PayerId);
+        Assert.Null(_repository.GetById(eins.Id)!.SettledDate);
+    }
+
+    [Fact]
+    public void Eine_gescheiterte_Sammelaenderung_laesst_nichts_halb_umgebucht()
+    {
+        // Ein Fremdschluessel auf eine Kategorie, die es nicht gibt - die
+        // Datenbank lehnt ab (PRAGMA foreign_keys = ON, Regel 2), und die
+        // Transaktion nimmt die ganze Anweisung zurueck.
+        var eins = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        var zwei = _repository.Create(_categoryId, 2000, new DateOnly(2026, 3, 2), _selfId);
+
+        Assert.ThrowsAny<Exception>(
+            () => _repository.SetCategoryMany(new[] { eins.Id, zwei.Id }, 4711));
+
+        Assert.Equal(_categoryId, _repository.GetById(eins.Id)!.CategoryId);
+        Assert.Equal(_categoryId, _repository.GetById(zwei.Id)!.CategoryId);
+    }
 }

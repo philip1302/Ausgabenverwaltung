@@ -144,6 +144,133 @@ public sealed class ExpenseRepository
         AppLog.Current.Info(LogEvents.ExpensesDeleted(ids.Count));
     }
 
+    // ---------------- Sammelaenderungen ----------------
+    //
+    // Was fuer das Loeschen laengst geht, geht auch fuer das Aendern:
+    // mehrere markierte Zeilen auf einmal umbuchen. Jede der drei
+    // Methoden laeuft in EINER Transaktion - eine halb umgebuchte Auswahl
+    // waere schlimmer als eine gar nicht umgebuchte, weil niemand ihr
+    // ansieht, wo sie aufgehoert hat.
+    //
+    // ModifiedUtc wird ueberall mitgezogen (wie beim Zusammenfuehren von
+    // Kategorien): die Buchungen haben sich geaendert, auch wenn Betrag
+    // und Datum gleich bleiben. CreatedUtc bleibt unberuehrt - erfasst
+    // wurden sie damals.
+    //
+    // Alle drei liefern die Zahl der TATSAECHLICH geaenderten Zeilen. Sie
+    // kann kleiner sein als die Auswahl (siehe SetSettledMany), und die
+    // Oberflaeche muss das sagen koennen.
+
+    /// <summary>
+    /// Bucht mehrere Ausgaben auf eine andere Kategorie um. Eine leere
+    /// Liste ist zulaessig und veraendert nichts.
+    /// </summary>
+    public int SetCategoryMany(IReadOnlyList<int> ids, int categoryId)
+    {
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        const string sql = """
+            UPDATE Expense
+            SET CategoryId  = @CategoryId,
+                ModifiedUtc = @NowUtcText
+            WHERE Id IN @Ids
+            """;
+
+        var geaendert = AendereInTransaktion(
+            sql, new { Ids = ids, CategoryId = categoryId, NowUtcText = JetztUtcText() });
+
+        AppLog.Current.Info(LogEvents.ExpensesCategoryChanged(geaendert, categoryId));
+
+        return geaendert;
+    }
+
+    /// <summary>
+    /// Bucht mehrere Ausgaben auf einen anderen Zahler um. Eine leere
+    /// Liste ist zulaessig und veraendert nichts.
+    ///
+    /// Ein gesetztes SettledDate bleibt dabei stehen. Es gehoert der
+    /// einzelnen Buchung (Regel 4) - wandert die Buchung auf die eigene
+    /// Person, wird es nur nicht mehr ausgewertet.
+    /// </summary>
+    public int SetPayerMany(IReadOnlyList<int> ids, int payerId)
+    {
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        const string sql = """
+            UPDATE Expense
+            SET PayerId     = @PayerId,
+                ModifiedUtc = @NowUtcText
+            WHERE Id IN @Ids
+            """;
+
+        var geaendert = AendereInTransaktion(
+            sql, new { Ids = ids, PayerId = payerId, NowUtcText = JetztUtcText() });
+
+        AppLog.Current.Info(LogEvents.ExpensesPayerChanged(geaendert, payerId));
+
+        return geaendert;
+    }
+
+    /// <summary>
+    /// Setzt oder loescht den Beglichen-Status mehrerer Ausgaben
+    /// (NULL = wieder offen).
+    ///
+    /// <b>Regel 4:</b> Bei einer eigenen Ausgabe bedeutet SettledDate
+    /// nichts und wird nie ausgewertet. Solche Zeilen bleiben deshalb
+    /// unberuehrt - sie werden im SQL uebersprungen, nicht vorher
+    /// aussortiert, damit die Entscheidung an genau einer Stelle steht.
+    /// Zurueck kommt die Zahl der tatsaechlich geaenderten Zeilen; sie ist
+    /// kleiner als die Auswahl, sobald eigene Ausgaben darin waren, und
+    /// die Oberflaeche sagt das dann auch.
+    /// </summary>
+    public int SetSettledMany(IReadOnlyList<int> ids, DateOnly? settledDate)
+    {
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        const string sql = """
+            UPDATE Expense
+            SET SettledDate = @SettledDateText,
+                ModifiedUtc = @NowUtcText
+            WHERE Id IN @Ids
+              AND PayerId IN (SELECT Id FROM Person WHERE IsSelf = 0)
+            """;
+
+        var geaendert = AendereInTransaktion(sql, new
+        {
+            Ids = ids,
+            SettledDateText = settledDate is DateOnly datum ? IsoDate.ToDateText(datum) : null,
+            NowUtcText = JetztUtcText(),
+        });
+
+        AppLog.Current.Info(LogEvents.ExpensesSettled(geaendert, settledDate is not null));
+
+        return geaendert;
+    }
+
+    // Der gemeinsame Rahmen der drei Sammelaenderungen. Dapper erweitert
+    // "IN @Ids" selbst zu einer Parameterliste; die Transaktion muss dabei
+    // mitgereicht werden, sonst laeuft die Anweisung ausserhalb.
+    private int AendereInTransaktion(string sql, object parameter)
+    {
+        using var transaction = _connection.BeginTransaction();
+
+        var geaendert = _connection.Execute(sql, parameter, transaction);
+        transaction.Commit();
+
+        return geaendert;
+    }
+
+    private static string JetztUtcText() => IsoDateTime.ToUtcText(DateTime.UtcNow);
+
     public Expense? GetById(int id)
     {
         const string sql = """
