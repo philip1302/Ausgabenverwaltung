@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+             x:Class="Ausgabenverwaltung.Views.TastenkuerzelView"
+             x:DataType="vm:TastenkuerzelViewModel">
+
+    <UserControl.Styles>
+        <!-- Die Tastenspalte hebt sich vom Fließtext ab, ohne eine feste
+             Größe zu setzen: gleiche Schriftstufe, nur fetter und in der
+             Akzentfarbe (Regel 9). -->
+        <Style Selector="TextBlock.taste">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentDezentText}" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Margin="32,24">
+        <TextBlock DockPanel.Dock="Top" Classes="seitentitel"
+                   Text="Tastenkürzel" Margin="0,0,0,20" />
+
+        <!-- Der Knopf steht fest unten und nicht am Ende der Liste: der
+             einzige Weg von dieser Seite herunter soll nicht aus dem Blick
+             geraten, wenn die Liste wächst. -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                    Spacing="8" Margin="0,16,0,0">
+            <Button Classes="primary" Content="Schließen"
+                    ToolTip.Tip="Zurück zu dem Bereich, aus dem die Übersicht aufgeschlagen wurde"
+                    Command="{Binding SchliessenCommand}" />
+        </StackPanel>
+
+        <ScrollViewer>
+            <StackPanel Spacing="16">
+                <ItemsControl ItemsSource="{Binding Gruppen}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TastenkuerzelGruppe">
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="{Binding Name}" Classes="ueberschrift"
+                                           Margin="0,0,0,6" />
+
+                                <Border Classes="karte">
+                                    <ItemsControl ItemsSource="{Binding Kuerzel}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="anzeige:Tastenkuerzel">
+                                                <!-- Feste Spalte für die Taste, damit die
+                                                     Beschreibungen untereinander stehen;
+                                                     die Breite wächst mit der
+                                                     eingestellten Schriftgröße mit. -->
+                                                <Grid ColumnDefinitions="Auto,16,*" Margin="0,4">
+                                                    <TextBlock Grid.Column="0" Classes="taste"
+                                                               Width="{anzeige:Breite 210}"
+                                                               Text="{Binding Taste}"
+                                                               TextWrapping="Wrap" />
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Beschreibung}"
+                                                               TextWrapping="Wrap" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="{Binding Fussnote}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextTertiaerFarbe}" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

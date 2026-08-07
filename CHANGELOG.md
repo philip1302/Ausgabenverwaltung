@@ -15,6 +15,12 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Die Anwendung lässt sich jetzt weitgehend über die Tastatur bedienen:
+  Strg + N öffnet die Erfassungsmaske, Strg + F springt in die Suche der
+  Ausgabenliste, Strg + 1 bis Strg + 9 wechseln in den Bereich an dieser
+  Stelle der Seitenleiste. In Formularen speichert Strg + S oder
+  Strg + Eingabe, Esc schließt ohne zu speichern. Welche Taste was tut,
+  zeigt F1 auf einer eigenen Seite — damit man es nicht raten muss.
 - Das Löschen einer Buchung fragt nicht mehr nach, sondern lässt sich
   zurücknehmen: die Zeile verschwindet sofort, darüber steht „Buchung
   gelöscht · Rückgängig". Ein Druck darauf legt alles wieder an — Betrag,

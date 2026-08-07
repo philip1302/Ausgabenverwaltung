@@ -289,6 +289,11 @@ public partial class App : Application
             provider.GetRequiredService<AppSettingsStore>(),
             GlobaleFehlerbehandlung.Version));
 
+        // Die Kuerzeluebersicht (F1). Sie liest nichts und schreibt nichts -
+        // ihre Zeilen sind dieselben Eintraege, aus denen sich die
+        // Tastenbindungen aufbauen (Anzeige/Tastenkuerzel.cs).
+        services.AddSingleton<TastenkuerzelViewModel>();
+
         // Eigene Instanz statt WeakReferenceMessenger.Default: die
         // Bereichs-ViewModels registrieren sich darauf fuer
         // BuchungenGeaendertNachricht (Regel 14), und eine eigene Instanz

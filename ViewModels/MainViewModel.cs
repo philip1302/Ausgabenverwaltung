@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core.RecurringExpenses;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -89,10 +90,30 @@ public sealed partial class MainViewModel : ViewModelBase
     // Flyout zu oeffnen.
     private readonly NavigationItem _darstellungEintrag;
 
+    // Der Eintrag der Kuerzeluebersicht (F1) - ebenfalls ohne
+    // Sidebar-Platz, angewaehlt ueber OeffneTastenkuerzelCommand.
+    private readonly NavigationItem _tastenkuerzelEintrag;
+
+    // Wohin "Schließen" auf der Kuerzeluebersicht zurueckfuehrt. Die Seite
+    // ist eine Zwischenfrage mitten in der Arbeit, keine Station: wer sie
+    // aus der Ausgabenliste heraus aufschlaegt, will danach wieder in die
+    // Ausgabenliste und nicht auf die Startseite.
+    private NavigationItem? _vorTastenkuerzel;
+
+    /// <summary>
+    /// Die Bereiche, die Strg+1 bis Strg+9 anspringen - genau die
+    /// Eintraege mit sichtbarem Sidebar-Platz, in ihrer Reihenfolge von
+    /// oben nach unten. Aus <see cref="NavigationItems"/> abgeleitet und
+    /// nicht als zweite Liste gepflegt: sonst zeigte Strg+4 nach dem
+    /// naechsten Umbau der Seitenleiste woandershin als der vierte Eintrag.
+    /// </summary>
+    public IReadOnlyList<NavigationItem> BereicheMitZiffer { get; }
+
     public MainViewModel(
         StartupNoticeViewModel startupNotice,
         AktualisierungViewModel aktualisierung,
         WasIstNeuViewModel wasIstNeu,
+        TastenkuerzelViewModel tastenkuerzel,
         StartseiteViewModel startseite,
         ErfassenViewModel erfassen,
         OffenePostenViewModel offenePosten,
@@ -138,6 +159,10 @@ public sealed partial class MainViewModel : ViewModelBase
             // Ohne Sidebar-Platz und ohne Kommando: diesen Bereich waehlt
             // nur der Start aus, und zwar hoechstens einmal je Fassung.
             new("Was ist neu", wasIstNeu, "IconDarstellung", NavigationGruppe.Keine),
+
+            // Ebenfalls ohne Sidebar-Platz - aufgeschlagen wird die
+            // Uebersicht ueber F1 (OeffneTastenkuerzelCommand).
+            new("Tastenkürzel", tastenkuerzel, "IconDarstellung", NavigationGruppe.Keine),
         };
 
         StartseiteEintrag = NavigationItems[0];
@@ -149,6 +174,20 @@ public sealed partial class MainViewModel : ViewModelBase
         // Eintrag" der falsche.
         _darstellungEintrag = NavigationItems
             .First(item => ReferenceEquals(item.ViewModel, verwaltung.Darstellung));
+
+        _tastenkuerzelEintrag = NavigationItems
+            .First(item => ReferenceEquals(item.ViewModel, tastenkuerzel));
+
+        // Dieselbe Reihenfolge wie in der Seitenleiste (Views/MainWindow.axaml):
+        // Startseite, dann die drei Gruppen. Mehr als neun Eintraege waeren
+        // ueber Ziffern ohnehin nicht zu erreichen - die Liste wird deshalb
+        // gekappt statt eine Zuordnung zu behaupten, die es nicht gibt.
+        BereicheMitZiffer = new[] { StartseiteEintrag }
+            .Concat(ErfassenUndVerwaltenEintraege)
+            .Concat(AuswertungEintraege)
+            .Concat(EinstellungenEintraege)
+            .Take(Tastenkuerzel.BereicheMitZiffer)
+            .ToList();
 
         var wasIstNeuEintrag = NavigationItems
             .First(item => ReferenceEquals(item.ViewModel, wasIstNeu));
@@ -164,6 +203,12 @@ public sealed partial class MainViewModel : ViewModelBase
         // Die Seite kennt die Navigation nicht, sie meldet nur, dass sie
         // fertig ist - dasselbe Muster wie bei den Spruengen unten.
         wasIstNeu.Geschlossen += (_, _) => SelectedNavigationItem = StartseiteEintrag;
+
+        // Die Kuerzeluebersicht kehrt dorthin zurueck, wo sie
+        // aufgeschlagen wurde. Nur wenn das nicht mehr zu ermitteln ist,
+        // uebernimmt die Startseite.
+        tastenkuerzel.Geschlossen += (_, _) =>
+            SelectedNavigationItem = _vorTastenkuerzel ?? StartseiteEintrag;
 
         // Wird sonst erst beim naechsten Wechsel gesetzt (siehe
         // OnSelectedNavigationItemChanged) - die direkte Feldzuweisung
@@ -312,6 +357,68 @@ public sealed partial class MainViewModel : ViewModelBase
     private void OeffneDarstellung()
     {
         SelectedNavigationItem = _darstellungEintrag;
+    }
+
+    // ---------------- Tastenkuerzel ----------------
+    //
+    // Die Gesten selbst stehen nicht hier, sondern in
+    // Anzeige/Tastenkuerzel.cs; das Hauptfenster baut seine Bindungen
+    // daraus auf (Views/MainWindow.axaml.cs). Hier steht nur, was beim
+    // Druck passiert.
+
+    /// <summary>Strg+N: die Erfassungsmaske, Zeiger im Betragsfeld.</summary>
+    [RelayCommand]
+    private void NeueBuchung()
+    {
+        SelectedNavigationItem = NavigationItems
+            .First(item => ReferenceEquals(item.ViewModel, _erfassen));
+
+        // Den Fokus setzt die Ansicht selbst - beim Betreten des Bereichs
+        // steht der Zeiger ohnehin im Betragsfeld (siehe ErfassenView).
+    }
+
+    /// <summary>
+    /// Strg+F: in die Ausgabenliste und in ihr Suchfeld. Der Fokuswunsch
+    /// ueberlebt den Bereichswechsel, weil die Ansicht erst im naechsten
+    /// Layoutlauf entsteht (siehe
+    /// <see cref="AusgabenlisteViewModel.FokussiereSuche"/>).
+    /// </summary>
+    [RelayCommand]
+    private void SucheFokussieren()
+    {
+        SelectedNavigationItem = NavigationItems
+            .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
+
+        _ausgabenliste.FokussiereSuche();
+    }
+
+    /// <summary>
+    /// Strg+1 bis Strg+9: der Bereich an dieser Stelle der Seitenleiste.
+    /// Eine Ziffer ohne Bereich (kuenftig weniger Eintraege) tut nichts.
+    /// </summary>
+    [RelayCommand]
+    private void WaehleNummer(int nummer)
+    {
+        if (nummer >= 1 && nummer <= BereicheMitZiffer.Count)
+        {
+            SelectedNavigationItem = BereicheMitZiffer[nummer - 1];
+        }
+    }
+
+    /// <summary>
+    /// F1: die Kuerzeluebersicht. Ein zweiter Druck auf der Uebersicht
+    /// selbst merkt sich NICHT sie als Rueckweg - sonst fuehrte
+    /// "Schließen" wieder auf dieselbe Seite.
+    /// </summary>
+    [RelayCommand]
+    private void OeffneTastenkuerzel()
+    {
+        if (!ReferenceEquals(SelectedNavigationItem, _tastenkuerzelEintrag))
+        {
+            _vorTastenkuerzel = SelectedNavigationItem;
+        }
+
+        SelectedNavigationItem = _tastenkuerzelEintrag;
     }
 
     // Genau ein Eintrag ist aktiv - siehe NavigationItem.IstAktiv. Bei den

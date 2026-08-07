@@ -11,9 +11,9 @@
              x:Name="Wurzel"
              x:DataType="vm:ErfassenViewModel">
 
-    <UserControl.KeyBindings>
-        <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SpeichernCommand}" />
-    </UserControl.KeyBindings>
+    <!-- Die Tastenkürzel dieser Ansicht stehen im Code-Behind: sie kommen
+         aus Anzeige/Tastenkuerzel.cs, damit die Übersichtsseite (F1) und
+         die tatsächliche Wirkung nicht auseinanderlaufen. -->
 
     <!-- UI/UX-Redesign, Abschnitt 5.1: zweispaltiges Layout - Formular
          links in fester Kartenbreite, "Letzte Buchungen" rechts statt

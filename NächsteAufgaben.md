@@ -812,12 +812,29 @@ und den Vorlagenbezug unverändert zurück, was `Create` nicht kann. Die
 Zeilen bekommen dabei neue Ids; die alten sind mit dem Löschen verfallen
 und können inzwischen an eine neu erfasste Buchung vergeben sein.
 
-### [ ] 13. Tastaturkürzel und eine Übersicht dazu
+### [x] 13. Tastaturkürzel und eine Übersicht dazu
+
+**Erledigt in:** Die Anwendung laesst sich ueber die Tastatur bedienen
+
 `Strg+N` erfassen, `Strg+S`/`Strg+Enter` speichern, `Esc` Dialog
 schließen, `Strg+F` Suchfeld, `Strg+1..9` Bereichswechsel, `F1`
 Kürzelübersicht. Definition an **einer** Stelle
 (`Anzeige/Tastenkuerzel.cs`), damit die Übersichtsseite sich daraus
 erzeugt und nicht auseinanderläuft.
+
+**Umsetzung, über die Vorgabe hinaus:** Nicht nur die Übersicht, auch die
+**Bindungen** entstehen aus derselben Liste — über
+`Anzeige/Kuerzelbindung.cs`, im Code-Behind statt als `KeyBinding` in der
+`.axaml`. Sonst stünde jede Geste zweimal im Programm und die Hilfeseite
+wäre spätestens beim nächsten neuen Kürzel falsch, ohne dass es jemandem
+auffällt. `TastenkuerzelTests` prüft beides mit: dass jede Geste gültig und
+eindeutig ist, dass die Seite genau die Liste zeigt, und dass eine Bindung
+ihr Kommando auch dann findet, wenn der DataContext erst nach dem
+Konstruktor gesetzt wird.
+
+`Strg+1..9` zählt die Einträge der Seitenleiste von oben nach unten; die
+Zuordnung leitet sich in `MainViewModel.BereicheMitZiffer` aus
+`NavigationItems` ab, statt als zweite Liste gepflegt zu werden.
 
 ### [ ] 14. Kontextmenü auf Listenzeilen
 Rechtsklick auf eine Zeile in Ausgabenliste, Offene Posten und Vorlagen:

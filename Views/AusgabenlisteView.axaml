@@ -278,8 +278,12 @@
 
                         <StackPanel>
                             <TextBlock Text="Suche in der Bemerkung" Classes="filterbeschriftung" />
-                            <TextBox Text="{Binding Suchtext}"
+                            <!-- Ziel von Strg+F (siehe
+                                 AusgabenlisteView.axaml.cs). -->
+                            <TextBox x:Name="Suchfeld"
+                                     Text="{Binding Suchtext}"
                                      Width="{anzeige:Breite 220}"
+                                     ToolTip.Tip="Strg + F springt aus jedem Bereich hierher"
                                      PlaceholderText="Volltext…" />
                         </StackPanel>
                     </StackPanel>

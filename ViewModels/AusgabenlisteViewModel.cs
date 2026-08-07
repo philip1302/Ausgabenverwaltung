@@ -57,6 +57,31 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     /// </summary>
     public event EventHandler<int>? VorlageAusBuchungAngefordert;
 
+    /// <summary>
+    /// Bitte um den Tastaturfokus im Suchfeld (Strg+F). Welches
+    /// Bedienelement das ist, weiss nur die Ansicht - dasselbe Muster wie
+    /// <see cref="ErfassenViewModel.FokusBetragAngefordert"/>.
+    /// </summary>
+    public event EventHandler? FokusSucheAngefordert;
+
+    /// <summary>
+    /// Ein noch nicht eingeloester Fokuswunsch. Er ueberlebt bewusst den
+    /// Bereichswechsel: kommt Strg+F aus einem anderen Bereich, wird die
+    /// Ansicht erst im naechsten Layoutlauf gebaut, und das Ereignis
+    /// darueber liefe ins Leere. Die Ansicht loest den Wunsch dann beim
+    /// Laden ein (siehe Views/AusgabenlisteView.axaml.cs).
+    /// </summary>
+    public bool SucheFokusOffen { get; private set; }
+
+    public void FokussiereSuche()
+    {
+        SucheFokusOffen = true;
+        FokusSucheAngefordert?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Meldet, dass der Zeiger tatsaechlich im Feld steht.</summary>
+    public void FokusSucheErledigt() => SucheFokusOffen = false;
+
     public ObservableCollection<AusgabeZeile> Zeilen { get; } = new();
 
     public ObservableCollection<KategorieFilterKnoten> KategorieWurzeln { get; } = new();

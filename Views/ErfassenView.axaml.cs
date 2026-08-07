@@ -1,4 +1,5 @@
 using System;
+using Ausgabenverwaltung.Anzeige;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Ausgabenverwaltung.ViewModels;
@@ -12,6 +13,13 @@ public partial class ErfassenView : UserControl
         InitializeComponent();
         Loaded += (_, _) => BetragBox.Focus();
         DataContextChanged += OnDataContextChanged;
+
+        // Strg+S und Strg+Enter speichern die Maske. Die Gesten kommen aus
+        // Anzeige/Tastenkuerzel.cs - dieselbe Quelle, aus der sich die
+        // Uebersichtsseite (F1) aufbaut.
+        Kuerzelbindung.Binde(
+            this, TastenkuerzelAktion.Speichern,
+            nameof(ErfassenViewModel.SpeichernCommand));
     }
 
     // Reine Fokus-Verdrahtung (Regel 7 betrifft Fachlogik, nicht UI-
