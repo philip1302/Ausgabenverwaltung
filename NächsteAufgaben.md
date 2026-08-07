@@ -793,13 +793,24 @@ der Regel-4-Fall.
 
 ## Batch 4 — Weitere Quality-of-Life-Punkte (12–20)
 
-### [ ] 12. Rückgängig statt Löschbestätigung
+### [x] 12. Rückgängig statt Löschbestätigung
+
+**Erledigt in:** Geloeschte Buchungen lassen sich zurueckholen
+
 Das Bestätigungsband beim Löschen von Buchungen durch ein Undo-Band
 ersetzen („3 Buchungen gelöscht · Rückgängig"). Gelöschte Zeilen bis zum
 Bereichswechsel im Speicher halten und bei „Rückgängig" über
 `Create` neu anlegen. Passt zum recherchierten Muster: umkehrbar machen
 schlägt nachfragen. Vorlagen-Löschen (Punkt 4) behält seinen Dialog — das
 Schadensausmaß ist größer.
+
+**Abweichung von der Vorgabe, bewusst:** Wiederhergestellt wird über eine
+eigene Methode `ExpenseRepository.RestoreMany` statt über `Create` — sie
+läuft in EINER Transaktion (eine halb zurückgeholte Auswahl wäre schlimmer
+als eine gar nicht zurückgeholte) und schreibt `CreatedUtc`, `SettledDate`
+und den Vorlagenbezug unverändert zurück, was `Create` nicht kann. Die
+Zeilen bekommen dabei neue Ids; die alten sind mit dem Löschen verfallen
+und können inzwischen an eine neu erfasste Buchung vergeben sein.
 
 ### [ ] 13. Tastaturkürzel und eine Übersicht dazu
 `Strg+N` erfassen, `Strg+S`/`Strg+Enter` speichern, `Esc` Dialog

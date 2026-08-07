@@ -15,6 +15,13 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Das Löschen einer Buchung fragt nicht mehr nach, sondern lässt sich
+  zurücknehmen: die Zeile verschwindet sofort, darüber steht „Buchung
+  gelöscht · Rückgängig". Ein Druck darauf legt alles wieder an — Betrag,
+  Datum, Kategorie, Zahler, Bemerkung und auch die Zuordnung zu einer
+  Vorlage. Das Angebot bleibt stehen, bis der Bereich gewechselt wird;
+  eine Nachfrage, die man dreimal am Tag wegklickt, schützt ohnehin
+  niemanden mehr. Vorlagen werden weiterhin erst nach Rückfrage gelöscht.
 - Die Seite „Was ist neu" zeigt jetzt tatsächlich die Änderungen: sie
   liest sie aus der Änderungsliste, die die Anwendung selbst mitbringt.
   Vorher hing sie am Beschreibungstext der Veröffentlichung im Netz —

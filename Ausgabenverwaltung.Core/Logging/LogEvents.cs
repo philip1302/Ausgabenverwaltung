@@ -156,6 +156,18 @@ public static class LogEvents
         => count == 1 ? "1 Ausgabe geloescht." : $"{count} Ausgaben geloescht.";
 
     /// <summary>
+    /// Das Gegenstueck zu <see cref="ExpensesDeleted"/>: der Anwender hat
+    /// das Loeschen zurueckgenommen. Nur die Anzahl - was in den Zeilen
+    /// stand, geht das Protokoll nichts an (Regel 11). Die Zeilen tragen
+    /// danach neue Ids, die alten aus der Loeschzeile daneben gelten also
+    /// nicht mehr.
+    /// </summary>
+    public static string ExpensesRestored(int count)
+        => count == 1
+            ? "1 geloeschte Ausgabe wiederhergestellt."
+            : $"{count} geloeschte Ausgaben wiederhergestellt.";
+
+    /// <summary>
     /// Nur die beiden Ids - Betrag, Kategorie und Bemerkung der Kopie
     /// gehen niemanden etwas an (Regel 11). Dass ueberhaupt kopiert wurde,
     /// erklaert spaeter, warum zwei gleiche Buchungen nebeneinander

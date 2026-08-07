@@ -144,6 +144,65 @@ public sealed class ExpenseRepository
         AppLog.Current.Info(LogEvents.ExpensesDeleted(ids.Count));
     }
 
+    /// <summary>
+    /// Legt geloeschte Ausgaben wieder an - das Gegenstueck zu
+    /// <see cref="DeleteMany"/> fuer das Rueckgaengig-Band der
+    /// Ausgabenliste. Alles in EINER Transaktion: eine halb
+    /// wiederhergestellte Auswahl waere schlimmer als eine gar nicht
+    /// wiederhergestellte, weil niemand ihr ansieht, wo sie aufgehoert hat.
+    ///
+    /// Die Zeilen bekommen neue Ids - die alten sind mit dem Loeschen
+    /// verfallen, und eine davon kann inzwischen an eine neu erfasste
+    /// Buchung vergeben sein. Alles uebrige wird unveraendert
+    /// zurueckgeschrieben, <b>einschliesslich CreatedUtc</b>: erfasst
+    /// wurde die Buchung damals, und in "Letzte Buchungen" soll sie wieder
+    /// dort auftauchen, wo sie vorher stand. Nur ModifiedUtc wandert auf
+    /// jetzt - angefasst wurde die Zeile ja gerade.
+    /// </summary>
+    public int RestoreMany(IReadOnlyList<Expense> expenses)
+    {
+        if (expenses.Count == 0)
+        {
+            return 0;
+        }
+
+        const string sql = """
+            INSERT INTO Expense
+                (CategoryId, AmountCents, ExpenseDate, Note, PayerId,
+                 SettledDate, RecurringExpenseId, IsIncome, CreatedUtc, ModifiedUtc)
+            VALUES
+                (@CategoryId, @AmountCents, @ExpenseDateText, @Note, @PayerId,
+                 @SettledDateText, @RecurringExpenseId, @IsIncome, @CreatedUtcText, @NowUtcText)
+            """;
+
+        var nowUtcText = JetztUtcText();
+
+        // Eine Parameterliste statt einer Schleife mit Einzelaufrufen:
+        // Dapper fuehrt dieselbe Anweisung je Element aus, alle innerhalb
+        // derselben Transaktion.
+        var parameter = expenses.Select(expense => new
+        {
+            expense.CategoryId,
+            expense.AmountCents,
+            ExpenseDateText = IsoDate.ToDateText(expense.ExpenseDate),
+            expense.Note,
+            expense.PayerId,
+            SettledDateText = expense.SettledDate is DateOnly settled
+                ? IsoDate.ToDateText(settled)
+                : null,
+            expense.RecurringExpenseId,
+            expense.IsIncome,
+            CreatedUtcText = IsoDateTime.ToUtcText(expense.CreatedUtc),
+            NowUtcText = nowUtcText,
+        }).ToList();
+
+        var wiederhergestellt = AendereInTransaktion(sql, parameter);
+
+        AppLog.Current.Info(LogEvents.ExpensesRestored(wiederhergestellt));
+
+        return wiederhergestellt;
+    }
+
     // ---------------- Sammelaenderungen ----------------
     //
     // Was fuer das Loeschen laengst geht, geht auch fuer das Aendern:
@@ -282,6 +341,32 @@ public sealed class ExpenseRepository
 
         var row = _connection.QueryFirstOrDefault<ExpenseRow>(sql, new { Id = id });
         return row is null ? null : ToExpense(row);
+    }
+
+    /// <summary>
+    /// Mehrere Ausgaben auf einmal - fuer das Rueckgaengig-Band der
+    /// Ausgabenliste, das die Werte sichern muss, BEVOR geloescht wird.
+    /// Eine leere Liste liefert eine leere Liste zurueck. Ids, zu denen es
+    /// nichts (mehr) gibt, fehlen im Ergebnis, ohne dass es einen Fehler
+    /// gibt - die Liste des Aufrufers kann veraltet sein.
+    /// </summary>
+    public IReadOnlyList<Expense> GetByIds(IReadOnlyList<int> ids)
+    {
+        if (ids.Count == 0)
+        {
+            return Array.Empty<Expense>();
+        }
+
+        const string sql = """
+            SELECT Id, CategoryId, AmountCents, ExpenseDate, Note, PayerId,
+                   SettledDate, RecurringExpenseId, IsIncome, CreatedUtc, ModifiedUtc
+            FROM Expense
+            WHERE Id IN @Ids
+            """;
+
+        return _connection.Query<ExpenseRow>(sql, new { Ids = ids })
+                          .Select(ToExpense)
+                          .ToList();
     }
 
     /// <summary>

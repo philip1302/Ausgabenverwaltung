@@ -41,7 +41,13 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     // Auswahllisten) - sonst laeuft die Abfrage pro Eigenschaft erneut.
     private bool _ladenGesperrt;
 
-    private IReadOnlyList<int> _zuLoeschendeIds = Array.Empty<int>();
+    // Die zuletzt geloeschten Buchungen mit allen ihren Werten - der
+    // Vorrat, aus dem "Rueckgaengig" sie wieder anlegt. Gehalten wird er
+    // bis zum Bereichswechsel (siehe AktualisiereListe), bewusst ohne
+    // Zeitablauf: eine geloeschte Buchung ist muehsamer wiederzubeschaffen
+    // als ein Haekchen, und ein Band, das von selbst verschwindet, nimmt
+    // dem Anwender die Entscheidung ab.
+    private IReadOnlyList<Expense> _geloeschteBuchungen = Array.Empty<Expense>();
 
     /// <summary>
     /// Bitte um einen Wechsel in den Vorlagenbereich, mit einem aus dieser
@@ -223,12 +229,18 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     public bool BearbeitenAktiv => Bearbeiten is not null;
 
+    /// <summary>
+    /// Das Rueckgaengig-Band nach einem Loeschvorgang ("3 Buchungen
+    /// gelöscht · Rückgängig"). Es ersetzt die fruehere Sicherheitsabfrage:
+    /// eine Aktion umkehrbar zu machen ist mehr wert als eine Nachfrage,
+    /// die ohnehin weggeklickt wird. Das Vorlagen-Loeschen behaelt seine
+    /// Nachfrage - dort ist das Schadensausmass groesser.
+    /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(LoeschAnfrageAktiv))]
-    [NotifyPropertyChangedFor(nameof(SchreibFehlerAlsBand))]
-    private string? _loeschAnfrageText;
+    [NotifyPropertyChangedFor(nameof(RueckgaengigSichtbar))]
+    private string? _rueckgaengigText;
 
-    public bool LoeschAnfrageAktiv => LoeschAnfrageText is not null;
+    public bool RueckgaengigSichtbar => RueckgaengigText is not null;
 
     /// <summary>
     /// Ein Schreibfehler in der Liste selbst - beim Loeschen. Als Band
@@ -244,11 +256,11 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     /// <summary>
     /// Derselbe Text als Band ueber der Tabelle - aber nur, solange keine
-    /// Nachfrage offen ist. Die zeigen ihn selbst, und zweimal derselbe
+    /// Nachfrage offen ist. Die zeigt ihn selbst, und zweimal derselbe
     /// Satz auf einem Bildschirm liest sich wie zwei Fehler.
     /// </summary>
     public bool SchreibFehlerAlsBand =>
-        SchreibFehlerText is not null && LoeschAnfrageText is null && SammelAnfrageText is null;
+        SchreibFehlerText is not null && SammelAnfrageText is null;
 
     [RelayCommand]
     private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
@@ -303,6 +315,13 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     /// </summary>
     public void AktualisiereListe()
     {
+        // Der Bereich wird gerade betreten - das Rueckgaengig-Angebot des
+        // letzten Besuchs gilt nicht mehr. Es ausdruecklich hier zu raeumen
+        // ist der Preis dafuer, dass es sonst NICHT von selbst verschwindet:
+        // solange der Anwender in der Liste steht, soll er sich Zeit lassen
+        // duerfen.
+        VergissGeloeschte();
+
         _ladenGesperrt = true;
         LadeAuswahllisten();
         _ladenGesperrt = false;
@@ -711,7 +730,6 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             return;
         }
 
-        LoeschAnfrageText = null;
         Bearbeiten = new AusgabeBearbeitenViewModel(
             zeile,
             _categoryRepository.GetSelectableLeaves(),
@@ -763,6 +781,12 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     private void BearbeitenAbbrechen() => Bearbeiten = null;
 
     // ---------------- Loeschen ----------------
+    //
+    // Geloescht wird sofort, ohne Nachfrage - dafuer laesst sich der
+    // Vorgang zurueckholen, solange der Bereich nicht gewechselt wurde.
+    // Eine Nachfrage vor jedem Loeschen wird nach dem dritten Mal blind
+    // bestaetigt und schuetzt dann niemanden mehr; ein Rueckgaengig-Band
+    // schuetzt auch den, der zu schnell geklickt hat.
 
     [RelayCommand]
     private void Loeschen(AusgabeZeile? zeile)
@@ -772,15 +796,9 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             return;
         }
 
-        Bearbeiten = null;
-
-        // Das Erfolgsband von vorhin gehoerte zu einem anderen Vorgang und
-        // stuende sonst ueber der Nachfrage, die gerade aufgeht.
-        ErfolgText = null;
-
-        _zuLoeschendeIds = new[] { zeile.Id };
-        LoeschAnfrageText =
-            $"Diese Ausgabe wirklich loeschen?\n{zeile.LoeschBeschreibung}";
+        LoescheUndMerke(
+            new[] { zeile.Id },
+            $"Buchung gelöscht: {zeile.LoeschBeschreibung}");
     }
 
     [RelayCommand(CanExecute = nameof(HatAuswahl))]
@@ -792,42 +810,107 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             return;
         }
 
-        Bearbeiten = null;
-        ErfolgText = null;
-        _zuLoeschendeIds = ausgewaehlte.Select(zeile => zeile.Id).ToList();
-        LoeschAnfrageText = ausgewaehlte.Count == 1
-            ? $"Diese Ausgabe wirklich loeschen?\n{ausgewaehlte[0].LoeschBeschreibung}"
-            : $"{ausgewaehlte.Count} Ausgaben wirklich loeschen?";
+        LoescheUndMerke(
+            ausgewaehlte.Select(zeile => zeile.Id).ToList(),
+            ausgewaehlte.Count == 1
+                ? $"Buchung gelöscht: {ausgewaehlte[0].LoeschBeschreibung}"
+                : $"{ausgewaehlte.Count} Buchungen gelöscht.");
     }
 
-    [RelayCommand]
-    private void LoeschenBestaetigen()
+    /// <summary>
+    /// Loescht die angegebenen Buchungen und legt sie zugleich fuer
+    /// "Rueckgaengig" beiseite.
+    ///
+    /// Die Werte werden VOR dem Loeschen aus der Datenbank geholt und nicht
+    /// aus den Anzeigezeilen genommen: dort stehen formatierte Texte, und
+    /// aus "-1.234,56 €" zurueckzurechnen waere eine Fehlerquelle ohne Not.
+    /// </summary>
+    private void LoescheUndMerke(IReadOnlyList<int> ids, string bandText)
     {
-        // DeleteMany laeuft in einer Transaktion: entweder alle
-        // ausgewaehlten Zeilen sind weg oder keine. Ein Fehler mittendrin
-        // hinterlaesst also keine halb geleerte Auswahl.
+        Bearbeiten = null;
+
+        // Beide Baender von vorhin gehoerten zu einem anderen Vorgang.
+        ErfolgText = null;
+        RueckgaengigText = null;
+
+        var gesichert = _expenseRepository.GetByIds(ids);
+
+        // DeleteMany laeuft in einer Transaktion: entweder alle Zeilen sind
+        // weg oder keine. Ein Fehler mittendrin hinterlaesst also keine
+        // halb geleerte Auswahl - und der gemerkte Vorrat passt dazu.
         SchreibFehlerText = Schreibvorgang.Versuche(
             "Beim Loeschen von Ausgaben",
-            () => _expenseRepository.DeleteMany(_zuLoeschendeIds));
+            () => _expenseRepository.DeleteMany(ids));
 
         if (SchreibFehlerText is not null)
         {
-            // Die Nachfrage bleibt stehen: der Anwender kann es gleich
-            // noch einmal versuchen, ohne die Auswahl neu zu treffen.
+            // Regel 13: die Liste bleibt unveraendert stehen, der Fehler
+            // erklaert als Band darueber, warum sich nichts bewegt hat.
             return;
         }
 
         // Steht die Liste gerade auf genau der Buchung, die eben geloescht
         // wurde, muss der Einzelfilter mit weg - sonst zeigt sie dauerhaft
         // nichts mehr an, und der Grund dafuer ist nicht mehr da.
-        if (_buchungFilterId is int gefiltert && _zuLoeschendeIds.Contains(gefiltert))
+        if (_buchungFilterId is int gefiltert && ids.Contains(gefiltert))
         {
             EinzelfilterLeeren();
         }
 
-        _zuLoeschendeIds = Array.Empty<int>();
-        LoeschAnfrageText = null;
+        _geloeschteBuchungen = gesichert;
+        RueckgaengigText = bandText;
+
         _messenger.Send(new BuchungenGeaendertNachricht());
+    }
+
+    /// <summary>
+    /// Holt die zuletzt geloeschten Buchungen zurueck. Sie bekommen dabei
+    /// neue Ids (siehe <see cref="ExpenseRepository.RestoreMany"/>) - alles
+    /// uebrige steht danach wieder so da wie vorher.
+    /// </summary>
+    [RelayCommand]
+    private void LoeschenRueckgaengig()
+    {
+        if (_geloeschteBuchungen.Count == 0)
+        {
+            return;
+        }
+
+        var wiederherzustellen = _geloeschteBuchungen;
+        var anzahl = 0;
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Wiederherstellen geloeschter Ausgaben",
+            () => anzahl = _expenseRepository.RestoreMany(wiederherzustellen));
+
+        if (SchreibFehlerText is not null)
+        {
+            // Regel 13: das Band bleibt stehen, der Versuch laesst sich
+            // gleich wiederholen.
+            return;
+        }
+
+        _geloeschteBuchungen = Array.Empty<Expense>();
+        RueckgaengigText = null;
+        ErfolgText = anzahl == 1
+            ? "Buchung wiederhergestellt."
+            : $"{anzahl} Buchungen wiederhergestellt.";
+
+        _messenger.Send(new BuchungenGeaendertNachricht());
+    }
+
+    /// <summary>
+    /// Nimmt das Angebot an, ohne es anzunehmen: das Band verschwindet, die
+    /// Loeschung bleibt. Raeumt zugleich den gemerkten Vorrat - was nicht
+    /// mehr angeboten wird, muss auch nicht mehr vorgehalten werden.
+    /// </summary>
+    [RelayCommand]
+    private void RueckgaengigSchliessen() => VergissGeloeschte();
+
+    private void VergissGeloeschte()
+    {
+        _geloeschteBuchungen = Array.Empty<Expense>();
+        RueckgaengigText = null;
     }
 
     // ---------------- Duplizieren ----------------
@@ -891,13 +974,6 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         ErfolgText = "Buchung dupliziert — Datum auf heute gesetzt.";
         _messenger.Send(new BuchungenGeaendertNachricht());
-    }
-
-    [RelayCommand]
-    private void LoeschenAbbrechen()
-    {
-        _zuLoeschendeIds = Array.Empty<int>();
-        LoeschAnfrageText = null;
     }
 
     // ---------------- Sammelaktionen ----------------

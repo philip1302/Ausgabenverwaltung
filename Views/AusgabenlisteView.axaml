@@ -435,6 +435,28 @@
                 </Grid>
             </Border>
 
+            <!-- Rückgängig nach dem Löschen. Es tritt an die Stelle der
+                 früheren Sicherheitsabfrage: eine Nachfrage vor jedem
+                 Löschen wird nach dem dritten Mal blind bestätigt, ein
+                 Rückgängig-Band schützt auch den, der zu schnell geklickt
+                 hat. Es verschwindet NICHT von selbst — erst beim
+                 Bereichswechsel oder auf „Schließen“. -->
+            <Border DockPanel.Dock="Top" Classes="banner hinweis"
+                    IsVisible="{Binding RueckgaengigSichtbar}"
+                    Margin="0,0,0,10">
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding RueckgaengigText}"
+                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="secondary" Content="Rückgängig"
+                            VerticalAlignment="Top"
+                            ToolTip.Tip="Legt die gelöschten Buchungen wieder an"
+                            Command="{Binding LoeschenRueckgaengigCommand}" />
+                    <Button Grid.Column="2" Classes="ghost" Content="Schließen"
+                            VerticalAlignment="Top"
+                            Command="{Binding RueckgaengigSchliessenCommand}" />
+                </Grid>
+            </Border>
+
             <!-- ============ Fusszeile ============ -->
             <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto"
                   Margin="4,10,20,0">
@@ -611,32 +633,6 @@
             </DockPanel>
             </ScrollViewer>
         </DockPanel>
-
-        <!-- ============ Overlay: Loesch-Sicherheitsabfrage ============ -->
-        <Panel IsVisible="{Binding LoeschAnfrageAktiv}" Background="#60000000">
-            <Border Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" Margin="24"
-                    MaxWidth="{anzeige:Breite 520}"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
-
-                    <!-- Ein Schreibfehler beim Löschen: die Nachfrage
-                         bleibt offen, damit sich der Versuch ohne neue
-                         Auswahl wiederholen lässt. -->
-                    <Border IsVisible="{Binding SchreibFehlerSichtbar}"
-                            Background="{DynamicResource FehlerFlaeche}" BorderBrush="{DynamicResource FehlerRahmen}" BorderThickness="1"
-                            Padding="8">
-                        <TextBlock Text="{Binding SchreibFehlerText}" TextWrapping="Wrap" />
-                    </Border>
-
-                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                        <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
-                        <Button Classes="danger" Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-        </Panel>
 
         <!-- ============ Overlay: Sammelaktion bestätigen ============
              Erst ab 20 betroffenen Zeilen (siehe
