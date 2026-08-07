@@ -238,4 +238,79 @@ public class ExpenseRepositoryTests : IDisposable
         Assert.Equal(2, summary.Count);
         Assert.Equal(-50000, summary.SumCents);
     }
+
+    // ================= Vorschlag aus der Historie =================
+
+    [Fact]
+    public void SuggestFor_liefert_die_Werte_der_letzten_gleichlautenden_Buchung()
+    {
+        var unterkategorie = new CategoryRepository(_connection).Create("Strom", _categoryId).Id;
+
+        _repository.Create(unterkategorie, 4290, new DateOnly(2026, 3, 1), _otherId, note: "Aldi");
+
+        var vorschlag = _repository.SuggestFor("Aldi");
+
+        Assert.NotNull(vorschlag);
+        Assert.Equal(unterkategorie, vorschlag.CategoryId);
+        Assert.Equal(CategoryPaths.Append("Wohnen", "Strom"), vorschlag.CategoryFullPath);
+        Assert.Equal(4290, vorschlag.AmountCents);
+        Assert.Equal(_otherId, vorschlag.PayerId);
+        Assert.Equal("Mitbewohner", vorschlag.PayerName);
+        Assert.False(vorschlag.IsIncome);
+        Assert.Equal(new DateOnly(2026, 3, 1), vorschlag.ExpenseDate);
+    }
+
+    [Fact]
+    public void SuggestFor_nimmt_die_juengste_Buchung()
+    {
+        _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _selfId, note: "Aldi");
+        _repository.Create(_categoryId, 2000, new DateOnly(2026, 5, 1), _otherId, note: "Aldi");
+        _repository.Create(_categoryId, 3000, new DateOnly(2026, 4, 1), _selfId, note: "Aldi");
+
+        Assert.Equal(2000, _repository.SuggestFor("Aldi")!.AmountCents);
+    }
+
+    [Theory]
+    [InlineData("aldi")]
+    [InlineData("ALDI")]
+    [InlineData("  Aldi  ")]
+    public void SuggestFor_ist_unempfindlich_gegen_Schreibweise_und_Leerzeichen(string eingabe)
+    {
+        _repository.Create(_categoryId, 4290, new DateOnly(2026, 3, 1), _selfId, note: "Aldi");
+
+        Assert.Equal(4290, _repository.SuggestFor(eingabe)!.AmountCents);
+    }
+
+    [Fact]
+    public void SuggestFor_vergleicht_die_ganze_Bemerkung()
+    {
+        // "Aldi" und "Aldi Getraenke" sind zwei verschiedene Einkaeufe -
+        // ein Angebot aus dem falschen davon waere schlimmer als keines.
+        _repository.Create(_categoryId, 4290, new DateOnly(2026, 3, 1), _selfId, note: "Aldi Getränke");
+
+        Assert.Null(_repository.SuggestFor("Aldi"));
+    }
+
+    [Theory]
+    [InlineData("Rewe")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void SuggestFor_liefert_null_ohne_Treffer(string? eingabe)
+    {
+        _repository.Create(_categoryId, 4290, new DateOnly(2026, 3, 1), _selfId, note: "Aldi");
+
+        Assert.Null(_repository.SuggestFor(eingabe));
+    }
+
+    [Fact]
+    public void SuggestFor_behaelt_die_Buchungsart()
+    {
+        // Sonst wuerde aus einer Einnahme von jemandem still eine Ausgabe
+        // an dieselbe Person.
+        _repository.Create(
+            _categoryId, 30000, new DateOnly(2026, 3, 1), _otherId, note: "Gehalt", isIncome: true);
+
+        Assert.True(_repository.SuggestFor("Gehalt")!.IsIncome);
+    }
 }

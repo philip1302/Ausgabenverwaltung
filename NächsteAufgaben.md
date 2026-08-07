@@ -729,10 +729,16 @@ erzeugt beim nächsten Lauf **kein** Duplikat der Ausgangsbuchung.
 
 ---
 
-### [ ] 10. Vorschläge aus der Historie
+### [x] 10. Vorschläge aus der Historie
+
+**Erledigt in:** Die Erfassungsmaske bietet die Werte der letzten gleichen Buchung an
 
 **Ziel:** Bemerkung getippt → Kategorie, Betrag und Zahler der letzten
 gleichlautenden Buchung stehen bereit.
+
+**Ergänzung:** Übernommen wird zusätzlich die **Buchungsart**
+(`IsIncome`) — sonst würde aus einer Einnahme von Anna still eine
+Ausgabe an Anna, weil der Zahler ja mitwandert.
 
 **Vorgehen**
 

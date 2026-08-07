@@ -140,6 +140,30 @@
                         <TextBlock Text="BEMERKUNG" Classes="feldbeschriftung" />
                         <TextBox Text="{Binding Bemerkung}" TabIndex="5" />
 
+                        <!-- Ein Angebot, keine Vorbelegung: die Werte der
+                             zuletzt gleichlautend bemerkten Buchung stehen
+                             bereit, eingesetzt werden sie erst auf Klick.
+                             Eine Maske, die sich beim Tippen von selbst
+                             fuellt, ueberschreibt frueher oder spaeter
+                             etwas, das schon richtig war. -->
+                        <Border Classes="banner hinweis"
+                                IsVisible="{Binding VorschlagSichtbar}"
+                                Margin="0,6,0,0">
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding VorschlagText}"
+                                           TextWrapping="Wrap"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Classes="secondary klein"
+                                        Content="Übernehmen"
+                                        Margin="8,0,0,0"
+                                        Command="{Binding VorschlagUebernehmenCommand}" />
+                                <Button Grid.Column="2" Classes="ghost klein"
+                                        Content="Schließen"
+                                        Command="{Binding VorschlagVerwerfenCommand}" />
+                            </Grid>
+                        </Border>
+
                         <!-- Kein anderer Zahler vorhanden, um eine gerade angekreuzte
                              Einnahme zuzuordnen - das Haekchen wurde deshalb bereits
                              automatisch zurueckgesetzt (siehe

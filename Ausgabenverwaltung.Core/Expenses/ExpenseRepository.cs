@@ -193,6 +193,72 @@ public sealed class ExpenseRepository
     }
 
     /// <summary>
+    /// Die zuletzt gleichlautend bemerkte Buchung - Grundlage fuer das
+    /// Angebot in der Erfassungsmaske ("Zuletzt: Lebensmittel · 42,90 € ·
+    /// Paul"). NULL, wenn es keine gibt.
+    ///
+    /// Verglichen wird die GANZE Bemerkung, nicht ihr Anfang: "Aldi" und
+    /// "Aldi Getränke" sind zwei verschiedene Einkaeufe, und ein Angebot
+    /// aus dem falschen davon waere schlimmer als keines.
+    ///
+    /// COLLATE NOCASE, weil "aldi" und "Aldi" derselbe Laden sind. Die
+    /// SQLite-Voreinstellung NOCASE gilt nur fuer ASCII-Buchstaben; ein
+    /// "Café" bleibt deshalb von "café" unterschieden. Das ist die
+    /// hinnehmbare Luecke - die Alternative waere eine eigene
+    /// Vergleichsfunktion fuer eine Bequemlichkeit.
+    ///
+    /// Sortiert nach ExpenseDate: die juengste gleichlautende Buchung
+    /// gewinnt. Bei zwei Buchungen am selben Tag entscheidet die hoehere
+    /// Id, also die spaeter erfasste.
+    /// </summary>
+    public ExpenseSuggestion? SuggestFor(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return null;
+        }
+
+        const string sql = """
+            WITH RECURSIVE Pfad(Id, ParentId, FullPath) AS (
+                SELECT Id, ParentId, Name FROM Category WHERE ParentId IS NULL
+                UNION ALL
+                SELECT c.Id, c.ParentId, Pfad.FullPath || ' › ' || c.Name
+                FROM   Category c
+                JOIN   Pfad ON c.ParentId = Pfad.Id
+            )
+            SELECT
+                e.CategoryId,
+                pfad.FullPath AS CategoryFullPath,
+                e.AmountCents,
+                e.PayerId,
+                p.Name        AS PayerName,
+                e.IsIncome,
+                e.ExpenseDate
+            FROM Expense e
+            JOIN Person p    ON p.Id = e.PayerId
+            JOIN Pfad   pfad ON pfad.Id = e.CategoryId
+            WHERE e.Note = @Note COLLATE NOCASE
+            ORDER BY e.ExpenseDate DESC, e.Id DESC
+            LIMIT 1
+            """;
+
+        var row = _connection.QueryFirstOrDefault<SuggestionRow>(sql, new { Note = note.Trim() });
+
+        return row is null
+            ? null
+            : new ExpenseSuggestion
+            {
+                CategoryId = row.CategoryId,
+                CategoryFullPath = row.CategoryFullPath,
+                AmountCents = row.AmountCents,
+                PayerId = row.PayerId,
+                PayerName = row.PayerName,
+                IsIncome = row.IsIncome,
+                ExpenseDate = IsoDate.ParseDate(row.ExpenseDate),
+            };
+    }
+
+    /// <summary>
     /// Die Ausgabenliste: alle Buchungen, die auf den Filter passen, mit
     /// Zahlername, vollem Kategoriepfad und Vorlagentitel. Gefiltert UND
     /// sortiert wird in SQL, nicht im Speicher - die Liste kann ueber
@@ -367,6 +433,17 @@ public sealed class ExpenseRepository
         public bool IsIncome { get; set; }
         public bool PayerIsSelf { get; set; }
         public string? SettledDate { get; set; }
+    }
+
+    private sealed class SuggestionRow
+    {
+        public int CategoryId { get; set; }
+        public string CategoryFullPath { get; set; } = string.Empty;
+        public long AmountCents { get; set; }
+        public int PayerId { get; set; }
+        public string PayerName { get; set; } = string.Empty;
+        public bool IsIncome { get; set; }
+        public string ExpenseDate { get; set; } = string.Empty;
     }
 
     private sealed class ExpenseListRow

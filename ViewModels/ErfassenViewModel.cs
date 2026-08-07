@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Categories;
@@ -123,6 +124,40 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? _bemerkung;
+
+    // ---------------- Vorschlag aus der Historie ----------------
+
+    /// <summary>
+    /// Ab wie vielen Zeichen ueberhaupt nachgesehen wird. Bei ein, zwei
+    /// Buchstaben passt fast nichts, und was passt, ist Zufall.
+    /// </summary>
+    private const int VorschlagMindestlaenge = 3;
+
+    /// <summary>
+    /// Wie lange nach dem letzten Tastendruck gewartet wird. Lang genug,
+    /// dass beim Durchtippen einer Bemerkung nicht bei jedem Buchstaben
+    /// eine Abfrage laeuft, kurz genug, dass das Angebot noch waehrend des
+    /// Tippens erscheint.
+    /// </summary>
+    private static readonly TimeSpan VorschlagVerzoegerung = TimeSpan.FromMilliseconds(300);
+
+    private CancellationTokenSource? _vorschlagCts;
+
+    /// <summary>
+    /// Die Werte hinter dem Angebotsband - was <see cref="VorschlagUebernehmen"/>
+    /// einsetzen wuerde.
+    /// </summary>
+    private ExpenseSuggestion? _vorschlag;
+
+    /// <summary>
+    /// Das Angebot als Text ("Zuletzt: Lebensmittel · -42,90 € · Paul").
+    /// NULL = kein Angebot.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VorschlagSichtbar))]
+    private string? _vorschlagText;
+
+    public bool VorschlagSichtbar => VorschlagText is not null;
 
     // Alle aktiven Personen, ungefiltert - die Quelle, aus der
     // AktualisiereZahlerAuswahl das tatsaechlich waehlbare ZahlerOptionen
@@ -340,6 +375,115 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     }
 
     partial void OnIstEinnahmeChanged(bool value) => AktualisiereZahlerAuswahl();
+
+    // Eine neue Bemerkung loest ein neues Angebot aus - entprellt, damit
+    // beim Durchtippen nicht bei jedem Buchstaben eine Abfrage laeuft.
+    partial void OnBemerkungChanged(string? value) => StosseVorschlagAn(value);
+
+    /// <summary>
+    /// Sucht nach der zuletzt gleichlautend bemerkten Buchung und baut
+    /// daraus das Angebotsband. Bewusst ohne await beim Aufrufer: das
+    /// Angebot ist eine Zugabe, niemand wartet darauf.
+    ///
+    /// Der vorherige Durchlauf wird abgebrochen - sonst ueberholte das
+    /// Angebot zu "Le" das zu "Lebensmittel".
+    ///
+    /// Nach dem Warten geht es auf dem Oberflaechen-Thread weiter: das
+    /// await uebernimmt den SynchronizationContext, unter dem die
+    /// Eigenschaftsaenderung gelaufen ist. Wichtig, weil die ganze
+    /// Anwendung sich EINE Datenbankverbindung teilt - die Abfrage darf
+    /// nicht nebenher auf einem zweiten Thread laufen.
+    /// </summary>
+    private async void StosseVorschlagAn(string? bemerkung)
+    {
+        _vorschlagCts?.Cancel();
+
+        _vorschlag = null;
+        VorschlagText = null;
+
+        var text = bemerkung?.Trim() ?? string.Empty;
+        if (text.Length < VorschlagMindestlaenge)
+        {
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _vorschlagCts = cts;
+
+        try
+        {
+            await Task.Delay(VorschlagVerzoegerung, cts.Token);
+
+            if (_expenseRepository.SuggestFor(text) is not { } vorschlag)
+            {
+                return;
+            }
+
+            // Zwischen Abfrage und Anzeige kann weitergetippt worden sein.
+            if (cts.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _vorschlag = vorschlag;
+            VorschlagText =
+                $"Zuletzt: {vorschlag.CategoryFullPath} · "
+                + $"{EuroText.FormatSigned(vorschlag.AmountCents, vorschlag.IsIncome)} · "
+                + $"{vorschlag.PayerName} ({GermanDateInput.ToText(vorschlag.ExpenseDate)})";
+        }
+        catch (TaskCanceledException)
+        {
+            // Es wurde weitergetippt - dieser Durchlauf ist ueberholt.
+        }
+        catch (Exception ex)
+        {
+            // Ein Vorschlag ist eine Bequemlichkeit. Scheitert die Abfrage,
+            // bleibt das Band einfach weg - ein Fehlerdialog waehrend des
+            // Tippens waere voellig unverhaeltnismaessig.
+            AppLog.Current.Exception("Beim Suchen eines Vorschlags zur Bemerkung", ex);
+        }
+    }
+
+    /// <summary>
+    /// Setzt Kategorie, Betrag und Zahler des Angebots ein. Das Datum
+    /// bleibt stehen - es gehoert dem Beleg, der gerade vor einem liegt,
+    /// nicht dem von damals.
+    ///
+    /// Die Buchungsart wandert mit, obwohl sie kein Feld ist, das der
+    /// Anwender gesucht hat: aus einer Einnahme von Anna wuerde sonst
+    /// still eine Ausgabe an Anna.
+    /// </summary>
+    [RelayCommand]
+    private void VorschlagUebernehmen()
+    {
+        if (_vorschlag is not { } vorschlag)
+        {
+            return;
+        }
+
+        // Erst die Art, dann der Zahler: die Art baut die Zahlerauswahl neu
+        // auf (bei einer Einnahme faellt die Ich-Person heraus).
+        IstEinnahme = vorschlag.IsIncome;
+
+        BetragText = EuroText.Plain(vorschlag.AmountCents);
+        AusgewaehlteKategorie = KategorieVorschlaege.FirstOrDefault(o => o.Id == vorschlag.CategoryId);
+
+        if (ZahlerOptionen.FirstOrDefault(p => p.Id == vorschlag.PayerId) is { } zahler)
+        {
+            AusgewaehlterZahler = zahler;
+        }
+
+        // Das Angebot ist angenommen und hat sich damit erledigt.
+        _vorschlag = null;
+        VorschlagText = null;
+    }
+
+    [RelayCommand]
+    private void VorschlagVerwerfen()
+    {
+        _vorschlag = null;
+        VorschlagText = null;
+    }
 
     /// <summary>
     /// Schreibt den ausgerechneten Betrag in Normalform zurueck, sobald
