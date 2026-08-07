@@ -6,6 +6,7 @@ using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Errors;
+using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.RecurringExpenses;
@@ -28,6 +29,7 @@ namespace Ausgabenverwaltung.ViewModels;
 public sealed partial class VorlagenViewModel : ViewModelBase
 {
     private readonly RecurringExpenseRepository _recurringExpenseRepository;
+    private readonly ExpenseRepository _expenseRepository;
     private readonly CategoryRepository _categoryRepository;
     private readonly PersonRepository _personRepository;
     private readonly RecurringExpenseScheduler _scheduler;
@@ -165,6 +167,7 @@ public sealed partial class VorlagenViewModel : ViewModelBase
 
     public VorlagenViewModel(
         RecurringExpenseRepository recurringExpenseRepository,
+        ExpenseRepository expenseRepository,
         CategoryRepository categoryRepository,
         PersonRepository personRepository,
         RecurringExpenseScheduler scheduler,
@@ -172,6 +175,7 @@ public sealed partial class VorlagenViewModel : ViewModelBase
         IMessenger messenger)
     {
         _recurringExpenseRepository = recurringExpenseRepository;
+        _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
         _personRepository = personRepository;
         _scheduler = scheduler;
@@ -221,6 +225,93 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     {
         SchliesseBaender();
         Bearbeiten = ErzeugeFormular(vorlage: null, uebertragbareAnzahl: 0);
+    }
+
+    /// <summary>
+    /// Oeffnet das Vorlagenformular, vorbelegt aus einer bestehenden
+    /// Buchung ("das kommt jeden Monat"). Gespeichert wird nichts - der
+    /// Dialog geht auf, der Anwender bestaetigt.
+    ///
+    /// Der Rhythmus wird auf "jeden Monat am Tag des Buchungsdatums"
+    /// geraten, weil das der weitaus haeufigste Fall ist; die Vorschau im
+    /// Formular zeigt sofort, was daraus folgt, und alles laesst sich
+    /// vorher aendern.
+    ///
+    /// <c>GeneratedThrough</c> steht auf dem Buchungsdatum: die Buchung,
+    /// aus der die Vorlage entsteht, gibt es bereits. Ohne diesen Wert
+    /// legte der erste Erzeugungslauf sie gleich ein zweites Mal an.
+    ///
+    /// Muss NACH dem Bereichswechsel aufgerufen werden - derselbe Grund
+    /// wie bei <see cref="WaehleVorlage"/>.
+    /// </summary>
+    public void NeueVorlageAus(int expenseId)
+    {
+        SchliesseBaender();
+        Bearbeiten = null;
+
+        if (_expenseRepository.GetById(expenseId) is not { } buchung)
+        {
+            // Zwischenzeitlich anderswo geloescht - dann gibt es nichts,
+            // woraus sich eine Vorlage bilden liesse.
+            SchreibFehlerText =
+                "Diese Buchung gibt es nicht mehr. Sie wurde inzwischen an anderer "
+                + "Stelle gelöscht. Es wurde keine Vorlage angelegt. "
+                + "„Neue Vorlage“ legt eine von Hand an.";
+            return;
+        }
+
+        var pfade = CategoryPaths.BuildFullPaths(_categoryRepository.GetTree());
+        var pfad = pfade.TryGetValue(buchung.CategoryId, out var gefunden) ? gefunden : null;
+
+        var entwurf = new RecurringExpense
+        {
+            CategoryId = buchung.CategoryId,
+            PayerId = buchung.PayerId,
+            AmountCents = buchung.AmountCents,
+            Note = buchung.Note,
+            IsIncome = buchung.IsIncome,
+
+            // Die Bemerkung ist der beste Titel, den die Buchung hergibt.
+            // Fehlt sie, tut es der Kategoriename - besser als ein leeres
+            // Pflichtfeld, das den Anwender vor dem Speichern aufhaelt.
+            Title = string.IsNullOrWhiteSpace(buchung.Note)
+                ? LetzteStufe(pfad)
+                : buchung.Note.Trim(),
+
+            IntervalUnit = "month",
+            IntervalCount = 1,
+            AnchorDay = buchung.ExpenseDate.Day,
+            StartDate = buchung.ExpenseDate,
+            EndDate = null,
+            GeneratedThrough = buchung.ExpenseDate,
+            IsActive = true,
+        };
+
+        Bearbeiten = new VorlageBearbeitenViewModel(
+            entwurf,
+            pfad,
+            _categoryRepository.GetSelectableLeaves(),
+            _personRepository.GetAllActive(),
+            uebertragbareAnzahl: 0,
+            Heute,
+            alsEntwurf: true);
+    }
+
+    /// <summary>
+    /// Der Kategoriename aus einem vollen Pfad ("Pferde › Hufschmied" wird
+    /// zu "Hufschmied"). Als Titel taugt nur die letzte Stufe - der ganze
+    /// Pfad stuende in der Liste ohnehin schon in der Kategoriespalte
+    /// daneben.
+    /// </summary>
+    private static string LetzteStufe(string? pfad)
+    {
+        if (string.IsNullOrWhiteSpace(pfad))
+        {
+            return "Wiederkehrende Buchung";
+        }
+
+        var stufen = pfad.Split(CategoryPaths.Separator);
+        return stufen[^1];
     }
 
     [RelayCommand]
@@ -667,6 +758,17 @@ public sealed partial class VorlagenViewModel : ViewModelBase
                 formular.IstEinnahme);
 
             id = erstellt.Id;
+
+            // Ein Entwurf aus einer bestehenden Buchung bringt sein
+            // GeneratedThrough mit (siehe NeueVorlageAus). Ohne diesen
+            // Schritt legte GenerateDueOccurrences gleich darunter ein
+            // Duplikat genau der Buchung an, aus der die Vorlage entstanden
+            // ist. Bei einer von Hand angelegten Vorlage ist der Wert NULL
+            // und es passiert nichts.
+            if (formular.GeneratedThrough is DateOnly erzeugtBis)
+            {
+                _recurringExpenseRepository.SetGeneratedThrough(id, erzeugtBis);
+            }
         }
 
         // Der Aktiv-Schalter wird immer angeglichen: Create legt aktiv an,

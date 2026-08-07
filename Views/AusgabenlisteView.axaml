@@ -441,7 +441,8 @@
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Status" />
                     <Button Grid.Column="14" Classes="kopf" Content="{Binding BemerkungHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
-                    <Button Grid.Column="16" Content="Aktionen" Classes="tabellenkopf-aktion" />
+                    <Button Grid.Column="16" Content="Aktionen" Classes="tabellenkopf-aktion"
+                            ToolTip.Tip="Rechtsklick auf eine Zeile: Als Vorlage anlegen" />
                 </Grid>
             </Border>
 
@@ -467,6 +468,19 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:AusgabeZeile">
                         <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
+                            <!-- "Als Vorlage" steht im Kontextmenue und
+                                 nicht als vierter Knopf in der
+                                 Aktionsspalte: die ist bereits an ihrer
+                                 Breitengrenze (siehe Kommentar am Kopf der
+                                 Datei). Die uebrigen Aktionen wandern
+                                 spaeter mit hierher. -->
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Als Vorlage anlegen…"
+                                              Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).AlsVorlageCommand}"
+                                              CommandParameter="{Binding}" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,300">
                                 <!-- Farbe der Kategorie. Bewusst ein schmaler
                                      Balken am Rand und keine eingefaerbte

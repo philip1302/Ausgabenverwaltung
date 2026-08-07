@@ -691,10 +691,20 @@ Zeitraumgrenze wirkt, archivierte Kategorien tauchen nicht auf.
 
 ---
 
-### [ ] 9. Vorlage aus einer bestehenden Buchung erzeugen
+### [x] 9. Vorlage aus einer bestehenden Buchung erzeugen
+
+**Erledigt in:** Aus einer Buchung laesst sich eine Vorlage anlegen
 
 **Ziel:** „Das kommt jeden Monat" — ein Klick statt Neuanlage im
 Vorlagenbereich.
+
+**Abweichung von der Vorgabe, bewusst:** Der Einstieg ist ein
+**Kontextmenü auf der Zeile**, kein vierter Knopf in der Aktionsspalte.
+Die steht laut dem Kommentar am Kopf von `AusgabenlisteView.axaml`
+bereits an ihrer Breitengrenze — „wächst sie weiter, gehört das in ein
+Kontextmenü". Punkt 14 zieht die übrigen Aktionen dorthin nach. Der
+Spaltenkopf „Aktionen" nennt den Rechtsklick im Hilfetext, damit die
+Funktion auffindbar bleibt.
 
 **Vorgehen**
 

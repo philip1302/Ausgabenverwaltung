@@ -216,6 +216,18 @@ public sealed partial class MainViewModel : ViewModelBase
             verwaltung.Vorlagen.WaehleVorlage(vorlageId);
         };
 
+        // "Als Vorlage" an einer Zeile der Ausgabenliste. Umgekehrte
+        // Reihenfolge wie bei den uebrigen Spruengen - aus demselben Grund
+        // wie bei WaehleVorlage oben: der Bereichswechsel laedt die
+        // Vorlagenliste neu, das vorbelegte Formular soll danach entstehen.
+        ausgabenliste.VorlageAusBuchungAngefordert += (_, expenseId) =>
+        {
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, verwaltung.Vorlagen));
+
+            verwaltung.Vorlagen.NeueVorlageAus(expenseId);
+        };
+
         // Klick auf eine Zeile unter "Letzte Buchungen" bzw. "Letzte
         // Ausgaben": zeigt genau diese eine Buchung.
         startseite.BuchungAngefordert += (_, zeile) => ZeigeEinzelneBuchung(zeile);

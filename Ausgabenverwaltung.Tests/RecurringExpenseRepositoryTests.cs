@@ -354,6 +354,33 @@ public class RecurringExpenseRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void Eine_aus_einer_Buchung_erzeugte_Vorlage_legt_kein_Duplikat_an()
+    {
+        // Der Fall "das kommt jeden Monat": aus einer bestehenden Buchung
+        // wird eine Vorlage mit demselben Startdatum. Sie darf genau diese
+        // Buchung nicht ein zweites Mal anlegen - dafuer wandert
+        // GeneratedThrough beim Anlegen auf das Buchungsdatum (siehe
+        // VorlagenViewModel.NeueVorlageAus).
+        var buchungsdatum = new DateOnly(2026, 5, 15);
+        _expenseRepository.Create(_categoryId, 5000, buchungsdatum, _payerId, note: "Miete");
+
+        var template = _repository.Create(
+            _categoryId, _payerId, 5000, "Miete", "month", 1, buchungsdatum.Day,
+            buchungsdatum, null, note: "Miete");
+        _repository.SetGeneratedThrough(template.Id, buchungsdatum);
+
+        // Derselbe Tag: es gibt nichts nachzuholen.
+        Assert.Empty(_repository.GenerateDueOccurrences(template.Id, buchungsdatum));
+        Assert.Empty(GetGeneratedExpenses(template.Id));
+
+        // Einen Monat spaeter entsteht das naechste Vorkommen - und nur
+        // dieses eine.
+        var naechste = _repository.GenerateDueOccurrences(template.Id, new DateOnly(2026, 6, 15));
+
+        Assert.Equal(new DateOnly(2026, 6, 15), Assert.Single(naechste).ExpenseDate);
+    }
+
+    [Fact]
     public void Delete_entfernt_die_Vorlage_und_loest_nur_die_Zuordnung_der_Buchungen()
     {
         var template = _repository.Create(

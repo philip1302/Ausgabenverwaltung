@@ -295,20 +295,39 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
 
     public bool SpeicherFehlerSichtbar => SpeicherFehlerText is not null;
 
+    /// <param name="alsEntwurf">
+    /// Die uebergebene Vorlage liefert nur die VORBELEGUNG der Felder und
+    /// ist kein gespeicherter Datensatz - der Fall "Vorlage aus einer
+    /// bestehenden Buchung" (siehe
+    /// <see cref="VorlagenViewModel.NeueVorlageAus"/>). Das Formular
+    /// verhaelt sich dann in jeder Hinsicht wie eine Neuanlage: es
+    /// speichert einen neuen Datensatz, zeigt keinen Rueckwirkend-Hinweis
+    /// zu einer Historie, die es noch nicht gibt, und bietet keine
+    /// Uebertragung an.
+    ///
+    /// Nur <see cref="GeneratedThrough"/> wird auch aus einem Entwurf
+    /// uebernommen: die Buchung, aus der die Vorlage entsteht, gibt es
+    /// bereits, und ohne diesen Wert legte der erste Erzeugungslauf sie
+    /// gleich ein zweites Mal an.
+    /// </param>
     public VorlageBearbeitenViewModel(
         RecurringExpense? vorlage,
         string? kategoriePfad,
         IReadOnlyList<CategoryOption> waehlbareKategorien,
         IReadOnlyList<Person> zahler,
         int uebertragbareAnzahl,
-        DateOnly heute)
+        DateOnly heute,
+        bool alsEntwurf = false)
     {
         _heute = heute;
         UebertragbareAnzahl = uebertragbareAnzahl;
 
-        VorlageId = vorlage?.Id;
+        VorlageId = alsEntwurf ? null : vorlage?.Id;
         GeneratedThrough = vorlage?.GeneratedThrough;
-        _urspruenglichesStartdatum = vorlage?.StartDate;
+
+        // Ein Entwurf hat kein "urspruengliches" Startdatum - er wurde noch
+        // nie gespeichert, also kann auch keines vorverlegt worden sein.
+        _urspruenglichesStartdatum = alsEntwurf ? null : vorlage?.StartDate;
 
         KategorieVorschlaege = BaueKategorieVorschlaege(vorlage, kategoriePfad, waehlbareKategorien);
         _allePersonen = BaueZahlerOptionen(vorlage, zahler);

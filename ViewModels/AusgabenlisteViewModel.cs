@@ -43,6 +43,14 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     private IReadOnlyList<int> _zuLoeschendeIds = Array.Empty<int>();
 
+    /// <summary>
+    /// Bitte um einen Wechsel in den Vorlagenbereich, mit einem aus dieser
+    /// Buchung vorbelegten Formular. Die Liste kennt die Navigation nicht
+    /// selbst - der <see cref="MainViewModel"/> hoert zu und setzt sie um
+    /// (dasselbe Muster wie bei den Spruengen der Startseite).
+    /// </summary>
+    public event EventHandler<int>? VorlageAusBuchungAngefordert;
+
     public ObservableCollection<AusgabeZeile> Zeilen { get; } = new();
 
     public ObservableCollection<KategorieFilterKnoten> KategorieWurzeln { get; } = new();
@@ -875,6 +883,26 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     {
         _zuLoeschendeIds = Array.Empty<int>();
         LoeschAnfrageText = null;
+    }
+
+    // ---------------- Als Vorlage ----------------
+
+    /// <summary>
+    /// "Das kommt jeden Monat": oeffnet im Vorlagenbereich ein Formular,
+    /// vorbelegt aus dieser Buchung. Gespeichert wird hier nichts - nur
+    /// die Id wird weitergereicht, die Werte holt der Vorlagenbereich
+    /// selbst aus der Datenbank (siehe
+    /// <see cref="VorlagenViewModel.NeueVorlageAus"/>).
+    /// </summary>
+    [RelayCommand]
+    private void AlsVorlage(AusgabeZeile? zeile)
+    {
+        if (zeile is null)
+        {
+            return;
+        }
+
+        VorlageAusBuchungAngefordert?.Invoke(this, zeile.Id);
     }
 
     // ---------------- Laden ----------------
