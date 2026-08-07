@@ -57,6 +57,29 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
         </Style>
 
+        <!-- Die Kategoriespalte bleibt beim waagerechten Schieben stehen.
+             Sie liegt weiter in derselben Zeile wie die Werte und wird
+             nur um die Bildlaufposition zurueckgeschoben - um eine
+             gemeinsame Verschiebung fuer alle Zeilen, die
+             ReportView.SpaltenVersatz fuehrt. Deshalb:
+             - ZIndex 1, damit sie ueber den Werten liegt, die unter ihr
+               wegwandern,
+             - ein deckender Hintergrund in der Flaechenfarbe des
+               Inhaltsbereichs, sonst schaeben die Werte durch,
+             - eine Trennlinie rechts, die erst beim Schieben sichtbar
+               wird. Ihre Breite steht immer, auch unsichtbar, sonst
+               ruckte die Tabelle beim ersten Schieben um ein Pixel. -->
+        <Style Selector="Border.fixspalte">
+            <Setter Property="ZIndex" Value="1" />
+            <Setter Property="Width" Value="{anzeige:Breite 300}" />
+            <Setter Property="Background" Value="{DynamicResource CanvasFarbe}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,1,0" />
+        </Style>
+        <Style Selector="Border.fixspalte.verschoben">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+        </Style>
+
         <Style Selector="TextBlock.filterbeschriftung">
             <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
             <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
@@ -305,7 +328,8 @@
                  stehen und wandert beim waagerechten Schieben mit den
                  Spalten mit - ohne dass zwei Bildlaufpositionen von Hand
                  gleichgehalten werden muessen. -->
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+            <ScrollViewer x:Name="Kreuztabelle"
+                          HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
                 <DockPanel>
                     <!-- Kopfzeile -->
@@ -313,7 +337,11 @@
                             BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="0,0,0,1"
                             Padding="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Kategorie" Classes="tabellenkopf" Width="{anzeige:Breite 300}" />
+                            <Border Classes="fixspalte"
+                                    Classes.verschoben="{Binding #Wurzel.SpalteVerschoben}"
+                                    RenderTransform="{Binding #Wurzel.SpaltenVersatz}">
+                                <TextBlock Text="Kategorie" Classes="tabellenkopf" />
+                            </Border>
                             <ItemsControl ItemsSource="{Binding Spalten}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -351,35 +379,42 @@
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- DockPanel statt StackPanel, damit der
                                                      Name die Restbreite bekommt und lange
-                                                     Bezeichnungen gekuerzt werden. -->
-                                                <DockPanel Width="{anzeige:Breite 300}">
-                                                    <Border DockPanel.Dock="Left"
-                                                            Width="{Binding EinzugBreite}" />
-                                                    <Button DockPanel.Dock="Left"
-                                                            Classes="aufklapp"
-                                                            Content="{Binding AufklappZeichen}"
-                                                            IsVisible="{Binding HatKinder}"
-                                                            Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZeileUmschaltenCommand}"
-                                                            CommandParameter="{Binding}" />
-                                                    <Border DockPanel.Dock="Left" Width="{anzeige:Breite 20}"
-                                                            IsVisible="{Binding !HatKinder}" />
+                                                     Bezeichnungen gekuerzt werden. Der Rahmen
+                                                     darum haelt die Spalte beim waagerechten
+                                                     Schieben an ihrem Platz (Style
+                                                     "fixspalte"). -->
+                                                <Border Classes="fixspalte"
+                                                        Classes.verschoben="{Binding #Wurzel.SpalteVerschoben}"
+                                                        RenderTransform="{Binding #Wurzel.SpaltenVersatz}">
+                                                    <DockPanel>
+                                                        <Border DockPanel.Dock="Left"
+                                                                Width="{Binding EinzugBreite}" />
+                                                        <Button DockPanel.Dock="Left"
+                                                                Classes="aufklapp"
+                                                                Content="{Binding AufklappZeichen}"
+                                                                IsVisible="{Binding HatKinder}"
+                                                                Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZeileUmschaltenCommand}"
+                                                                CommandParameter="{Binding}" />
+                                                        <Border DockPanel.Dock="Left" Width="{anzeige:Breite 20}"
+                                                                IsVisible="{Binding !HatKinder}" />
 
-                                                    <!-- Farbe der Kategorie, vor dem Namen und
-                                                         niemals an seiner Stelle. -->
-                                                    <Border DockPanel.Dock="Left"
-                                                            Classes="farbpunkt"
-                                                            Background="{Binding Farbe}"
-                                                            IsVisible="{Binding ZeigtFarbe}"
-                                                            Margin="0,0,6,0" />
+                                                        <!-- Farbe der Kategorie, vor dem Namen und
+                                                             niemals an seiner Stelle. -->
+                                                        <Border DockPanel.Dock="Left"
+                                                                Classes="farbpunkt"
+                                                                Background="{Binding Farbe}"
+                                                                IsVisible="{Binding ZeigtFarbe}"
+                                                                Margin="0,0,6,0" />
 
-                                                    <!-- Hier steht nur der Name der Kategorie
-                                                         und nicht ihr Pfad - gekuerzt wird
-                                                         also hinten. Der Hilfetext erscheint
-                                                         nur, wenn wirklich etwas fehlt. -->
-                                                    <anzeige:Textzelle Inhalt="{Binding Name}"
-                                                                       VerticalAlignment="Center"
-                                                                       Classes.archiviert="{Binding IstArchiviert}" />
-                                                </DockPanel>
+                                                        <!-- Hier steht nur der Name der Kategorie
+                                                             und nicht ihr Pfad - gekuerzt wird
+                                                             also hinten. Der Hilfetext erscheint
+                                                             nur, wenn wirklich etwas fehlt. -->
+                                                        <anzeige:Textzelle Inhalt="{Binding Name}"
+                                                                           VerticalAlignment="Center"
+                                                                           Classes.archiviert="{Binding IstArchiviert}" />
+                                                    </DockPanel>
+                                                </Border>
 
                                                 <ItemsControl ItemsSource="{Binding Zellen}">
                                                     <ItemsControl.ItemsPanel>
@@ -436,9 +471,13 @@
                                         <Border BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="0,1,0,0"
                                                 Padding="0,6,0,0" Margin="0,2,0,0">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" Width="{anzeige:Breite 300}"
-                                                           FontWeight="Bold"
-                                                           VerticalAlignment="Center" />
+                                                <Border Classes="fixspalte"
+                                                        Classes.verschoben="{Binding #Wurzel.SpalteVerschoben}"
+                                                        RenderTransform="{Binding #Wurzel.SpaltenVersatz}">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontWeight="Bold"
+                                                               VerticalAlignment="Center" />
+                                                </Border>
                                                 <ItemsControl ItemsSource="{Binding Zellen}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
