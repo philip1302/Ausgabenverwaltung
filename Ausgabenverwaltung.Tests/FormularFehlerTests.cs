@@ -391,7 +391,7 @@ public class FormularFehlerTests : IDisposable
             kategoriePfad: null,
             _kategorien.GetSelectableLeaves(),
             _personen.GetAllActive(),
-            erzeugteAnzahl: 0,
+            uebertragbareAnzahl: 0,
             heute: new DateOnly(2026, 7, 31));
 
     private BackupService NeueSicherung()

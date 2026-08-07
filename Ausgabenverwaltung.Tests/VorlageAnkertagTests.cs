@@ -32,7 +32,7 @@ public class VorlageAnkertagTests : IDisposable
             kategoriePfad: null,
             new CategoryRepository(_connection).GetSelectableLeaves(),
             new PersonRepository(_connection).GetAllActive(),
-            erzeugteAnzahl: 0,
+            uebertragbareAnzahl: 0,
             heute: new DateOnly(2026, 7, 31));
 
     private void SetzeEinheit(VorlageBearbeitenViewModel formular, string wert)

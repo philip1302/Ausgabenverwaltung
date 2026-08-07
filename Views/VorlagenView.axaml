@@ -357,8 +357,8 @@
                             <Border IsVisible="{Binding BetragHinweisSichtbar}"
                                     Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                                     Padding="8" Margin="0,0,0,10">
-                                <TextBlock Classes="hinweis"
-                                           Text="Änderungen wirken nur auf künftig erzeugte Buchungen. Bereits erzeugte Buchungen behalten Betrag, Kategorie und Zahler, die zum Zeitpunkt ihrer Erzeugung galten." />
+                                <TextBlock Classes="hinweis" TextWrapping="Wrap"
+                                           Text="{Binding BetragHinweisText}" />
                             </Border>
 
                             <!-- Startdatum nach vorne verschoben, obwohl schon erzeugt wurde -->
@@ -510,6 +510,16 @@
                                     Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
                                     Padding="8" Margin="0,8,0,0">
                                 <TextBlock Text="{Binding RueckwirkendText}" Classes="hinweis" />
+                            </Border>
+
+                            <!-- Die Ausnahme von Regel 6: ausdruecklich
+                                 anzuhaken, jedes Mal neu, und nur, wenn es
+                                 ueberhaupt erzeugte Buchungen gibt. -->
+                            <Border Classes="banner hinweis" IsVisible="{Binding UebertragungMoeglich}"
+                                    Margin="0,8,0,0">
+                                <CheckBox IsChecked="{Binding AenderungUebertragen}">
+                                    <TextBlock Text="{Binding UebertragungText}" TextWrapping="Wrap" />
+                                </CheckBox>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>

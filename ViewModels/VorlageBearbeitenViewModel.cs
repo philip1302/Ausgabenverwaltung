@@ -45,7 +45,11 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
     /// <summary>Bis hierhin wurde bereits erzeugt, NULL = noch nie gelaufen.</summary>
     public DateOnly? GeneratedThrough { get; }
 
-    public int ErzeugteAnzahl { get; }
+    /// <summary>
+    /// Wie viele Buchungen aus dieser Vorlage bereits entstanden sind -
+    /// also wie viele eine Uebertragung betraefe.
+    /// </summary>
+    public int UebertragbareAnzahl { get; }
 
     public IReadOnlyList<IntervallOption> IntervallOptionen { get; } =
     [
@@ -229,8 +233,49 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
 
     // ---------------- Hinweise beim Bearbeiten ----------------
 
-    /// <summary>Regel 6: Betragsaenderungen wirken nie rueckwirkend.</summary>
+    /// <summary>Regel 6: Aenderungen wirken nie von selbst rueckwirkend.</summary>
     public bool BetragHinweisSichtbar => IstBestehend;
+
+    /// <summary>
+    /// Der Hinweistext dazu. Er haengt davon ab, ob die Uebertragung
+    /// ueberhaupt angeboten wird: sonst verwiese er auf ein Haekchen, das
+    /// gar nicht dasteht.
+    /// </summary>
+    public string BetragHinweisText => UebertragungMoeglich
+        ? "Änderungen wirken nur auf künftig erzeugte Buchungen — es sei denn, die "
+          + "Übertragung unten wird angehakt. Bereits erzeugte Buchungen behalten sonst "
+          + "Betrag, Kategorie und Zahler, die zum Zeitpunkt ihrer Erzeugung galten."
+        : "Änderungen wirken nur auf künftig erzeugte Buchungen. Bereits erzeugte "
+          + "Buchungen behalten Betrag, Kategorie und Zahler, die zum Zeitpunkt ihrer "
+          + "Erzeugung galten.";
+
+    // ---------------- Uebertragung auf bestehende Buchungen ----------------
+    //
+    // Die Ausnahme von Regel 6, und die einzige: ein getrennter, jedes Mal
+    // neu anzuhakender Vorgang, den der Anwender bewusst ausloest. Das
+    // automatische Verhalten des Speicherns bleibt unveraendert - ohne
+    // Haekchen ruehrt es die Historie nie an.
+    //
+    // Bewusst NICHT ueber die vorhandene Mechanik
+    // RueckwirkendAbfrageAngefordert/-Bestaetigt: die betrifft die
+    // rueckwirkende ERZEUGUNG neuer Vorkommen und ist etwas anderes.
+
+    /// <summary>
+    /// Immer false beim Oeffnen des Dialogs - eine Uebertragung gilt fuer
+    /// genau ein Speichern, nie fuer das naechste mit.
+    /// </summary>
+    [ObservableProperty]
+    private bool _aenderungUebertragen;
+
+    public bool UebertragungMoeglich => IstBestehend && UebertragbareAnzahl > 0;
+
+    public string UebertragungText =>
+        (UebertragbareAnzahl == 1
+            ? "Diese Änderung auch auf die 1 bereits erzeugte Buchung anwenden. "
+            : $"Diese Änderung auch auf die {UebertragbareAnzahl} bereits erzeugten Buchungen anwenden. ")
+        + "Betrifft Betrag, Kategorie, Zahler, Bemerkung und Art. Datum und "
+        + "Beglichen-Status bleiben unverändert. Nicht rückgängig zu machen — vorher wird "
+        + "automatisch gesichert.";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StartVorverlegtHinweisSichtbar))]
@@ -255,11 +300,11 @@ public sealed partial class VorlageBearbeitenViewModel : ObservableObject
         string? kategoriePfad,
         IReadOnlyList<CategoryOption> waehlbareKategorien,
         IReadOnlyList<Person> zahler,
-        int erzeugteAnzahl,
+        int uebertragbareAnzahl,
         DateOnly heute)
     {
         _heute = heute;
-        ErzeugteAnzahl = erzeugteAnzahl;
+        UebertragbareAnzahl = uebertragbareAnzahl;
 
         VorlageId = vorlage?.Id;
         GeneratedThrough = vorlage?.GeneratedThrough;

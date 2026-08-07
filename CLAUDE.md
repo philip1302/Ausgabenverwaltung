@@ -48,7 +48,10 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
 
 6. **Betraege werden beim Erzeugen aus der Vorlage KOPIERT**,
    nicht referenziert. Vorlagenaenderungen duerfen die
-   Historie nicht ruckwirkend veraendern.
+   Historie nicht ruckwirkend veraendern. Ausgenommen ist die
+   ausdruecklich angehakte, einmalige Uebertragung beim Speichern
+   einer Vorlage — sie ist eine Anwenderaktion, keine Referenz, und
+   laesst Datum und Beglichen-Status unberuehrt.
 
 7. **Keine Geschaeftslogik in Code-Behind oder ViewModels.**
    Alles Pruefbare gehoert nach Core.

@@ -220,7 +220,7 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     private void NeueVorlage()
     {
         SchliesseBaender();
-        Bearbeiten = ErzeugeFormular(vorlage: null, erzeugteAnzahl: 0);
+        Bearbeiten = ErzeugeFormular(vorlage: null, uebertragbareAnzahl: 0);
     }
 
     [RelayCommand]
@@ -232,7 +232,12 @@ public sealed partial class VorlagenViewModel : ViewModelBase
         }
 
         SchliesseBaender();
-        Bearbeiten = ErzeugeFormular(zeile.Vorlage, zeile.ErzeugteAnzahl);
+
+        // Frisch gezaehlt statt aus der Zeile uebernommen: an dieser Zahl
+        // haengt das Angebot, die Aenderung auf die bestehenden Buchungen
+        // zu uebertragen.
+        Bearbeiten = ErzeugeFormular(
+            zeile.Vorlage, _recurringExpenseRepository.CountGeneratedExpenses(zeile.Id));
     }
 
     [RelayCommand]
@@ -272,9 +277,64 @@ public sealed partial class VorlagenViewModel : ViewModelBase
             return;
         }
 
+        // Die ausdruecklich angehakte Uebertragung auf die bereits
+        // erzeugten Buchungen. Sie laeuft NACH dem Speichern: uebertragen
+        // wird der frisch gespeicherte Stand der Vorlage.
+        var uebertragung = formular is { IstBestehend: true, AenderungUebertragen: true }
+            ? UebertrageAufErzeugteBuchungen(formular.VorlageId!.Value)
+            : null;
+
         Bearbeiten = null;
         LadeListe();
-        ZeigeErgebnis(erzeugt, leerText: null);
+        ZeigeErgebnis(erzeugt, leerText: null, vorspann: uebertragung);
+    }
+
+    /// <summary>
+    /// Uebertraegt die gespeicherte Vorlagenaenderung auf die bereits
+    /// erzeugten Buchungen und liefert den Text fuer das Ergebnisband.
+    ///
+    /// Regel 6 bleibt gewahrt: hierher kommt nur, wer das Haekchen im
+    /// Formular ausdruecklich gesetzt hat. Scheitert die Uebertragung,
+    /// bleibt die gespeicherte Vorlage bestehen - das ist richtig, und
+    /// genau das muss der Fehlertext sagen, sonst waere unklar, welcher
+    /// Teil des Speicherns gegriffen hat.
+    /// </summary>
+    private string? UebertrageAufErzeugteBuchungen(int vorlageId)
+    {
+        // Die Sicherung enthaelt die Buchungen in ihrem Zustand VOR der
+        // Uebertragung - genau die, die sonst nicht wiederzubekommen
+        // waeren (Regel 8).
+        if (!SichereVorNichtUmkehrbaremSchritt(
+                "Vor dem Übertragen auf die bestehenden Buchungen", out var sicherungsFehler))
+        {
+            SchreibFehlerText =
+                "Die Vorlage wurde gespeichert, die Übertragung auf die bestehenden "
+                + "Buchungen jedoch nicht ausgeführt.\n\n" + sicherungsFehler;
+            return null;
+        }
+
+        var anzahl = 0;
+
+        var fehler = Schreibvorgang.Versuche(
+            "Beim Uebertragen einer Vorlagenaenderung auf die erzeugten Buchungen",
+            () => anzahl = _recurringExpenseRepository.ApplyToGeneratedExpenses(vorlageId));
+
+        if (fehler is not null)
+        {
+            SchreibFehlerText =
+                "Die Vorlage wurde gespeichert, die Übertragung auf die bestehenden "
+                + "Buchungen jedoch nicht ausgeführt.\n\n" + fehler;
+            return null;
+        }
+
+        // Betrag, Kategorie, Zahler und Art bestehender Buchungen haben
+        // sich geaendert - jede Liste und jede Auswertung zeigt sonst
+        // veraltete Werte (Regel 14).
+        _messenger.Send(new BuchungenGeaendertNachricht());
+
+        return anzahl == 1
+            ? "Die Änderung wurde auf 1 bereits erzeugte Buchung übertragen."
+            : $"Die Änderung wurde auf {anzahl} bereits erzeugte Buchungen übertragen.";
     }
 
     [RelayCommand]
@@ -561,7 +621,7 @@ public sealed partial class VorlagenViewModel : ViewModelBase
 
     // ---------------- Innereien ----------------
 
-    private VorlageBearbeitenViewModel ErzeugeFormular(RecurringExpense? vorlage, int erzeugteAnzahl)
+    private VorlageBearbeitenViewModel ErzeugeFormular(RecurringExpense? vorlage, int uebertragbareAnzahl)
     {
         // Kategorien und Personen bewusst beim Oeffnen frisch laden: der
         // Bereich ist ein DI-Singleton, und nebenan in der Verwaltung
@@ -573,7 +633,7 @@ public sealed partial class VorlagenViewModel : ViewModelBase
             vorlage is not null && pfade.TryGetValue(vorlage.CategoryId, out var pfad) ? pfad : null,
             _categoryRepository.GetSelectableLeaves(),
             _personRepository.GetAllActive(),
-            erzeugteAnzahl,
+            uebertragbareAnzahl,
             Heute);
     }
 
@@ -625,18 +685,17 @@ public sealed partial class VorlagenViewModel : ViewModelBase
             : Array.Empty<Expense>();
     }
 
-    private void ZeigeErgebnis(IReadOnlyList<Expense> erzeugt, string? leerText)
+    /// <summary>
+    /// Baut das Ergebnisband. <paramref name="leerText"/> erscheint, wenn
+    /// nichts erzeugt wurde (beim Speichern der Normalfall und keine
+    /// Meldung wert, beim Knopfdruck dagegen schon).
+    /// <paramref name="vorspann"/> steht davor - beim selben Speichern
+    /// kann sowohl uebertragen als auch erzeugt worden sein.
+    /// </summary>
+    private void ZeigeErgebnis(IReadOnlyList<Expense> erzeugt, string? leerText, string? vorspann = null)
     {
         ErgebnisZeilen.Clear();
         ErgebnisHatZeilen = erzeugt.Count > 0;
-
-        if (erzeugt.Count == 0)
-        {
-            // Beim Speichern ist "nichts erzeugt" der Normalfall und keine
-            // Meldung wert - beim Knopfdruck dagegen schon.
-            ErgebnisText = leerText;
-            return;
-        }
 
         foreach (var expense in erzeugt)
         {
@@ -646,9 +705,18 @@ public sealed partial class VorlagenViewModel : ViewModelBase
                 (string.IsNullOrEmpty(expense.Note) ? string.Empty : $" · {expense.Note}"));
         }
 
-        ErgebnisText = erzeugt.Count == 1
-            ? "1 Buchung wurde erzeugt."
-            : $"{erzeugt.Count} Buchungen wurden erzeugt.";
+        var erzeugtText = erzeugt.Count switch
+        {
+            0 => leerText,
+            1 => "1 Buchung wurde erzeugt.",
+            _ => $"{erzeugt.Count} Buchungen wurden erzeugt.",
+        };
+
+        var zeilen = new[] { vorspann, erzeugtText }
+            .Where(text => !string.IsNullOrEmpty(text))
+            .ToList();
+
+        ErgebnisText = zeilen.Count == 0 ? null : string.Join("\n", zeilen);
     }
 
     /// <summary>

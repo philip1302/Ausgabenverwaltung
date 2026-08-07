@@ -309,7 +309,9 @@ Zahl im Dialog stimmt, und alle Bereiche aktualisieren sich.
 
 ---
 
-### [ ] 5. Vorlagenänderung auf erzeugte Buchungen übertragen
+### [x] 5. Vorlagenänderung auf erzeugte Buchungen übertragen
+
+**Erledigt in:** Vorlagenaenderungen lassen sich auf erzeugte Buchungen uebertragen
 
 **Ziel:** Beim Speichern einer geänderten Vorlage kann der Anwender
 **ausdrücklich** verlangen, dass die Änderung auch für die bereits

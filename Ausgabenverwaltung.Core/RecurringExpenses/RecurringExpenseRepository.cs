@@ -13,8 +13,11 @@ namespace Ausgabenverwaltung.Core.RecurringExpenses;
 /// Datumsberechnung dafuer steckt in <see cref="RecurrenceGenerator"/> und
 /// ist bewusst von diesem Datenzugriff getrennt. Betraege werden beim
 /// Erzeugen aus der Vorlage kopiert, nicht referenziert (Regel 6) -
-/// nachtraegliche Vorlagenaenderungen wirken sich also nie auf bereits
-/// erzeugte Buchungen aus.
+/// nachtraegliche Vorlagenaenderungen wirken sich also nie von selbst auf
+/// bereits erzeugte Buchungen aus. Die einzige Ausnahme ist die
+/// ausdruecklich angehakte, einmalige
+/// <see cref="ApplyToGeneratedExpenses"/> - eine Anwenderaktion, keine
+/// Referenz.
 /// </summary>
 public sealed class RecurringExpenseRepository
 {
@@ -274,9 +277,56 @@ public sealed class RecurringExpenseRepository
     }
 
     /// <summary>
+    /// Uebertraegt die aktuellen Werte der Vorlage auf die bereits daraus
+    /// erzeugten Buchungen und liefert die Anzahl der geaenderten Zeilen.
+    ///
+    /// Regel 6 bleibt davon unberuehrt: das Speichern einer Vorlage aendert
+    /// die Historie NIE von selbst. Diese Methode laeuft ausschliesslich,
+    /// wenn der Anwender die Uebertragung ausdruecklich anhakt - fachlich
+    /// dasselbe wie ein Sammel-Bearbeiten in der Ausgabenliste.
+    ///
+    /// Uebertragen werden nur die Felder, die beschreiben, WAS gebucht
+    /// wurde. ExpenseDate bleibt aussen vor (es ergibt sich aus dem
+    /// Rhythmus, nicht aus der Vorlage), SettledDate ebenso - das gehoert
+    /// der einzelnen Buchung (Regel 4).
+    ///
+    /// Ein einzelnes UPDATE, damit entweder alle betroffenen Zeilen
+    /// wandern oder keine: SQLite fuehrt eine einzelne Anweisung fuer sich
+    /// atomar aus, eine zusaetzliche Transaktionsklammer waere hier nur
+    /// Beiwerk.
+    /// </summary>
+    public int ApplyToGeneratedExpenses(int templateId)
+    {
+        const string sql = """
+            UPDATE Expense
+            SET CategoryId  = vorlage.CategoryId,
+                PayerId     = vorlage.PayerId,
+                AmountCents = vorlage.AmountCents,
+                Note        = vorlage.Note,
+                IsIncome    = vorlage.IsIncome,
+                ModifiedUtc = @NowUtcText
+            FROM (SELECT CategoryId, PayerId, AmountCents, Note, IsIncome
+                  FROM   RecurringExpense
+                  WHERE  Id = @Id) AS vorlage
+            WHERE Expense.RecurringExpenseId = @Id
+            """;
+
+        var anzahl = _connection.Execute(sql, new
+        {
+            Id = templateId,
+            NowUtcText = IsoDateTime.ToUtcText(DateTime.UtcNow),
+        });
+
+        AppLog.Current.Info(LogEvents.TemplateChangeApplied(templateId, anzahl));
+
+        return anzahl;
+    }
+
+    /// <summary>
     /// Anzahl der aus EINER Vorlage erzeugten Buchungen. Fuer die
-    /// Nachfrage vor dem Loeschen - dort ist nur diese eine Zahl gefragt,
-    /// nicht die Neuberechnung aller Vorlagen aus
+    /// Nachfrage vor dem Loeschen und fuer die Uebertragung beim
+    /// Speichern - dort ist nur diese eine Zahl gefragt, nicht die
+    /// Neuberechnung aller Vorlagen aus
     /// <see cref="GetGeneratedExpenseCounts"/>.
     /// </summary>
     public int CountGeneratedExpenses(int templateId)

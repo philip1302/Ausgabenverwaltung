@@ -203,6 +203,17 @@ public static class LogEvents
             ? $"Wiederkehrende Ausgabe geloescht (Id {templateId}), samt 1 daraus erzeugter Buchung."
             : $"Wiederkehrende Ausgabe geloescht (Id {templateId}), samt {count} daraus erzeugten Buchungen.";
 
+    /// <summary>
+    /// Die vom Anwender angehakte Uebertragung einer Vorlagenaenderung auf
+    /// die bereits erzeugten Buchungen. Nur Id und Anzahl, keine Werte -
+    /// welche Betraege sich geaendert haben, geht das Protokoll nichts an
+    /// (Regel 11).
+    /// </summary>
+    public static string TemplateChangeApplied(int templateId, int count)
+        => count == 1
+            ? $"Vorlagenaenderung auf 1 bereits erzeugte Buchung uebertragen (Vorlage Id {templateId})."
+            : $"Vorlagenaenderung auf {count} bereits erzeugte Buchungen uebertragen (Vorlage Id {templateId}).";
+
     public static string RecurringExpenseGeneratedThroughSet(int id, DateOnly through)
         => $"Wiederkehrende Ausgabe (Id {id}): Stand ohne Erzeugung auf "
            + $"{through.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)} gesetzt.";
