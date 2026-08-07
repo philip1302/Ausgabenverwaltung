@@ -512,4 +512,124 @@ public class CategoryRepositoryTests : IDisposable
         Assert.Equal(2, counts[heizkosten.Id]);
         Assert.False(counts.ContainsKey(wohnen.Id));
     }
+
+    // ================= Schnellwahl =================
+
+    [Fact]
+    public void GetMostUsed_sortiert_nach_Haeufigkeit()
+    {
+        var selten = _repository.Create("Selten", null);
+        var oft = _repository.Create("Oft", null);
+        var mittel = _repository.Create("Mittel", null);
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+        var expenses = new ExpenseRepository(_connection);
+
+        expenses.Create(selten.Id, 1000, new DateOnly(2026, 6, 1), person.Id);
+        for (var i = 0; i < 3; i++)
+        {
+            expenses.Create(oft.Id, 1000, new DateOnly(2026, 6, 2), person.Id);
+        }
+
+        expenses.Create(mittel.Id, 1000, new DateOnly(2026, 6, 3), person.Id);
+        expenses.Create(mittel.Id, 1000, new DateOnly(2026, 6, 4), person.Id);
+
+        var haeufigste = _repository.GetMostUsed(5, new DateOnly(2026, 1, 1));
+
+        Assert.Equal(
+            new[] { oft.Id, mittel.Id, selten.Id },
+            haeufigste.Select(option => option.Id));
+    }
+
+    [Fact]
+    public void GetMostUsed_liefert_hoechstens_die_gewuenschte_Anzahl()
+    {
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+        var expenses = new ExpenseRepository(_connection);
+
+        for (var i = 1; i <= 4; i++)
+        {
+            var kategorie = _repository.Create($"Kategorie {i}", null);
+            expenses.Create(kategorie.Id, 1000, new DateOnly(2026, 6, i), person.Id);
+        }
+
+        Assert.Equal(2, _repository.GetMostUsed(2, new DateOnly(2026, 1, 1)).Count);
+    }
+
+    [Fact]
+    public void GetMostUsed_beachtet_die_Zeitraumgrenze()
+    {
+        // Was vor zwei Jahren oft gebraucht wurde, sagt ueber den
+        // naechsten Beleg wenig - deshalb der Stichtag.
+        var alt = _repository.Create("Alt", null);
+        var neu = _repository.Create("Neu", null);
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+        var expenses = new ExpenseRepository(_connection);
+
+        expenses.Create(alt.Id, 1000, new DateOnly(2026, 3, 30), person.Id);
+        expenses.Create(alt.Id, 1000, new DateOnly(2026, 3, 31), person.Id);
+        expenses.Create(neu.Id, 1000, new DateOnly(2026, 4, 1), person.Id);
+
+        var haeufigste = _repository.GetMostUsed(5, new DateOnly(2026, 4, 1));
+
+        // Der Stichtag zaehlt selbst noch dazu (>=), die beiden Tage davor
+        // nicht mehr.
+        Assert.Equal(new[] { neu.Id }, haeufigste.Select(option => option.Id));
+    }
+
+    [Fact]
+    public void GetMostUsed_laesst_archivierte_Kategorien_weg()
+    {
+        var archiviert = _repository.Create("Archiviert", null);
+        var aktiv = _repository.Create("Aktiv", null);
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+        var expenses = new ExpenseRepository(_connection);
+
+        // Die archivierte ist die haeufigere - trotzdem darf sie nicht
+        // erscheinen: die Schnellwahl kann nichts anbieten, was sich im
+        // Kategoriefeld daneben nicht auswaehlen laesst.
+        expenses.Create(archiviert.Id, 1000, new DateOnly(2026, 6, 1), person.Id);
+        expenses.Create(archiviert.Id, 1000, new DateOnly(2026, 6, 2), person.Id);
+        expenses.Create(aktiv.Id, 1000, new DateOnly(2026, 6, 3), person.Id);
+
+        _repository.Archive(archiviert.Id, includeDescendants: false);
+
+        var haeufigste = _repository.GetMostUsed(5, new DateOnly(2026, 1, 1));
+
+        Assert.Equal(new[] { aktiv.Id }, haeufigste.Select(option => option.Id));
+    }
+
+    [Fact]
+    public void GetMostUsed_laesst_Kategorien_mit_Unterkategorien_weg()
+    {
+        // Eine Kategorie mit Kindern ist nicht waehlbar (siehe
+        // GetSelectableLeaves) - auch dann nicht, wenn aus einer frueheren
+        // Zeit noch Buchungen direkt an ihr haengen.
+        var wohnen = _repository.Create("Wohnen", null);
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+        var expenses = new ExpenseRepository(_connection);
+
+        expenses.Create(wohnen.Id, 1000, new DateOnly(2026, 6, 1), person.Id);
+        _repository.Create("Heizkosten", wohnen.Id);
+
+        Assert.Empty(_repository.GetMostUsed(5, new DateOnly(2026, 1, 1)));
+    }
+
+    [Fact]
+    public void GetMostUsed_liefert_den_vollen_Pfad_und_die_aufgeloeste_Farbe()
+    {
+        // Dieselben Angaben wie im Kategoriefeld daneben - die Schnellwahl
+        // laedt den Baum dafuer nicht ein zweites Mal.
+        var pferde = _repository.Create("Pferde", null);
+        var hufschmied = _repository.Create("Hufschmied", pferde.Id);
+        var person = new PersonRepository(_connection).Create("Ich", isSelf: true);
+
+        _repository.SetColor(pferde.Id, CategoryColorPalette.Colors[0].Hex);
+        new ExpenseRepository(_connection)
+            .Create(hufschmied.Id, 1000, new DateOnly(2026, 6, 1), person.Id);
+
+        var option = Assert.Single(_repository.GetMostUsed(5, new DateOnly(2026, 1, 1)));
+
+        Assert.Equal(CategoryPaths.Append("Pferde", "Hufschmied"), option.FullPath);
+        Assert.Equal(CategoryColorPalette.Colors[0].Hex, option.Color);
+    }
 }

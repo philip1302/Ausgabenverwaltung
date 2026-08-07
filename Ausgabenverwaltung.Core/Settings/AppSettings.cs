@@ -67,4 +67,18 @@ public sealed record AppSettings
     /// jedem Start.
     /// </summary>
     public DateTime? LastUpdateCheckUtc { get; init; }
+
+    /// <summary>
+    /// Ob die Erfassungsmaske nach dem Speichern Kategorie, Zahler und
+    /// Datum stehen laesst (siehe ErfassenViewModel). Fuer das Erfassen
+    /// mehrerer Belege am Stueck.
+    ///
+    /// Vorgabe aus: wer die Maske einmal am Tag benutzt, soll ein leeres
+    /// Formular vorfinden. Die Einstellung steht hier und nicht nur im
+    /// Speicher, weil das Erfassen mehrerer Belege am Stueck eine
+    /// Gewohnheit ist und nicht die Ausnahme eines Nachmittags - sie
+    /// jeden Start neu anzuhaken waere genau die Tipparbeit, die sie
+    /// sparen soll.
+    /// </summary>
+    public bool KeepEntryValues { get; init; }
 }

@@ -183,6 +183,24 @@ public class AppSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Die_Serienerfassung_ist_ohne_Angabe_ausgeschaltet()
+    {
+        // Wer die Maske einmal am Tag benutzt, soll ein leeres Formular
+        // vorfinden - auch nach einem Update aus einer Fassung, die das
+        // Feld noch nicht kannte.
+        Assert.False(new AppSettingsStore(SettingsPath).Load().KeepEntryValues);
+    }
+
+    [Fact]
+    public void Die_angehakte_Serienerfassung_uebersteht_den_Neustart()
+    {
+        var speicher = new AppSettingsStore(SettingsPath);
+        speicher.Save(new AppSettings { KeepEntryValues = true });
+
+        Assert.True(speicher.Load().KeepEntryValues);
+    }
+
+    [Fact]
     public void Der_Zeitpunkt_der_letzten_Suche_kommt_unveraendert_zurueck()
     {
         var speicher = new AppSettingsStore(SettingsPath);

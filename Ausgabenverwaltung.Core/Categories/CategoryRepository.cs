@@ -520,6 +520,54 @@ public sealed class CategoryRepository
         return leaves;
     }
 
+    /// <summary>
+    /// Die am haeufigsten benutzten waehlbaren Kategorien seit
+    /// <paramref name="since"/>, absteigend nach Anzahl - Grundlage der
+    /// Schnellwahl ueber dem Kategoriefeld der Erfassungsmaske.
+    ///
+    /// Der Zeitraum haelt die Auswahl beweglich: was vor zwei Jahren oft
+    /// gebraucht wurde, sagt ueber den naechsten Beleg wenig.
+    ///
+    /// Gefiltert wird gegen <see cref="GetSelectableLeaves"/> und nicht im
+    /// SQL: damit gelten hier genau dieselben Bedingungen wie im
+    /// Kategoriefeld daneben (nur Blattknoten, nicht archiviert), und die
+    /// Schnellwahl kann nichts anbieten, was sich dort nicht auswaehlen
+    /// laesst. Deshalb steht auch kein LIMIT in der Abfrage - abgeschnitten
+    /// wird erst NACH dem Filtern, sonst faellt die Liste kuerzer aus als
+    /// gewuenscht, sobald eine haeufige Kategorie inzwischen archiviert ist.
+    /// </summary>
+    public IReadOnlyList<CategoryOption> GetMostUsed(int count, DateOnly since)
+    {
+        const string sql = """
+            SELECT CategoryId, COUNT(*) AS Anzahl
+            FROM Expense
+            WHERE ExpenseDate >= @Since
+            GROUP BY CategoryId
+            ORDER BY Anzahl DESC, CategoryId
+            """;
+
+        var haeufigkeiten = _connection.Query<CategoryExpenseCountRow>(
+            sql, new { Since = IsoDate.ToDateText(since) });
+
+        var waehlbar = GetSelectableLeaves().ToDictionary(option => option.Id);
+
+        var ergebnis = new List<CategoryOption>();
+        foreach (var zeile in haeufigkeiten)
+        {
+            if (ergebnis.Count == count)
+            {
+                break;
+            }
+
+            if (waehlbar.TryGetValue(zeile.CategoryId, out var option))
+            {
+                ergebnis.Add(option);
+            }
+        }
+
+        return ergebnis;
+    }
+
     private static void CollectLeaves(
         IReadOnlyList<CategoryNode> nodes,
         string? parentPath,

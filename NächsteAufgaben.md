@@ -656,10 +656,18 @@ die bei jeder Erfassung angefasst werden.
 
 ---
 
-### [ ] 8. Serienerfassung: Werte behalten und Schnellwahl
+### [x] 8. Serienerfassung: Werte behalten und Schnellwahl
+
+**Erledigt in:** Erfassungsmaske behaelt Werte und bietet eine Schnellwahl
 
 **Ziel:** Fünf Belege hintereinander erfassen, ohne fünfmal dieselbe
 Kategorie zu wählen.
+
+**Ergänzung:** Bei angehakter Serienerfassung bleibt auch das
+Einnahme-Häkchen stehen („geleert werden nur Betrag und Bemerkung") —
+im Regelfall wird es weiterhin zurückgesetzt. Die Schnellwahl filtert
+gegen `GetSelectableLeaves`, damit sie nichts anbieten kann, was sich
+im Kategoriefeld daneben nicht auswählen lässt.
 
 **Vorgehen**
 

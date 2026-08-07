@@ -84,6 +84,11 @@ public sealed class AppSettingsStore
                 // in der Datei.
                 AutoUpdate = document.AutoUpdate ?? true,
                 LastUpdateCheckUtc = ParseOrNull(document.LastUpdateCheckUtc),
+
+                // Fehlt der Wert (Datei aus einer aelteren Fassung), gilt
+                // die Vorgabe "aus" - ein leeres Formular nach dem
+                // Speichern, wie bisher.
+                KeepEntryValues = document.KeepEntryValues ?? false,
             };
         }
         catch (Exception)
@@ -107,6 +112,7 @@ public sealed class AppSettingsStore
             LastUpdateCheckUtc = settings.LastUpdateCheckUtc is DateTime geprueft
                 ? IsoDateTime.ToUtcText(geprueft)
                 : null,
+            KeepEntryValues = settings.KeepEntryValues,
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -152,5 +158,6 @@ public sealed class AppSettingsStore
         public string? ThemeMode { get; set; }
         public bool? AutoUpdate { get; set; }
         public string? LastUpdateCheckUtc { get; set; }
+        public bool? KeepEntryValues { get; set; }
     }
 }

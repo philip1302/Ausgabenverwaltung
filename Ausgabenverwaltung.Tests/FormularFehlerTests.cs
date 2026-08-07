@@ -56,8 +56,13 @@ public class FormularFehlerTests : IDisposable
         _tempDir.Delete(recursive: true);
     }
 
+    // Der Einstellungsspeicher zeigt in das Temp-Verzeichnis des Tests -
+    // die Erfassungsmaske merkt sich darin die Serienerfassung, und die
+    // echte Einstellungsdatei des Anwenders geht das nichts an.
     private ErfassenViewModel NeueErfassung()
-        => new(_ausgaben, _kategorien, _personen, _messenger);
+        => new(_ausgaben, _kategorien, _personen,
+            new AppSettingsStore(Path.Combine(_tempDir.FullName, "settings.json")),
+            _messenger);
 
     private int AnzahlAusgaben()
         => _ausgaben.GetRecent(1000).Count;

@@ -8,7 +8,9 @@ using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.People;
+using Ausgabenverwaltung.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -23,9 +25,26 @@ namespace Ausgabenverwaltung.ViewModels;
 /// </summary>
 public sealed partial class ErfassenViewModel : ViewModelBase
 {
+    /// <summary>
+    /// So viele Kategorien passen als Schnellwahl ueber das Feld, ohne
+    /// dass die Reihe zur zweiten Vorschlagsliste wird. Reine
+    /// Anzeigegroesse - die Auswahl selbst trifft
+    /// <see cref="CategoryRepository.GetMostUsed"/>.
+    /// </summary>
+    private const int SchnellwahlAnzahl = 5;
+
+    /// <summary>
+    /// Wie weit die Schnellwahl zurueckschaut. Ein Vierteljahr ist lang
+    /// genug, dass auch monatliche Buchungen mehrfach vorkommen, und kurz
+    /// genug, dass eine aufgegebene Gewohnheit wieder aus der Reihe
+    /// verschwindet.
+    /// </summary>
+    private const int SchnellwahlTage = 90;
+
     private readonly ExpenseRepository _expenseRepository;
     private readonly CategoryRepository _categoryRepository;
     private readonly PersonRepository _personRepository;
+    private readonly AppSettingsStore _settingsStore;
     private readonly IMessenger _messenger;
 
     public event EventHandler? FokusBetragAngefordert;
@@ -73,6 +92,16 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     // diesem Bereich - ErfassenViewModel ist ein DI-Singleton und laedt
     // sonst nur einmal beim Start).
     public ObservableCollection<CategoryOption> KategorieVorschlaege { get; } = new();
+
+    /// <summary>
+    /// Die Kategorien, die zuletzt am haeufigsten gebraucht wurden - als
+    /// Knopfreihe ueber dem Feld. Ein Klick spart das Tippen und Suchen;
+    /// das Feld darunter bleibt der vollstaendige Weg und wird nicht
+    /// ersetzt.
+    /// </summary>
+    public ObservableCollection<CategoryOption> Schnellwahl { get; } = new();
+
+    public bool SchnellwahlSichtbar => Schnellwahl.Count > 0;
 
     [ObservableProperty]
     private CategoryOption? _ausgewaehlteKategorie;
@@ -154,16 +183,35 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
     public ObservableCollection<LetzteAusgabeZeile> LetzteAusgaben { get; } = new();
 
+    /// <summary>
+    /// Serienerfassung: Kategorie, Zahler und Datum bleiben nach dem
+    /// Speichern stehen, geleert werden nur Betrag und Bemerkung. Fuer
+    /// den Stapel Belege, der am Monatsende auf dem Tisch liegt.
+    ///
+    /// Die Einstellung uebersteht den Neustart (siehe
+    /// <see cref="AppSettings.KeepEntryValues"/>) - sie beschreibt eine
+    /// Arbeitsweise, keine Laune eines Nachmittags.
+    /// </summary>
+    [ObservableProperty]
+    private bool _werteBehalten;
+
     public ErfassenViewModel(
         ExpenseRepository expenseRepository,
         CategoryRepository categoryRepository,
         PersonRepository personRepository,
+        AppSettingsStore settingsStore,
         IMessenger messenger)
     {
         _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
         _personRepository = personRepository;
+        _settingsStore = settingsStore;
         _messenger = messenger;
+
+        // Direkte Feldzuweisung: ueber die Eigenschaft wuerde
+        // OnWerteBehaltenChanged den gerade gelesenen Wert sofort wieder
+        // zurueckschreiben.
+        _werteBehalten = _settingsStore.Load().KeepEntryValues;
 
         AktualisiereKategorieVorschlaege();
 
@@ -178,9 +226,34 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         // Buchungsaenderungen aus anderen Bereichen (Abhaken in "Offene
         // Posten", Bearbeiten/Loeschen in der Ausgabenliste, Zusammenfuehren
         // von Kategorien) sollen hier sofort sichtbar werden, nicht erst
-        // beim naechsten Navigieren zu "Erfassen" (Regel 14).
+        // beim naechsten Navigieren zu "Erfassen" (Regel 14). Die
+        // Schnellwahl haengt an denselben Daten und wandert mit.
         _messenger.Register<ErfassenViewModel, BuchungenGeaendertNachricht>(
-            this, (empfaenger, _) => empfaenger.LadeLetzteAusgaben());
+            this, (empfaenger, _) =>
+            {
+                empfaenger.LadeLetzteAusgaben();
+                empfaenger.AktualisiereSchnellwahl();
+            });
+    }
+
+    // Die Einstellung wird sofort gespeichert, nicht erst beim Beenden -
+    // ein Absturz dazwischen darf sie nicht verschlucken. Immer mit "with"
+    // auf dem gerade gelesenen Stand, sonst faellt alles Uebrige auf die
+    // Vorgabewerte zurueck (siehe AppSettingsStore).
+    partial void OnWerteBehaltenChanged(bool value)
+    {
+        // Ausdruecklich still: das hier ist ein Haekchen an einem
+        // Formular. Ein Fehlerdialog, nur weil sich eine Bequemlichkeit
+        // nicht merken laesst, waere unverhaeltnismaessig - fuer diese
+        // Sitzung gilt die Einstellung ohnehin.
+        try
+        {
+            _settingsStore.Save(_settingsStore.Load() with { KeepEntryValues = value });
+        }
+        catch (Exception ex)
+        {
+            AppLog.Current.Exception("Beim Speichern der Serienerfassung", ex);
+        }
     }
 
     /// <summary>
@@ -202,6 +275,44 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         AusgewaehlteKategorie = ausgewaehlteId is int id
             ? KategorieVorschlaege.FirstOrDefault(o => o.Id == id)
             : null;
+
+        AktualisiereSchnellwahl();
+    }
+
+    /// <summary>
+    /// Baut die Schnellwahl neu auf. Laeuft mit den Vorschlaegen mit und
+    /// nach jeder Buchungsaenderung: was gerade oft gebraucht wird, aendert
+    /// sich mit jedem Beleg.
+    /// </summary>
+    private void AktualisiereSchnellwahl()
+    {
+        var seit = DateOnly.FromDateTime(DateTime.Now).AddDays(-SchnellwahlTage);
+
+        Schnellwahl.Clear();
+        foreach (var option in _categoryRepository.GetMostUsed(SchnellwahlAnzahl, seit))
+        {
+            Schnellwahl.Add(option);
+        }
+
+        OnPropertyChanged(nameof(SchnellwahlSichtbar));
+    }
+
+    /// <summary>
+    /// Klick auf einen Schnellwahl-Knopf. Gesetzt wird die Kategorie aus
+    /// den Vorschlaegen und nicht die angeklickte selbst: das Kategoriefeld
+    /// vergleicht seine Auswahl ueber die Objektgleichheit, und zwei
+    /// getrennt geladene <see cref="CategoryOption"/> mit derselben Id sind
+    /// fuer es zwei verschiedene Kategorien.
+    /// </summary>
+    [RelayCommand]
+    private void SchnellwahlWaehlen(CategoryOption? option)
+    {
+        if (option is null)
+        {
+            return;
+        }
+
+        AusgewaehlteKategorie = KategorieVorschlaege.FirstOrDefault(o => o.Id == option.Id);
     }
 
     /// <summary>
@@ -385,10 +496,21 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         // ist im Regelfall wieder eine normale Ausgabe, und ein stehen
         // gebliebenes Haekchen wuerde sie sonst unbemerkt zur Einnahme
         // machen.
+        //
+        // Bei angehakter Serienerfassung gilt das Gegenteil: dann liegt
+        // ein Stapel gleichartiger Belege auf dem Tisch, und geleert
+        // werden nur Betrag und Bemerkung. Auch das Einnahme-Haekchen
+        // bleibt dann stehen - wer eine Reihe Einnahmen erfasst, will es
+        // nicht fuenfmal setzen. Unbemerkt ist es dabei nicht: das
+        // Haekchen steht sichtbar im Formular, direkt ueber dem Feld.
         BetragText = string.Empty;
-        AusgewaehlteKategorie = null;
         Bemerkung = null;
-        IstEinnahme = false;
+
+        if (!WerteBehalten)
+        {
+            AusgewaehlteKategorie = null;
+            IstEinnahme = false;
+        }
 
         // Statt nur der eigenen Liste (LadeLetzteAusgaben) wird die
         // Nachricht gesendet - die eigene Registrierung oben ladet dadurch
