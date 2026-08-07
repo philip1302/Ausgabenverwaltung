@@ -836,10 +836,31 @@ Konstruktor gesetzt wird.
 Zuordnung leitet sich in `MainViewModel.BereicheMitZiffer` aus
 `NavigationItems` ab, statt als zweite Liste gepflegt zu werden.
 
-### [ ] 14. Kontextmenü auf Listenzeilen
+### [x] 14. Kontextmenü auf Listenzeilen
+
+**Erledigt in:** Ein Rechtsklick auf eine Zeile zeigt ihre Aktionen
+
 Rechtsklick auf eine Zeile in Ausgabenliste, Offene Posten und Vorlagen:
 Bearbeiten, Duplizieren, Als Vorlage, Als beglichen, Löschen. Nimmt Druck
 von der Aktionsspalte, die sonst mit jedem neuen Punkt breiter wird.
+
+**Umsetzung:**
+
+- Das Menü führt **alle** Aktionen der Zeile, auch die, die daneben als
+  Knopf stehen. Ein Menü, in dem die Hälfte fehlt, zwingt zum Wechseln
+  zwischen zwei Wegen.
+- Was für eine Zeile nicht gilt (Abhaken einer eigenen Ausgabe, Regel 4;
+  „Rückgängig" bei einem noch offenen Posten; „Aktivieren" bei einer
+  aktiven Vorlage), ist **ausgegraut statt versteckt** — sonst springen
+  die Einträge je nach getroffener Zeile ihren Platz.
+- Neu dabei: `AlsBeglichen` für eine einzelne Zeile der Ausgabenliste. Es
+  schreibt über dasselbe `SetSettledMany` wie die Sammelaktion, damit
+  Regel 4 an genau einer Stelle steht.
+- Die Aktionsspalte der Ausgabenliste schrumpft von 300 auf 200 Pixel:
+  „Duplizieren" ist ins Menü gewandert, „Bearbeiten" und „Löschen" bleiben
+  sichtbar. Der Hilfetext am Spaltenkopf nennt den Rechtsklick, damit die
+  übrigen Aktionen auffindbar bleiben. Die `MinWidth` des waagerechten
+  Bildlaufs sinkt entsprechend von 1100 auf 1000.
 
 ### [ ] 15. Suche über Bemerkung, Kategorie und Zahler
 Heute durchsucht `ReportFilter.SearchText` nur `Note`. Auf

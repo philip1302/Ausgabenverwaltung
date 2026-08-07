@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
              xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
@@ -11,7 +11,7 @@
              x:Name="Wurzel"
              x:DataType="vm:AusgabenlisteViewModel">
 
-    <!-- Spaltenraster "4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,300"
+    <!-- Spaltenraster "4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200"
          gilt fuer Kopfzeile UND Zeilen gleichermassen: Farbbalken,
          Auswahl, Vorlagen-Marker, Datum, Kategorie, Betrag, Zahler,
          Status, Bemerkung, Aktionen - dazwischen feste Gutter-Spalten als
@@ -50,11 +50,16 @@
          breit: seit die Betraege das €-Zeichen tragen, braucht
          "-1.234,56 €" mehr Platz als vorher "1.234,56".
 
-         Die Aktionsspalte fasst "Bearbeiten", "Duplizieren" und "Löschen"
-         nebeneinander; 300 statt der urspruenglichen 150 Pixel, weil die
-         Schaltflaechen mit der Theme-Polsterung sonst nicht nebeneinander
-         passen und die letzte abgeschnitten wird. Waechst sie weiter,
-         gehoert das in ein Kontextmenue statt in noch mehr Breite. -->
+         Die Aktionsspalte fasst nur noch "Bearbeiten" und "Löschen" - die
+         beiden Handgriffe, die am haeufigsten gebraucht werden. 200 Pixel
+         statt der zwischenzeitlichen 300: "Duplizieren" ist ins
+         Kontextmenue der Zeile gewandert, zusammen mit "Als Vorlage" und
+         "Als beglichen markieren". Genau das war der Ausweg, den der
+         Kommentar hier vorher schon angekuendigt hat - die Spalte kann
+         nicht mit jeder neuen Aktion weiterwachsen, sonst bleibt fuer
+         Bemerkung und Kategorie nichts uebrig. Der Hilfetext am
+         Spaltenkopf nennt den Rechtsklick, damit die uebrigen Aktionen
+         auffindbar bleiben. -->
     <UserControl.Styles>
         <!-- Die ListBox dient hier nur als virtualisierender Behaelter:
              ausgewaehlt wird ueber die Checkbox-Spalte, weil die Zeilen
@@ -491,8 +496,9 @@
                  dahinter nach rechts schieben und die Zeilen gegeneinander
                  versetzen.
 
-                 Die MinWidth ist die Summe aller uebrigen Spalten (857)
-                 plus rund 140 Pixel Rest fuer die Bemerkung; die
+                 Die MinWidth ist die Summe aller uebrigen Spalten (757,
+                 seit die Aktionsspalte nur noch zwei Schaltflaechen
+                 traegt) plus Rest fuer die Bemerkung; die
                  einstellbare Kategoriebreite kommt hinzu. Sie waechst also
                  mit, wenn die Kategoriespalte breiter gezogen wird -
                  sonst holte die sich ihren Platz aus der Bemerkung, bis
@@ -501,7 +507,7 @@
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
             <DockPanel Width="{Binding #Waagerecht.Viewport.Width}"
-                       MinWidth="{anzeige:BreitePlusKategorie 1100}">
+                       MinWidth="{anzeige:BreitePlusKategorie 1000}">
             <!-- Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste
                  (siehe PersonenView). Hier aber ueber Scroll.Viewport und
                  nicht ueber Bounds: die ListBox scrollt selbst, ihre
@@ -511,7 +517,7 @@
                     Width="{Binding #Zeilenliste.Scroll.Viewport.Width}"
                     HorizontalAlignment="Left"
                     Padding="4,0,4,4">
-                <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,300">
+                <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200">
                     <Button Grid.Column="4" Classes="kopf" Content="{Binding DatumHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
                     <Button Grid.Column="6" Classes="kopf" Content="{Binding KategorieHeaderText}"
@@ -532,7 +538,7 @@
                     <Button Grid.Column="14" Classes="kopf" Content="{Binding BemerkungHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Bemerkung" />
                     <Button Grid.Column="16" Content="Aktionen" Classes="tabellenkopf-aktion"
-                            ToolTip.Tip="Rechtsklick auf eine Zeile: Als Vorlage anlegen" />
+                            ToolTip.Tip="Rechtsklick auf eine Zeile: Duplizieren, Als Vorlage anlegen, Als beglichen markieren" />
                 </Grid>
             </Border>
 
@@ -558,20 +564,49 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:AusgabeZeile">
                         <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
-                            <!-- "Als Vorlage" steht im Kontextmenue und
-                                 nicht als vierter Knopf in der
-                                 Aktionsspalte: die ist bereits an ihrer
-                                 Breitengrenze (siehe Kommentar am Kopf der
-                                 Datei). Die uebrigen Aktionen wandern
-                                 spaeter mit hierher. -->
+                            <!-- Das Kontextmenü führt ALLE Aktionen der
+                                 Zeile, auch die, die daneben als Knopf
+                                 stehen. Ein Menü, in dem die Hälfte fehlt,
+                                 zwingt zum Wechseln zwischen zwei Wegen.
+                                 Die Aktionsspalte trägt nur noch die
+                                 beiden häufigsten (siehe Kommentar am Kopf
+                                 der Datei). -->
                             <Border.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Bearbeiten…"
+                                              Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenOeffnenCommand}"
+                                              CommandParameter="{Binding}" />
+                                    <MenuItem Header="Duplizieren"
+                                              ToolTip.Tip="Legt dieselbe Buchung noch einmal an, mit dem heutigen Datum"
+                                              Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).DuplizierenCommand}"
+                                              CommandParameter="{Binding}" />
                                     <MenuItem Header="Als Vorlage anlegen…"
                                               Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).AlsVorlageCommand}"
                                               CommandParameter="{Binding}" />
+
+                                    <Separator />
+
+                                    <!-- Nur bei einer offenen Buchung mit
+                                         fremdem Zahler: eine eigene Ausgabe
+                                         hat keinen Beglichen-Status
+                                         (Regel 4). Ausgegraut statt
+                                         versteckt, damit die Zeilen
+                                         dasselbe Menü haben. -->
+                                    <MenuItem Header="Als beglichen markieren"
+                                              IsEnabled="{Binding IstOffen}"
+                                              ToolTip.Tip="Trägt das heutige Datum ein. Eigene Ausgaben haben keinen Beglichen-Status."
+                                              Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).AlsBeglichenCommand}"
+                                              CommandParameter="{Binding}" />
+
+                                    <Separator />
+
+                                    <MenuItem Header="Löschen"
+                                              ToolTip.Tip="Lässt sich danach rückgängig machen"
+                                              Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).LoeschenCommand}"
+                                              CommandParameter="{Binding}" />
                                 </ContextMenu>
                             </Border.ContextMenu>
-                            <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,300">
+                            <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200">
                                 <!-- Farbe der Kategorie. Bewusst ein schmaler
                                      Balken am Rand und keine eingefaerbte
                                      Zeile: der Text muss lesbar bleiben, und
@@ -621,11 +656,8 @@
                                     <Button Classes="secondary klein" Content="Bearbeiten"
                                             Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenOeffnenCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Classes="secondary klein" Content="Duplizieren"
-                                            ToolTip.Tip="Legt dieselbe Buchung noch einmal an, mit dem heutigen Datum"
-                                            Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).DuplizierenCommand}"
-                                            CommandParameter="{Binding}" />
                                     <Button Classes="danger klein" Content="Löschen"
+                                            ToolTip.Tip="Lässt sich danach rückgängig machen"
                                             Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).LoeschenCommand}"
                                             CommandParameter="{Binding}" />
                                 </StackPanel>

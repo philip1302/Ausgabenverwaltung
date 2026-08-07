@@ -133,9 +133,11 @@ public sealed partial class AusgabeZeile : ObservableObject
     }
 
     /// <summary>
-    /// Beschreibung der Zeile fuer die Loesch-Sicherheitsabfrage: Datum,
-    /// Kategorie und Betrag, damit erkennbar bleibt, was verschwindet.
+    /// Die Zeile in einem Satz: Datum, Kategorie und Betrag. Steht in den
+    /// Baendern, die von einer einzelnen Buchung berichten ("Buchung
+    /// gelöscht: …", "Als beglichen markiert: …") - dort ist die Zeile
+    /// selbst gerade nicht mehr oder nicht mehr unveraendert zu sehen.
     /// </summary>
-    public string LoeschBeschreibung =>
+    public string Beschreibung =>
         $"{DatumText} · {CategoryFullPath} · {BetragText}";
 }

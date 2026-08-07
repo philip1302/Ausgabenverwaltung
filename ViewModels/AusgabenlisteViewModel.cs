@@ -823,7 +823,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         LoescheUndMerke(
             new[] { zeile.Id },
-            $"Buchung gelöscht: {zeile.LoeschBeschreibung}");
+            $"Buchung gelöscht: {zeile.Beschreibung}");
     }
 
     [RelayCommand(CanExecute = nameof(HatAuswahl))]
@@ -838,7 +838,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         LoescheUndMerke(
             ausgewaehlte.Select(zeile => zeile.Id).ToList(),
             ausgewaehlte.Count == 1
-                ? $"Buchung gelöscht: {ausgewaehlte[0].LoeschBeschreibung}"
+                ? $"Buchung gelöscht: {ausgewaehlte[0].Beschreibung}"
                 : $"{ausgewaehlte.Count} Buchungen gelöscht.");
     }
 
@@ -1164,6 +1164,47 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     private static string ZeilenText(int anzahl) =>
         anzahl == 1 ? "1 Buchung" : $"{anzahl} Buchungen";
+
+    // ---------------- Eine Zeile abhaken ----------------
+
+    /// <summary>
+    /// Markiert EINE Buchung als beglichen, mit dem heutigen Datum - der
+    /// Weg fuer den Einzelfall aus dem Kontextmenue, ohne vorher zu
+    /// markieren. Geschrieben wird ueber dieselbe Core-Methode wie bei der
+    /// Sammelaktion, damit Regel 4 an genau einer Stelle steht.
+    ///
+    /// Bei einer eigenen Buchung passiert nichts: dort bedeutet
+    /// SettledDate nichts. Der Menuepunkt ist deshalb erst gar nicht
+    /// anklickbar (siehe <see cref="AusgabeZeile.IstOffen"/>) - hier steht
+    /// die Pruefung noch einmal, weil sich ein Kommando nicht darauf
+    /// verlassen darf, wer es aufruft.
+    /// </summary>
+    [RelayCommand]
+    private void AlsBeglichen(AusgabeZeile? zeile)
+    {
+        if (zeile is null || !zeile.IstOffen)
+        {
+            return;
+        }
+
+        ErfolgText = null;
+        SchreibFehlerText = null;
+
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Markieren einer Ausgabe als beglichen",
+            () => _expenseRepository.SetSettledMany(new[] { zeile.Id }, heute));
+
+        if (SchreibFehlerText is not null)
+        {
+            // Regel 13: die Liste bleibt unveraendert stehen.
+            return;
+        }
+
+        ErfolgText = $"Als beglichen markiert: {zeile.Beschreibung}";
+        _messenger.Send(new BuchungenGeaendertNachricht());
+    }
 
     // ---------------- Als Vorlage ----------------
 

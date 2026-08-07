@@ -169,6 +169,34 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:OffenerPostenZeile">
                                         <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
+                                            <!-- Dieselben Aktionen wie in der
+                                                 Zeile, nur über den Rechtsklick
+                                                 erreichbar — wie in der
+                                                 Ausgabenliste. Was für die Zeile
+                                                 nicht gilt (Rückgängig bei einer
+                                                 offenen, Abhaken bei einer schon
+                                                 beglichenen), ist ausgegraut statt
+                                                 versteckt: so hat jede Zeile
+                                                 dasselbe Menü. -->
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Als beglichen markieren"
+                                                              IsEnabled="{Binding !IstBeglichen}"
+                                                              Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbhakenCommand}"
+                                                              CommandParameter="{Binding}" />
+                                                    <MenuItem Header="Mit abweichendem Datum abhaken…"
+                                                              IsEnabled="{Binding !IstBeglichen}"
+                                                              Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumOeffnenCommand}"
+                                                              CommandParameter="{Binding}" />
+
+                                                    <Separator />
+
+                                                    <MenuItem Header="Begleichung zurücknehmen"
+                                                              IsEnabled="{Binding IstBeglichen}"
+                                                              Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).RueckgaengigZeileCommand}"
+                                                              CommandParameter="{Binding}" />
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
                                             <StackPanel>
                                                 <Grid anzeige:Raster.Spalten="32,90,16,Kategorie,16,110,24,*,16,100,24,270">
                                                     <CheckBox Grid.Column="0"

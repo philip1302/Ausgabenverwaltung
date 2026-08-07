@@ -127,6 +127,52 @@ public class SammelaktionenTests : IDisposable
         Assert.Contains("eigenen Ausgaben", vm.ErfolgText);
     }
 
+    // Der Einzelfall aus dem Kontextmenue der Zeile - ohne vorher zu
+    // markieren. Er schreibt ueber dieselbe Core-Methode wie die
+    // Sammelaktion darueber, damit Regel 4 an genau einer Stelle steht.
+
+    [Fact]
+    public void Eine_einzelne_Zeile_laesst_sich_abhaken()
+    {
+        var fremde = _ausgaben.Create(_wohnenId, 1000, Heute, _annaId);
+
+        var vm = NeueListe();
+        vm.AlsBeglichenCommand.Execute(vm.Zeilen.Single(z => z.Id == fremde.Id));
+
+        Assert.Equal(Heute, _ausgaben.GetById(fremde.Id)!.SettledDate);
+        Assert.Contains("Als beglichen markiert", vm.ErfolgText);
+    }
+
+    [Fact]
+    public void Eine_eigene_Ausgabe_laesst_sich_nicht_abhaken()
+    {
+        // Regel 4: dort bedeutet SettledDate nichts. Der Menuepunkt ist
+        // ausgegraut - das Kommando prueft es trotzdem selbst, weil es
+        // sich nicht darauf verlassen darf, wer es aufruft.
+        var eigene = _ausgaben.Create(_wohnenId, 1000, Heute, _ichId);
+
+        var vm = NeueListe();
+        vm.AlsBeglichenCommand.Execute(vm.Zeilen.Single(z => z.Id == eigene.Id));
+
+        Assert.Null(_ausgaben.GetById(eigene.Id)!.SettledDate);
+        Assert.Null(vm.ErfolgText);
+    }
+
+    [Fact]
+    public void Eine_bereits_beglichene_Zeile_behaelt_ihr_Datum()
+    {
+        // Sonst wanderte ein aus gutem Grund zurueckdatiertes
+        // Begleichungsdatum bei einem Fehlklick still auf heute.
+        var gestern = Heute.AddDays(-1);
+        var fremde = _ausgaben.Create(
+            _wohnenId, 1000, Heute, _annaId, settledDate: gestern);
+
+        var vm = NeueListe();
+        vm.AlsBeglichenCommand.Execute(vm.Zeilen.Single(z => z.Id == fremde.Id));
+
+        Assert.Equal(gestern, _ausgaben.GetById(fremde.Id)!.SettledDate);
+    }
+
     [Fact]
     public void Unter_der_Schwelle_wird_nicht_nachgefragt()
     {

@@ -15,6 +15,14 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Ein Rechtsklick auf eine Zeile öffnet jetzt ein Menü mit allem, was sich
+  mit ihr anstellen lässt — in der Ausgabenliste, bei den offenen Posten
+  und bei den wiederkehrenden Ausgaben. In der Ausgabenliste kommt damit
+  auch das Abhaken einer einzelnen Buchung dazu, ohne sie vorher zu
+  markieren. Weil das Menü alles trägt, stehen in der Aktionsspalte nur
+  noch „Bearbeiten" und „Löschen": „Duplizieren" ist ins Menü gewandert
+  und die Spalte um 100 Pixel schmaler geworden — die gewinnt die
+  Bemerkung dazu.
 - Die Anwendung lässt sich jetzt weitgehend über die Tastatur bedienen:
   Strg + N öffnet die Erfassungsmaske, Strg + F springt in die Suche der
   Ausgabenliste, Strg + 1 bis Strg + 9 wechseln in den Bereich an dieser

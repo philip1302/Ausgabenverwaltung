@@ -195,6 +195,43 @@
                                  gesprungen wurde (siehe App.axaml). -->
                             <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6"
                                     Classes.hervorgehoben="{Binding IstHervorgehoben}">
+                                <!-- Dieselben Aktionen wie in der Zeile, nur
+                                     über den Rechtsklick erreichbar — wie in
+                                     der Ausgabenliste und in "Offene Posten".
+                                     "Aktivieren" und "Deaktivieren" stehen
+                                     beide da, jeweils nur eines anklickbar:
+                                     so springt der Menüpunkt nicht seinen
+                                     Platz, je nachdem, welche Zeile getroffen
+                                     wurde. -->
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Bearbeiten…"
+                                                  Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenOeffnenCommand}"
+                                                  CommandParameter="{Binding}" />
+                                        <MenuItem Header="Erzeugte Buchungen anzeigen"
+                                                  IsEnabled="{Binding HatErzeugteBuchungen}"
+                                                  Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BuchungenAnzeigenCommand}"
+                                                  CommandParameter="{Binding}" />
+
+                                        <Separator />
+
+                                        <MenuItem Header="Deaktivieren"
+                                                  IsEnabled="{Binding IstAktiv}"
+                                                  ToolTip.Tip="Stoppt die künftige Erzeugung. Bereits erzeugte Buchungen bleiben unverändert."
+                                                  Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).DeaktivierenCommand}"
+                                                  CommandParameter="{Binding}" />
+                                        <MenuItem Header="Aktivieren"
+                                                  IsEnabled="{Binding !IstAktiv}"
+                                                  Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).AktivierenCommand}"
+                                                  CommandParameter="{Binding}" />
+
+                                        <Separator />
+
+                                        <MenuItem Header="Löschen…"
+                                                  Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).LoeschenCommand}"
+                                                  CommandParameter="{Binding}" />
+                                    </ContextMenu>
+                                </Border.ContextMenu>
                                 <Grid anzeige:Raster.Spalten="2*,16,Kategorie,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
                                     <anzeige:Textzelle Grid.Column="0" Inhalt="{Binding Titel}"
                                                        Classes="tabellenzelle"

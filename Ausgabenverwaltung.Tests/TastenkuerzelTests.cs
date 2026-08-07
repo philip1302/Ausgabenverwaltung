@@ -97,11 +97,13 @@ public class TastenkuerzelTests
     {
         // Der Kern von Kuerzelbindung: die Ansichten haengen ihre Kuerzel
         // im Konstruktor an, der DataContext kommt erst danach. Wuerde das
-        // Kommando zugewiesen statt gebunden, bliebe die Taste stumm - und
-        // zwar ohne jede Fehlermeldung, weil eine KeyBinding ohne Kommando
-        // einfach nichts tut.
+        // Kommando dort einmalig abgegriffen, bliebe die Taste fuer immer
+        // stumm - und zwar ohne jede Fehlermeldung, weil eine KeyBinding
+        // ohne Kommando einfach nichts tut.
         var element = new Border();
         var viewModel = new TastenkuerzelViewModel();
+        var ausgeloest = false;
+        viewModel.Geschlossen += (_, _) => ausgeloest = true;
 
         Kuerzelbindung.Binde(
             element,
@@ -109,8 +111,25 @@ public class TastenkuerzelTests
             nameof(TastenkuerzelViewModel.SchliessenCommand));
 
         element.DataContext = viewModel;
+        element.KeyBindings[0].Command.Execute(null);
 
-        Assert.Same(viewModel.SchliessenCommand, element.KeyBindings[0].Command);
+        Assert.True(ausgeloest);
+    }
+
+    [Fact]
+    public void Eine_Bindung_ohne_DataContext_tut_nichts()
+    {
+        // Kommt ein Tastendruck an, bevor die Ansicht ihr ViewModel hat,
+        // darf er nicht mit einer Ausnahme mitten in der Bedienung enden.
+        var element = new Border();
+
+        Kuerzelbindung.Binde(
+            element,
+            TastenkuerzelAktion.Uebersicht,
+            nameof(TastenkuerzelViewModel.SchliessenCommand));
+
+        Assert.False(element.KeyBindings[0].Command.CanExecute(null));
+        element.KeyBindings[0].Command.Execute(null);
     }
 
     [Fact]
