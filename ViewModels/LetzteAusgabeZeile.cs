@@ -19,9 +19,20 @@ public sealed class LetzteAusgabeZeile
 {
     public LetzteAusgabeZeile(ExpenseOverview expense)
     {
-        VorText = GermanDateInput.ToText(expense.ExpenseDate) + "  ·  ";
+        Id = expense.Id;
+
+        var datumText = GermanDateInput.ToText(expense.ExpenseDate);
+        VorText = datumText + "  ·  ";
 
         BetragText = EuroText.FormatSigned(expense.AmountCents, expense.IsIncome);
+
+        // Kurzbeschreibung fuer den Hinweis-Chip der Ausgabenliste nach
+        // dem Sprung auf diese Buchung. An EINER Stelle zusammengesetzt,
+        // damit die beiden Aufrufer (Startseite und Erfassen) nicht
+        // auseinanderlaufen. Bewusst mit einfachen Trennpunkten statt der
+        // gepolsterten Fassung aus VorText: der Chip ist eine Zeile Text,
+        // keine Tabellenspalte.
+        Beschreibung = $"{datumText} · {BetragText} · {expense.CategoryName}";
 
         IstOffen = !expense.PayerIsSelf && expense.SettledDate is null;
         IstEinnahme = !expense.PayerIsSelf && expense.SettledDate is not null && expense.IsIncome;
@@ -31,6 +42,15 @@ public sealed class LetzteAusgabeZeile
         NachText = $"  ·  {expense.CategoryName}  ·  {expense.PayerName}"
             + (string.IsNullOrWhiteSpace(expense.Note) ? string.Empty : $"  ·  {expense.Note}");
     }
+
+    /// <summary>
+    /// Die Buchung selbst - fuer den Sprung in die Ausgabenliste, die
+    /// danach genau diese eine Zeile zeigt.
+    /// </summary>
+    public int Id { get; }
+
+    /// <summary>Datum, Betrag und Kategorie in einer Zeile.</summary>
+    public string Beschreibung { get; }
 
     /// <summary>Alles vor dem Betrag - hier nur das Datum.</summary>
     public string VorText { get; }

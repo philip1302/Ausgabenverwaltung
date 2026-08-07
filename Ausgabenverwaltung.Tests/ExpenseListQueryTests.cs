@@ -59,7 +59,9 @@ public class ExpenseListQueryTests : IDisposable
         PayerScope payerScope = PayerScope.All,
         int[]? categoryRootIds = null,
         int[]? excludedCategoryIds = null,
-        int[]? payerIds = null) => new()
+        int[]? payerIds = null,
+        bool? isIncome = null,
+        int? expenseId = null) => new()
     {
         From = DateOnly.MinValue,
         To = DateOnly.MaxValue,
@@ -75,7 +77,9 @@ public class ExpenseListQueryTests : IDisposable
 
         Status = status,
         SearchText = searchText,
+        IsIncome = isIncome,
         RecurringExpenseId = recurringExpenseId,
+        ExpenseId = expenseId,
         PayerScope = payerScope,
     };
 
@@ -187,6 +191,141 @@ public class ExpenseListQueryTests : IDisposable
 
         _expenses.Create(_pferdeId, 12000, new DateOnly(2026, 1, 1), _selfId, recurringExpenseId: vorlage.Id);
         _expenses.Create(_pferdeId, 500, new DateOnly(2026, 1, 3), _selfId);
+
+        Assert.Equal(2, Query(Alles()).Count);
+    }
+
+    // ---------------------------------------------------------------
+    // Buchungstyp (IsIncome) - die beiden Monatskacheln der Startseite
+    // ---------------------------------------------------------------
+
+    [Fact]
+    public void IsIncome_true_liefert_nur_Einnahmen()
+    {
+        _expenses.Create(_wohnenId, 5000, new DateOnly(2026, 3, 1), _otherId, isIncome: true);
+        _expenses.Create(_wohnenId, 1000, new DateOnly(2026, 3, 2), _selfId);
+
+        var item = Assert.Single(Query(Alles(isIncome: true)));
+
+        Assert.True(item.IsIncome);
+        Assert.Equal(5000, item.AmountCents);
+    }
+
+    [Fact]
+    public void IsIncome_false_liefert_nur_Ausgaben()
+    {
+        _expenses.Create(_wohnenId, 5000, new DateOnly(2026, 3, 1), _otherId, isIncome: true);
+        _expenses.Create(_wohnenId, 1000, new DateOnly(2026, 3, 2), _selfId);
+
+        var item = Assert.Single(Query(Alles(isIncome: false)));
+
+        Assert.False(item.IsIncome);
+        Assert.Equal(1000, item.AmountCents);
+    }
+
+    [Fact]
+    public void Ohne_IsIncome_erscheinen_Einnahmen_und_Ausgaben()
+    {
+        _expenses.Create(_wohnenId, 5000, new DateOnly(2026, 3, 1), _otherId, isIncome: true);
+        _expenses.Create(_wohnenId, 1000, new DateOnly(2026, 3, 2), _selfId);
+
+        Assert.Equal(2, Query(Alles()).Count);
+    }
+
+    [Fact]
+    public void IsIncome_schraenkt_zusaetzlich_zum_Status_ein_und_ersetzt_ihn_nicht()
+    {
+        // Die Kachel "Einnahmen diesen Monat" zaehlt nur, was tatsaechlich
+        // eingegangen ist - offene Einnahmen bleiben draussen.
+        _expenses.Create(
+            _wohnenId, 5000, new DateOnly(2026, 3, 1), _otherId,
+            settledDate: new DateOnly(2026, 3, 5), isIncome: true);
+        _expenses.Create(_wohnenId, 7000, new DateOnly(2026, 3, 2), _otherId, isIncome: true);
+        _expenses.Create(
+            _wohnenId, 1000, new DateOnly(2026, 3, 3), _otherId,
+            settledDate: new DateOnly(2026, 3, 6));
+
+        var item = Assert.Single(
+            Query(Alles(isIncome: true, status: SettlementStatus.Beglichene)));
+
+        Assert.Equal(5000, item.AmountCents);
+    }
+
+    [Fact]
+    public void IsIncome_schraenkt_zusaetzlich_zum_PayerScope_ein()
+    {
+        // "Meine Kosten" plus "nur Ausgaben" - die Kachel "Ausgaben diesen
+        // Monat". Die eigene Einnahme faellt trotz passendem PayerScope
+        // heraus.
+        _expenses.Create(_wohnenId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_wohnenId, 9000, new DateOnly(2026, 3, 2), _selfId, isIncome: true);
+        _expenses.Create(
+            _wohnenId, 2000, new DateOnly(2026, 3, 3), _otherId,
+            settledDate: new DateOnly(2026, 3, 4));
+
+        var items = Query(Alles(isIncome: false, payerScope: PayerScope.SelfAndOpen));
+
+        var item = Assert.Single(items);
+        Assert.Equal(1000, item.AmountCents);
+    }
+
+    [Fact]
+    public void Summarize_beachtet_den_Typfilter()
+    {
+        _expenses.Create(_wohnenId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_wohnenId, 2500, new DateOnly(2026, 3, 2), _selfId);
+        _expenses.Create(
+            _wohnenId, 9000, new DateOnly(2026, 3, 3), _otherId,
+            settledDate: new DateOnly(2026, 3, 4), isIncome: true);
+
+        var summary = _expenses.Summarize(Alles(isIncome: false));
+
+        Assert.Equal(2, summary.Count);
+        Assert.Equal(-3500, summary.SumCents);
+    }
+
+    // ---------------------------------------------------------------
+    // Einzelne Buchung (ExpenseId) - der Sprung aus "Letzte Buchungen"
+    // ---------------------------------------------------------------
+
+    [Fact]
+    public void ExpenseId_liefert_genau_eine_Zeile()
+    {
+        _expenses.Create(_wohnenId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        var gesucht = _expenses.Create(_stromId, 2500, new DateOnly(2026, 3, 2), _selfId);
+        _expenses.Create(_pferdeId, 4000, new DateOnly(2026, 3, 3), _selfId);
+
+        var item = Assert.Single(Query(Alles(expenseId: gesucht.Id)));
+
+        Assert.Equal(gesucht.Id, item.Id);
+        Assert.Equal(2500, item.AmountCents);
+    }
+
+    [Fact]
+    public void ExpenseId_ausserhalb_des_Zeitraums_liefert_nichts()
+    {
+        // Dokumentiert, warum der Sprung aus den Uebersichtslisten den
+        // Zeitraum oeffnen MUSS: der Einzelfilter wirkt zusaetzlich, nicht
+        // ersetzend - sonst bliebe die Liste nach dem Sprung auf eine
+        // nachtraeglich datierte Buchung raetselhaft leer.
+        var gesucht = _expenses.Create(_wohnenId, 2500, new DateOnly(2024, 5, 2), _selfId);
+
+        var filter = new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            ExpenseId = gesucht.Id,
+        };
+
+        Assert.Empty(_expenses.Query(filter, ExpenseSortColumn.Datum, ascending: false));
+        Assert.Equal(0, _expenses.Summarize(filter).Count);
+    }
+
+    [Fact]
+    public void Ohne_ExpenseId_erscheinen_weiterhin_alle_Buchungen()
+    {
+        _expenses.Create(_wohnenId, 1000, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_stromId, 2500, new DateOnly(2026, 3, 2), _selfId);
 
         Assert.Equal(2, Query(Alles()).Count);
     }

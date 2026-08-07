@@ -380,6 +380,94 @@
             <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
         </Style>
 
+        <!-- ==== Anklickbare Kachel ====
+             Umschliesst eine Border.kpi (oder eine andere Karte) und macht
+             sie als Ganzes zur Schaltflaeche, ohne selbst etwas zu zeichnen.
+             Bewusst so herum und nicht als "Button.kpi" mit eigener Optik:
+             die Kachel behaelt exakt das Aussehen, das sie vorher hatte,
+             und es gibt nur EINE Stelle, an der Kachelfarben stehen.
+
+             Alle drei Zustaende des ContentPresenters muessen ausdruecklich
+             zurueckgesetzt werden - das Thema faerbt ihn sonst bei
+             pointerover/pressed ein und legt seine Flaeche ueber die der
+             Kachel. Die Hervorhebung uebernimmt stattdessen die Border
+             darin (Regel: sichtbar klickbar, ohne dass die Kachel ihre
+             Form verliert). -->
+        <Style Selector="Button.kachel">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.kachel /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+        <Style Selector="Button.kachel:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+        <Style Selector="Button.kachel:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+        <Style Selector="Button.kachel:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+        <Style Selector="Button.kachel:pointerover Border.kpi">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFarbe}" />
+        </Style>
+        <!-- Eine Kachel ohne Inhalt fuehrt nirgendwohin. Sie bleibt
+             lesbar, wird aber sichtbar zurueckgenommen - ein Sprung ins
+             Nichts ist schlimmer als kein Sprung. -->
+        <Style Selector="Button.kachel:disabled">
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
+
+        <!-- ==== Anklickbare Listenzeile ====
+             Fuer die Uebersichtslisten ("Letzte Buchungen"), deren Zeilen
+             in die Ausgabenliste fuehren. Wie Button.kachel zeichnet sie
+             selbst nichts; nur der Zeiger und eine dezente Flaeche beim
+             Ueberfahren zeigen, dass hier etwas passiert. -->
+        <Style Selector="Button.zeile">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.zeile /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+        <Style Selector="Button.zeile:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CanvasFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+        <Style Selector="Button.zeile:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CanvasFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+
+        <!-- ==== Hervorgehobene Tabellenzeile ====
+             Markiert die Zeile, auf die gerade gesprungen wurde (Vorlage
+             aus der Kachel "Nächste fällige Vorlage"). Nur Flaeche und
+             Trennlinienfarbe, ausdruecklich KEINE zusaetzliche
+             Rahmenstaerke: die wuerde den Zeileninhalt gegenueber der
+             Kopfzeile verschieben, und die Spalten stuenden nicht mehr
+             uebereinander. -->
+        <Style Selector="Border.hervorgehoben">
+            <Setter Property="Background" Value="{DynamicResource HinweisFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFarbe}" />
+        </Style>
+
         <!-- ==== Badge ==== -->
         <Style Selector="Border.badge">
             <Setter Property="CornerRadius" Value="999" />

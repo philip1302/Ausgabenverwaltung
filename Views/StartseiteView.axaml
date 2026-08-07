@@ -6,6 +6,7 @@
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="750"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.StartseiteView"
+             x:Name="Wurzel"
              x:DataType="vm:StartseiteViewModel">
 
     <!-- Neue Startseite (UI/UX-Redesign, Abschnitt 4): ersetzt "Erfassen"
@@ -34,9 +35,20 @@
             <!-- ============ Vier KPI-Kacheln ============
                  Prozentuale Spalten (UniformGrid) statt fester Pixelbreiten
                  (Regel 9) - alle vier greifen auf bereits vorhandene
-                 Core-Abfragen zurueck, keine neue Fachlogik. -->
+                 Core-Abfragen zurueck, keine neue Fachlogik.
+
+                 Jede Kachel ist ganzflaechig anklickbar und fuehrt dorthin,
+                 wo ihre Zahl herkommt (Button.kachel in App.axaml zeichnet
+                 selbst nichts, die Border.kpi darin behaelt ihr Aussehen).
+                 Hat eine Kachel nichts zu zeigen, ist ihr Knopf
+                 ausgeschaltet - ein Sprung ins Nichts ist schlimmer als
+                 kein Sprung. -->
             <UniformGrid Columns="4" Rows="1">
-                <Border Classes="kpi" Margin="0,0,8,0">
+                <Button Classes="kachel" Margin="0,0,8,0"
+                        IsEnabled="{Binding AusgabenMonatVorhanden}"
+                        ToolTip.Tip="Zeigt die Ausgaben dieses Monats in der Ausgabenliste"
+                        Command="{Binding AusgabenMonatOeffnenCommand}">
+                <Border Classes="kpi">
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="Auto,6,*">
                             <!-- Neutral statt rot: die Kachel mischt eigene UND noch
@@ -56,8 +68,13 @@
                         <TextBlock Classes="kpi-hinweis" Text="{Binding AusgabenMonatHinweis}" />
                     </StackPanel>
                 </Border>
+                </Button>
 
-                <Border Classes="kpi" Margin="8,0">
+                <Button Classes="kachel" Margin="8,0"
+                        IsEnabled="{Binding EinnahmenMonatVorhanden}"
+                        ToolTip.Tip="Zeigt die eingegangenen Einnahmen dieses Monats in der Ausgabenliste"
+                        Command="{Binding EinnahmenMonatOeffnenCommand}">
+                <Border Classes="kpi">
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="Auto,6,*">
                             <Path Grid.Column="0" Data="{DynamicResource IconPfeilRunter}"
@@ -71,8 +88,13 @@
                         <TextBlock Classes="kpi-hinweis" Text="{Binding EinnahmenMonatHinweis}" />
                     </StackPanel>
                 </Border>
+                </Button>
 
-                <Border Classes="kpi" Margin="8,0">
+                <Button Classes="kachel" Margin="8,0"
+                        IsEnabled="{Binding OffenePostenVorhanden}"
+                        ToolTip.Tip="Öffnet den Bereich „Offene Posten“"
+                        Command="{Binding OffenePostenOeffnenCommand}">
+                <Border Classes="kpi">
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="Auto,6,*">
                             <Path Grid.Column="0" Data="{DynamicResource IconOffenePosten}"
@@ -86,8 +108,13 @@
                         <TextBlock Classes="kpi-hinweis" Text="{Binding OffenePostenHinweis}" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
+                </Button>
 
-                <Border Classes="kpi" Margin="8,0,0,0">
+                <Button Classes="kachel" Margin="8,0,0,0"
+                        IsEnabled="{Binding NaechsteFaelligkeitVorhanden}"
+                        ToolTip.Tip="Zeigt diese Vorlage unter „Wiederkehrende Ausgaben“"
+                        Command="{Binding NaechsteFaelligkeitOeffnenCommand}">
+                <Border Classes="kpi">
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="Auto,6,*">
                             <Path Grid.Column="0" Data="{DynamicResource IconVorlagen}"
@@ -103,6 +130,7 @@
                         <TextBlock Classes="kpi-hinweis" Text="{Binding NaechsteFaelligkeitHinweis}" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
+                </Button>
             </UniformGrid>
 
             <!-- ============ Netto-Trend + Letzte Buchungen ============ -->
@@ -327,16 +355,26 @@
                         <ItemsControl ItemsSource="{Binding LetzteBuchungen}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:LetzteAusgabeZeile">
-                                    <Border BorderBrush="{DynamicResource BorderDezentFarbe}"
-                                            BorderThickness="0,0,0,1" Padding="0,8">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding VorText}" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Text="{Binding BetragText}"
-                                                       Classes.offen="{Binding IstOffen}"
-                                                       Classes.einnahme="{Binding IstEinnahme}"
-                                                       Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}" />
-                                        </StackPanel>
-                                    </Border>
+                                    <!-- Die ganze Zeile ist der Knopf: ein Klick
+                                         zeigt genau diese Buchung in der
+                                         Ausgabenliste. Der Befehl haengt am
+                                         ViewModel der Ansicht, nicht an der Zeile -
+                                         deshalb der Umweg ueber #Wurzel. -->
+                                    <Button Classes="zeile"
+                                            ToolTip.Tip="Diese Buchung in der Ausgabenliste zeigen"
+                                            Command="{Binding #Wurzel.((vm:StartseiteViewModel)DataContext).BuchungOeffnenCommand}"
+                                            CommandParameter="{Binding}">
+                                        <Border BorderBrush="{DynamicResource BorderDezentFarbe}"
+                                                BorderThickness="0,0,0,1" Padding="0,8">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding VorText}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding BetragText}"
+                                                           Classes.offen="{Binding IstOffen}"
+                                                           Classes.einnahme="{Binding IstEinnahme}"
+                                                           Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

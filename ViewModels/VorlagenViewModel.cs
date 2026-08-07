@@ -130,6 +130,22 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     /// </summary>
     public void AktualisiereListe() => LadeListe();
 
+    /// <summary>
+    /// Hebt genau eine Zeile hervor - fuer den Sprung aus der Kachel
+    /// "Nächste fällige Vorlage" auf der Startseite.
+    ///
+    /// Muss NACH dem Bereichswechsel aufgerufen werden: der Wechsel laesst
+    /// ueber <see cref="AktualisiereListe"/> die Zeilen neu entstehen und
+    /// wuerde eine vorher gesetzte Markierung mit wegwerfen.
+    /// </summary>
+    public void WaehleVorlage(int vorlageId)
+    {
+        foreach (var zeile in Zeilen)
+        {
+            zeile.IstHervorgehoben = zeile.Id == vorlageId;
+        }
+    }
+
     // ---------------- Anlegen und Bearbeiten ----------------
 
     [RelayCommand]

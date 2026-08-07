@@ -3,6 +3,7 @@ using System.Globalization;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.RecurringExpenses;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -16,7 +17,7 @@ namespace Ausgabenverwaltung.ViewModels;
 /// (<see cref="RecurrenceText"/>, <see cref="RecurrenceGenerator"/>) - hier
 /// wird nur formatiert (Regel 7).
 /// </summary>
-public sealed class VorlageZeile
+public sealed partial class VorlageZeile : ObservableObject
 {
     public VorlageZeile(
         RecurringExpense vorlage,
@@ -58,6 +59,16 @@ public sealed class VorlageZeile
 
         ErzeugtText = erzeugteAnzahl == 0 ? "—" : erzeugteAnzahl.ToString(CultureInfo.InvariantCulture);
     }
+
+    /// <summary>
+    /// Hervorgehoben, weil der Anwender gerade aus der Kachel "Nächste
+    /// fällige Vorlage" hierher gesprungen ist. Nur eine Markierung, keine
+    /// Auswahl: die Liste kennt keinen ausgewaehlten Eintrag, und ohne die
+    /// Hervorhebung landete der Sprung in einer Tabelle, in der man die
+    /// gemeinte Zeile erst suchen muesste.
+    /// </summary>
+    [ObservableProperty]
+    private bool _istHervorgehoben;
 
     public RecurringExpense Vorlage { get; }
 

@@ -9,6 +9,7 @@ using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.Reports;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -98,6 +99,18 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     [ObservableProperty]
     private bool _meineKosten;
 
+    /// <summary>
+    /// Einschraenkung auf einen Buchungstyp. Zwei unabhaengige Haekchen
+    /// nach dem Muster von <see cref="StatusOffen"/>/<see cref="StatusBeglichen"/>:
+    /// beide aus (und ebenso beide an) heisst "alles", weil eine Buchung
+    /// nicht zugleich Einnahme und Ausgabe sein kann.
+    /// </summary>
+    [ObservableProperty]
+    private bool _nurEinnahmen;
+
+    [ObservableProperty]
+    private bool _nurAusgaben;
+
     [ObservableProperty]
     private string _suchtext = string.Empty;
 
@@ -112,6 +125,23 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     private string? _vorlageFilterText;
 
     public bool VorlageFilterAktiv => VorlageFilterText is not null;
+
+    // Einschraenkung auf genau eine Buchung. Kommt wie der Vorlagenfilter
+    // nicht aus der Filterleiste, sondern ueber den Sprung aus "Letzte
+    // Buchungen" (siehe ZeigeEinzelneBuchung).
+    private int? _buchungFilterId;
+
+    /// <summary>
+    /// Bewusst ein sichtbarer, wegklickbarer Hinweis und kein stilles
+    /// Feld: eine Id tippt niemand ein, aber ein Filter, der wirkt, ohne
+    /// sich zu zeigen, ist der haeufigste Grund fuer "meine Buchungen sind
+    /// weg".
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BuchungFilterAktiv))]
+    private string? _buchungFilterText;
+
+    public bool BuchungFilterAktiv => BuchungFilterText is not null;
 
     // ---------------- Sortierung ----------------
 
@@ -172,6 +202,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LoeschAnfrageAktiv))]
+    [NotifyPropertyChangedFor(nameof(SchreibFehlerAlsBand))]
     private string? _loeschAnfrageText;
 
     public bool LoeschAnfrageAktiv => LoeschAnfrageText is not null;
@@ -183,12 +214,36 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SchreibFehlerSichtbar))]
+    [NotifyPropertyChangedFor(nameof(SchreibFehlerAlsBand))]
     private string? _schreibFehlerText;
 
     public bool SchreibFehlerSichtbar => SchreibFehlerText is not null;
 
+    /// <summary>
+    /// Derselbe Text als Band ueber der Tabelle - aber nur, solange die
+    /// Loesch-Nachfrage NICHT offen ist. Die zeigt ihn selbst, und zweimal
+    /// derselbe Satz auf einem Bildschirm liest sich wie zwei Fehler.
+    /// </summary>
+    public bool SchreibFehlerAlsBand =>
+        SchreibFehlerText is not null && LoeschAnfrageText is null;
+
     [RelayCommand]
     private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
+
+    /// <summary>
+    /// Ein geglueckter Schreibvorgang, der sich nicht von selbst erklaert -
+    /// bisher nur das Duplizieren. Eine neue Zeile mit heutigem Datum
+    /// taucht je nach Sortierung irgendwo in der Liste auf; ohne diesen
+    /// Satz bliebe offen, ob ueberhaupt etwas passiert ist.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ErfolgSichtbar))]
+    private string? _erfolgText;
+
+    public bool ErfolgSichtbar => ErfolgText is not null;
+
+    [RelayCommand]
+    private void ErfolgSchliessen() => ErfolgText = null;
 
     public AusgabenlisteViewModel(
         ExpenseRepository expenseRepository,
@@ -266,6 +321,8 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     partial void OnStatusOffenChanged(bool value) => LadeDaten();
     partial void OnStatusBeglichenChanged(bool value) => LadeDaten();
     partial void OnMeineKostenChanged(bool value) => LadeDaten();
+    partial void OnNurEinnahmenChanged(bool value) => LadeDaten();
+    partial void OnNurAusgabenChanged(bool value) => LadeDaten();
 
     /// <summary>
     /// Ein Haekchen im Kategorie-Baum oder in der Zahlerliste wurde
@@ -366,10 +423,23 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         Suchtext = string.Empty;
         _vorlageFilterId = null;
         VorlageFilterText = null;
+        EinzelfilterLeeren();
         SetzeVorgabeZeitraum();
         _ladenGesperrt = false;
 
         LadeDaten();
+    }
+
+    /// <summary>
+    /// Nimmt die Einschraenkung auf eine einzelne Buchung zurueck. Steht
+    /// als eigene Methode da, weil sie an jeder Sprungmethode dabei sein
+    /// muss: ueberlebte der Einzelfilter einen anderen Sprung, bliebe die
+    /// Liste danach raetselhaft leer.
+    /// </summary>
+    private void EinzelfilterLeeren()
+    {
+        _buchungFilterId = null;
+        BuchungFilterText = null;
     }
 
     /// <summary>
@@ -393,8 +463,77 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         SortSpalte = ExpenseSortColumn.Datum;
         SortAufsteigend = false;
 
+        EinzelfilterLeeren();
         _vorlageFilterId = vorlageId;
         VorlageFilterText = $"Nur Buchungen aus Vorlage: {vorlageTitel}";
+        _ladenGesperrt = false;
+
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Zeigt genau EINE Buchung. Wird aus "Letzte Buchungen" (Startseite)
+    /// und "Letzte Ausgaben" (Erfassen) heraus aufgerufen: ein Klick auf
+    /// eine Zeile dort soll zu genau dieser Buchung fuehren.
+    ///
+    /// Der Zeitraum wird dabei geoeffnet - die Vorgabe "dieses Jahr" wuerde
+    /// eine nachtraeglich datierte Buchung sonst gleich wieder
+    /// herausfiltern, und die Liste bliebe unerklaerlich leer.
+    /// </summary>
+    public void ZeigeEinzelneBuchung(int id, string beschreibung)
+    {
+        _ladenGesperrt = true;
+        AktiverZeitraumSchluessel = null;
+        FilterAuswahlLeeren();
+        Suchtext = string.Empty;
+        VonText = string.Empty;
+        BisText = string.Empty;
+
+        _vorlageFilterId = null;
+        VorlageFilterText = null;
+
+        SortSpalte = ExpenseSortColumn.Datum;
+        SortAufsteigend = false;
+
+        _buchungFilterId = id;
+        BuchungFilterText = $"Nur diese Buchung: {beschreibung}";
+        _ladenGesperrt = false;
+
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Zeigt die Buchungen EINES Monats, wahlweise nur die Einnahmen oder
+    /// nur die Ausgaben. Wird aus den beiden Monatskacheln der Startseite
+    /// heraus aufgerufen - die Liste soll danach genau das enthalten,
+    /// woraus die Zahl auf der Kachel besteht.
+    /// </summary>
+    public void ZeigeMonat(DateOnly monatsAnfang, bool nurEinnahmen, bool meineKosten)
+    {
+        _ladenGesperrt = true;
+        AktiverZeitraumSchluessel = null;
+        FilterAuswahlLeeren();
+        Suchtext = string.Empty;
+
+        _vorlageFilterId = null;
+        VorlageFilterText = null;
+        EinzelfilterLeeren();
+
+        VonText = GermanDateInput.ToText(monatsAnfang);
+        BisText = GermanDateInput.ToText(monatsAnfang.AddMonths(1).AddDays(-1));
+
+        NurEinnahmen = nurEinnahmen;
+        NurAusgaben = !nurEinnahmen;
+        MeineKosten = meineKosten;
+
+        // Die Einnahmenkachel zaehlt nur, was tatsaechlich zugeflossen ist
+        // (siehe StartseiteViewModel.AktualisiereMonatsKacheln) - eine noch
+        // offene Einnahme ist kein Geld. Ohne dieses Haekchen stuenden in
+        // der Liste mehr Buchungen, als die Kachel zusammengezaehlt hat.
+        StatusBeglichen = nurEinnahmen;
+
+        SortSpalte = ExpenseSortColumn.Datum;
+        SortAufsteigend = false;
         _ladenGesperrt = false;
 
         LadeDaten();
@@ -422,6 +561,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         _vorlageFilterId = null;
         VorlageFilterText = null;
+        EinzelfilterLeeren();
 
         VonText = GermanDateInput.ToText(von);
         BisText = GermanDateInput.ToText(bisEinschliesslich);
@@ -442,6 +582,18 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     {
         _vorlageFilterId = null;
         VorlageFilterText = null;
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Hebt die Einschraenkung auf eine einzelne Buchung auf, ohne die
+    /// uebrigen Filter anzufassen - das Gegenstueck zu
+    /// <see cref="VorlagenFilterEntfernen"/>.
+    /// </summary>
+    [RelayCommand]
+    private void BuchungFilterAufheben()
+    {
+        EinzelfilterLeeren();
         LadeDaten();
     }
 
@@ -492,6 +644,8 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         StatusOffen = false;
         StatusBeglichen = false;
         MeineKosten = false;
+        NurEinnahmen = false;
+        NurAusgaben = false;
 
         OnPropertyChanged(nameof(KategorieFilterText));
         OnPropertyChanged(nameof(ZahlerFilterText));
@@ -596,6 +750,11 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         }
 
         Bearbeiten = null;
+
+        // Das Erfolgsband von vorhin gehoerte zu einem anderen Vorgang und
+        // stuende sonst ueber der Nachfrage, die gerade aufgeht.
+        ErfolgText = null;
+
         _zuLoeschendeIds = new[] { zeile.Id };
         LoeschAnfrageText =
             $"Diese Ausgabe wirklich loeschen?\n{zeile.LoeschBeschreibung}";
@@ -611,6 +770,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         }
 
         Bearbeiten = null;
+        ErfolgText = null;
         _zuLoeschendeIds = ausgewaehlte.Select(zeile => zeile.Id).ToList();
         LoeschAnfrageText = ausgewaehlte.Count == 1
             ? $"Diese Ausgabe wirklich loeschen?\n{ausgewaehlte[0].LoeschBeschreibung}"
@@ -634,8 +794,79 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             return;
         }
 
+        // Steht die Liste gerade auf genau der Buchung, die eben geloescht
+        // wurde, muss der Einzelfilter mit weg - sonst zeigt sie dauerhaft
+        // nichts mehr an, und der Grund dafuer ist nicht mehr da.
+        if (_buchungFilterId is int gefiltert && _zuLoeschendeIds.Contains(gefiltert))
+        {
+            EinzelfilterLeeren();
+        }
+
         _zuLoeschendeIds = Array.Empty<int>();
         LoeschAnfrageText = null;
+        _messenger.Send(new BuchungenGeaendertNachricht());
+    }
+
+    // ---------------- Duplizieren ----------------
+
+    /// <summary>
+    /// Legt eine neue Buchung mit denselben Werten und dem heutigen Datum
+    /// an ("das war wieder dasselbe wie letztes Mal").
+    ///
+    /// Die Werte kommen aus der Datenbank und nicht aus der Anzeigezeile:
+    /// dort stehen formatierte Texte, und aus "-1.234,56 €"
+    /// zurueckzurechnen waere eine Fehlerquelle ohne Not.
+    ///
+    /// Bewusst NICHT uebernommen werden das Beglichen-Datum (es gehoert
+    /// der einzelnen Buchung, Regel 4) und der Vorlagenbezug (eine Kopie
+    /// von Hand stammt aus keiner Vorlage).
+    /// </summary>
+    [RelayCommand]
+    private void Duplizieren(AusgabeZeile? zeile)
+    {
+        if (zeile is null)
+        {
+            return;
+        }
+
+        SchreibFehlerText = null;
+        ErfolgText = null;
+
+        if (_expenseRepository.GetById(zeile.Id) is not { } vorlage)
+        {
+            // Zwischenzeitlich anderswo geloescht - die Liste ist dann
+            // ohnehin veraltet.
+            SchreibFehlerText =
+                "Diese Buchung gibt es nicht mehr. Sie wurde inzwischen an anderer "
+                + "Stelle gelöscht. Es wurde nichts angelegt. "
+                + "„Filter zurücksetzen“ zeigt den aktuellen Stand.";
+            return;
+        }
+
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        Expense? kopie = null;
+
+        SchreibFehlerText = Schreibvorgang.Versuche(
+            "Beim Duplizieren einer Ausgabe",
+            () => kopie = _expenseRepository.Create(
+                vorlage.CategoryId,
+                vorlage.AmountCents,
+                heute,
+                vorlage.PayerId,
+                vorlage.Note,
+                settledDate: null,
+                recurringExpenseId: null,
+                isIncome: vorlage.IsIncome));
+
+        if (SchreibFehlerText is not null)
+        {
+            // Regel 13: die Liste bleibt unveraendert stehen.
+            return;
+        }
+
+        AppLog.Current.Info(LogEvents.ExpenseDuplicated(vorlage.Id, kopie!.Id));
+
+        ErfolgText = "Buchung dupliziert — Datum auf heute gesetzt.";
         _messenger.Send(new BuchungenGeaendertNachricht());
     }
 
@@ -749,7 +980,13 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
                    | (StatusBeglichen ? SettlementStatus.Beglichene : SettlementStatus.Alle),
 
             SearchText = string.IsNullOrWhiteSpace(Suchtext) ? null : Suchtext.Trim(),
+
+            // Beide Haekchen zusammen sind dasselbe wie keines: eine
+            // Buchung ist entweder Einnahme oder Ausgabe, nie beides.
+            IsIncome = NurEinnahmen == NurAusgaben ? null : NurEinnahmen,
+
             RecurringExpenseId = _vorlageFilterId,
+            ExpenseId = _buchungFilterId,
         };
 
         return true;

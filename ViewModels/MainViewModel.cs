@@ -179,6 +179,48 @@ public sealed partial class MainViewModel : ViewModelBase
                 .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
         };
 
+        // Die vier KPI-Kacheln der Startseite fuehren dorthin, wo ihre Zahl
+        // herkommt. Wie beim Balken-Klick oben gilt ueberall: erst den
+        // Filter setzen, dann wechseln - AktualisiereListe laedt danach nur
+        // neu und laesst die Filterwerte stehen.
+        startseite.AusgabenMonatAngefordert += (_, monatsAnfang) =>
+        {
+            _ausgabenliste.ZeigeMonat(monatsAnfang, nurEinnahmen: false, meineKosten: true);
+
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
+        };
+
+        startseite.EinnahmenMonatAngefordert += (_, monatsAnfang) =>
+        {
+            _ausgabenliste.ZeigeMonat(monatsAnfang, nurEinnahmen: true, meineKosten: false);
+
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
+        };
+
+        startseite.OffenePostenAngefordert += (_, _) =>
+        {
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _offenePosten));
+        };
+
+        // Umgekehrte Reihenfolge als bei den uebrigen Spruengen: der
+        // Bereichswechsel laedt die Vorlagenliste neu und wuerde eine
+        // vorher gesetzte Markierung mit wegwerfen (siehe WaehleVorlage).
+        startseite.NaechsteFaelligkeitAngefordert += (_, vorlageId) =>
+        {
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, verwaltung.Vorlagen));
+
+            verwaltung.Vorlagen.WaehleVorlage(vorlageId);
+        };
+
+        // Klick auf eine Zeile unter "Letzte Buchungen" bzw. "Letzte
+        // Ausgaben": zeigt genau diese eine Buchung.
+        startseite.BuchungAngefordert += (_, zeile) => ZeigeEinzelneBuchung(zeile);
+        erfassen.BuchungAngefordert += (_, zeile) => ZeigeEinzelneBuchung(zeile);
+
         // Zaehler-Badge an "Offene Posten" (UI/UX-Redesign, Abschnitt 3) -
         // OffenePostenViewModel ist ein DI-Singleton und meldet jede
         // Neuberechnung ueber PropertyChanged weiter.
@@ -191,6 +233,17 @@ public sealed partial class MainViewModel : ViewModelBase
                 offenePostenEintrag.BadgeAnzahl = offenePosten.AnzahlOffenerPosten;
             }
         };
+    }
+
+    // Beide Uebersichtslisten ("Letzte Buchungen" auf der Startseite,
+    // "Letzte Ausgaben" unter der Erfassungsmaske) fuehren auf denselben
+    // Weg - deshalb einmal hier statt zweimal in den Handlern.
+    private void ZeigeEinzelneBuchung(LetzteAusgabeZeile zeile)
+    {
+        _ausgabenliste.ZeigeEinzelneBuchung(zeile.Id, zeile.Beschreibung);
+
+        SelectedNavigationItem = NavigationItems
+            .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
     }
 
     /// <summary>

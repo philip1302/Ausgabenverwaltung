@@ -67,10 +67,31 @@ public sealed class ReportFilter
     public string? SearchText { get; init; }
 
     /// <summary>
+    /// Optionale Einschraenkung auf EINEN Buchungstyp: <c>true</c> nur
+    /// Einnahmen, <c>false</c> nur Ausgaben. NULL schraenkt nicht ein -
+    /// dieselbe Regel wie bei allen uebrigen Filtern dieser Klasse.
+    ///
+    /// Gebraucht fuer die Spruenge aus den beiden Monatskacheln der
+    /// Startseite, die genau eine der beiden Haelften zeigen.
+    /// </summary>
+    public bool? IsIncome { get; init; }
+
+    /// <summary>
     /// Optionale Einschraenkung auf die aus EINER Vorlage erzeugten
     /// Buchungen - fuer den Sprung "zeig mir, was diese Vorlage bisher
     /// gebucht hat" aus der Vorlagenverwaltung. NULL = keine
     /// Einschraenkung.
     /// </summary>
     public int? RecurringExpenseId { get; init; }
+
+    /// <summary>
+    /// Optionale Einschraenkung auf genau EINE Buchung - fuer den Sprung
+    /// aus den Uebersichtslisten ("Letzte Buchungen") auf die Zeile, die
+    /// dort angeklickt wurde. NULL = keine Einschraenkung.
+    ///
+    /// Wirkt wie jeder andere Filter zusaetzlich: liegt die Buchung
+    /// ausserhalb des eingestellten Zeitraums, bleibt die Liste leer. Wer
+    /// hierher springt, muss den Zeitraum deshalb mit oeffnen.
+    /// </summary>
+    public int? ExpenseId { get; init; }
 }

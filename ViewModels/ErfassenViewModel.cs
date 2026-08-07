@@ -30,6 +30,14 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
     public event EventHandler? FokusBetragAngefordert;
 
+    /// <summary>
+    /// Bitte um einen Wechsel in die Ausgabenliste, eingeschraenkt auf
+    /// genau die angeklickte Buchung. Der Bereich kennt die Navigation
+    /// nicht selbst - der <see cref="MainViewModel"/> hoert zu und setzt
+    /// sie um (dasselbe Muster wie in <see cref="StartseiteViewModel"/>).
+    /// </summary>
+    public event EventHandler<LetzteAusgabeZeile>? BuchungAngefordert;
+
     [ObservableProperty]
     private string _betragText = string.Empty;
 
@@ -274,6 +282,19 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
     [RelayCommand]
     private void SpeicherFehlerSchliessen() => SpeicherFehlerText = null;
+
+    /// <summary>
+    /// Klick auf eine Zeile unter "Letzte Buchungen": zeigt genau diese
+    /// eine Buchung in der Ausgabenliste.
+    /// </summary>
+    [RelayCommand]
+    private void BuchungOeffnen(LetzteAusgabeZeile? zeile)
+    {
+        if (zeile is not null)
+        {
+            BuchungAngefordert?.Invoke(this, zeile);
+        }
+    }
 
     [RelayCommand]
     private async Task Speichern()

@@ -144,6 +144,15 @@ public static class LogEvents
     public static string ExpensesDeleted(int count)
         => count == 1 ? "1 Ausgabe geloescht." : $"{count} Ausgaben geloescht.";
 
+    /// <summary>
+    /// Nur die beiden Ids - Betrag, Kategorie und Bemerkung der Kopie
+    /// gehen niemanden etwas an (Regel 11). Dass ueberhaupt kopiert wurde,
+    /// erklaert spaeter, warum zwei gleiche Buchungen nebeneinander
+    /// stehen.
+    /// </summary>
+    public static string ExpenseDuplicated(int sourceId, int newId)
+        => $"Ausgabe dupliziert (Id {sourceId} -> Id {newId}).";
+
     // ---------------- Offene Posten ----------------
     public static string OpenItemSettled(int id, bool settled)
         => settled

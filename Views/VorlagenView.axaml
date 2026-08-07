@@ -190,7 +190,11 @@
                 <ItemsControl x:Name="Zeilenliste" ItemsSource="{Binding Zeilen}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:VorlageZeile">
-                            <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
+                            <!-- ".hervorgehoben" markiert die Zeile, auf die
+                                 gerade aus der Kachel "Nächste fällige Vorlage"
+                                 gesprungen wurde (siehe App.axaml). -->
+                            <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6"
+                                    Classes.hervorgehoben="{Binding IstHervorgehoben}">
                                 <Grid anzeige:Raster.Spalten="2*,16,Kategorie,16,105,16,135,16,95,16,90,16,70,16,80,24,300">
                                     <anzeige:Textzelle Grid.Column="0" Inhalt="{Binding Titel}"
                                                        Classes="tabellenzelle"

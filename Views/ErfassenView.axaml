@@ -8,6 +8,7 @@
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              x:Class="Ausgabenverwaltung.Views.ErfassenView"
+             x:Name="Wurzel"
              x:DataType="vm:ErfassenViewModel">
 
     <UserControl.KeyBindings>
@@ -175,17 +176,27 @@
                     <ItemsControl ItemsSource="{Binding LetzteAusgaben}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:LetzteAusgabeZeile">
-                                <Border BorderBrush="{DynamicResource BorderDezentFarbe}"
-                                        BorderThickness="0,0,0,1" Padding="0,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding VorText}" />
-                                        <TextBlock Text="{Binding BetragText}"
-                                                   Classes.offen="{Binding IstOffen}"
-                                                   Classes.einnahme="{Binding IstEinnahme}"
-                                                   Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}" />
-                                        <TextBlock Text="{Binding NachText}" />
-                                    </StackPanel>
-                                </Border>
+                                <!-- Die ganze Zeile ist der Knopf: ein Klick zeigt
+                                     genau diese Buchung in der Ausgabenliste. Der
+                                     Befehl haengt am ViewModel der Ansicht, nicht
+                                     an der Zeile - deshalb der Umweg ueber
+                                     #Wurzel. -->
+                                <Button Classes="zeile"
+                                        ToolTip.Tip="Diese Buchung in der Ausgabenliste zeigen"
+                                        Command="{Binding #Wurzel.((vm:ErfassenViewModel)DataContext).BuchungOeffnenCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Border BorderBrush="{DynamicResource BorderDezentFarbe}"
+                                            BorderThickness="0,0,0,1" Padding="0,8">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding VorText}" />
+                                            <TextBlock Text="{Binding BetragText}"
+                                                       Classes.offen="{Binding IstOffen}"
+                                                       Classes.einnahme="{Binding IstEinnahme}"
+                                                       Classes.beglichen-ausgabe="{Binding IstBeglichenAusgabe}" />
+                                            <TextBlock Text="{Binding NachText}" />
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

@@ -11,7 +11,7 @@
              x:Name="Wurzel"
              x:DataType="vm:AusgabenlisteViewModel">
 
-    <!-- Spaltenraster "4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200"
+    <!-- Spaltenraster "4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,300"
          gilt fuer Kopfzeile UND Zeilen gleichermassen: Farbbalken,
          Auswahl, Vorlagen-Marker, Datum, Kategorie, Betrag, Zahler,
          Status, Bemerkung, Aktionen - dazwischen feste Gutter-Spalten als
@@ -50,10 +50,11 @@
          breit: seit die Betraege das €-Zeichen tragen, braucht
          "-1.234,56 €" mehr Platz als vorher "1.234,56".
 
-         Die Aktionsspalte fasst "Bearbeiten" und "Löschen" nebeneinander;
-         200 statt der urspruenglichen 150 Pixel, weil die beiden
+         Die Aktionsspalte fasst "Bearbeiten", "Duplizieren" und "Löschen"
+         nebeneinander; 300 statt der urspruenglichen 150 Pixel, weil die
          Schaltflaechen mit der Theme-Polsterung sonst nicht nebeneinander
-         passen und die zweite abgeschnitten wird. -->
+         passen und die letzte abgeschnitten wird. Waechst sie weiter,
+         gehoert das in ein Kontextmenue statt in noch mehr Breite. -->
     <UserControl.Styles>
         <!-- Die ListBox dient hier nur als virtualisierender Behaelter:
              ausgewaehlt wird ueber die Checkbox-Spalte, weil die Zeilen
@@ -253,6 +254,22 @@
                         </StackPanel>
 
                         <StackPanel>
+                            <!-- Zwei unabhaengige Haekchen wie beim Status. Beide
+                                 aus heisst "beides"; beide an ebenfalls, weil
+                                 eine Buchung nie zugleich Einnahme und Ausgabe
+                                 ist. -->
+                            <TextBlock Text="Art" Classes="filterbeschriftung" />
+                            <StackPanel Orientation="Horizontal" Spacing="10"
+                                        VerticalAlignment="Center">
+                                <CheckBox Content="Ausgaben"
+                                          IsChecked="{Binding NurAusgaben, Mode=TwoWay}" />
+                                <CheckBox Content="Einnahmen"
+                                          IsChecked="{Binding NurEinnahmen, Mode=TwoWay}"
+                                          ToolTip.Tip="Ohne Häkchen — und ebenso mit beiden — sind Ausgaben und Einnahmen dabei." />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel>
                             <TextBlock Text="Sicht" Classes="filterbeschriftung" />
                             <CheckBox Content="Meine Kosten"
                                       IsChecked="{Binding MeineKosten, Mode=TwoWay}"
@@ -283,6 +300,24 @@
                                     Command="{Binding VorlagenFilterEntfernenCommand}" />
                         </StackPanel>
                     </Border>
+
+                    <!-- Einschraenkung auf genau eine Buchung - der Sprung aus
+                         "Letzte Buchungen". Steht wie der Vorlagenfilter in
+                         keinem Bedienelement der Leiste und muss deshalb
+                         sichtbar sein: sonst waere unerklaerlich, warum die
+                         Liste nur noch eine Zeile zeigt. -->
+                    <Border IsVisible="{Binding BuchungFilterAktiv}"
+                            Background="{DynamicResource WarnungFlaeche}" BorderBrush="{DynamicResource WarnungRahmen}" BorderThickness="1"
+                            CornerRadius="8" Padding="8,4"
+                            HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{Binding BuchungFilterText}"
+                                       VerticalAlignment="Center" />
+                            <Button Content="✕"
+                                    ToolTip.Tip="Einschränkung auf diese eine Buchung aufheben"
+                                    Command="{Binding BuchungFilterAufhebenCommand}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
 
@@ -306,6 +341,35 @@
                 <Button Grid.Column="2" Classes="ghost" Content="Filter zurücksetzen"
                         Command="{Binding FilterZuruecksetzenCommand}" />
             </Grid>
+
+            <!-- ============ Bänder über der Tabelle ============
+                 Ein Schreibfehler beim Duplizieren steht hier statt in der
+                 Lösch-Abfrage: die hat ihr eigenes Band, und ein Fehler
+                 ohne offenen Dialog braucht einen Platz, an dem die Liste
+                 unverändert darunter stehen bleiben kann (Regel 13). -->
+            <Border DockPanel.Dock="Top" Classes="banner fehler"
+                    IsVisible="{Binding SchreibFehlerAlsBand}"
+                    Margin="0,0,0,10">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding SchreibFehlerText}"
+                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="ghost" Content="Schließen"
+                            VerticalAlignment="Top"
+                            Command="{Binding SchreibFehlerSchliessenCommand}" />
+                </Grid>
+            </Border>
+
+            <Border DockPanel.Dock="Top" Classes="banner erfolg"
+                    IsVisible="{Binding ErfolgSichtbar}"
+                    Margin="0,0,0,10">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding ErfolgText}"
+                               TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="ghost" Content="Schließen"
+                            VerticalAlignment="Top"
+                            Command="{Binding ErfolgSchliessenCommand}" />
+                </Grid>
+            </Border>
 
             <!-- ============ Fusszeile ============ -->
             <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto"
@@ -347,7 +411,7 @@
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
             <DockPanel Width="{Binding #Waagerecht.Viewport.Width}"
-                       MinWidth="{anzeige:BreitePlusKategorie 1000}">
+                       MinWidth="{anzeige:BreitePlusKategorie 1100}">
             <!-- Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste
                  (siehe PersonenView). Hier aber ueber Scroll.Viewport und
                  nicht ueber Bounds: die ListBox scrollt selbst, ihre
@@ -357,7 +421,7 @@
                     Width="{Binding #Zeilenliste.Scroll.Viewport.Width}"
                     HorizontalAlignment="Left"
                     Padding="4,0,4,4">
-                <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200">
+                <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,300">
                     <Button Grid.Column="4" Classes="kopf" Content="{Binding DatumHeaderText}"
                             Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
                     <Button Grid.Column="6" Classes="kopf" Content="{Binding KategorieHeaderText}"
@@ -403,7 +467,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:AusgabeZeile">
                         <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">
-                            <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,200">
+                            <Grid anzeige:Raster.Spalten="4,8,32,24,90,16,Kategorie,16,110,24,110,16,175,16,*,16,300">
                                 <!-- Farbe der Kategorie. Bewusst ein schmaler
                                      Balken am Rand und keine eingefaerbte
                                      Zeile: der Text muss lesbar bleiben, und
@@ -452,6 +516,10 @@
                                 <StackPanel Grid.Column="16" Orientation="Horizontal" Spacing="6">
                                     <Button Classes="secondary klein" Content="Bearbeiten"
                                             Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).BearbeitenOeffnenCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Classes="secondary klein" Content="Duplizieren"
+                                            ToolTip.Tip="Legt dieselbe Buchung noch einmal an, mit dem heutigen Datum"
+                                            Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).DuplizierenCommand}"
                                             CommandParameter="{Binding}" />
                                     <Button Classes="danger klein" Content="Löschen"
                                             Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).LoeschenCommand}"

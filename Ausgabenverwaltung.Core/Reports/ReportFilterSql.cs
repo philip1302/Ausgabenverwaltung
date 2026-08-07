@@ -100,9 +100,18 @@ public static class ReportFilterSql
 
         AND  (@SearchText IS NULL OR e.Note LIKE '%' || @SearchText || '%')
 
+        -- Nur Einnahmen (1) bzw. nur Ausgaben (0). Ein leerer Wert
+        -- schraenkt nicht ein - dieselbe Regel wie bei allen uebrigen
+        -- Filtern hier.
+        AND  (@IsIncome IS NULL OR e.IsIncome = @IsIncome)
+
         -- Nur die aus einer bestimmten Vorlage erzeugten Buchungen.
         -- NULL => keine Einschraenkung.
         AND  (@RecurringExpenseId IS NULL OR e.RecurringExpenseId = @RecurringExpenseId)
+
+        -- Nur genau eine Buchung - der Sprung aus den Uebersichtslisten.
+        -- NULL => keine Einschraenkung.
+        AND  (@ExpenseId IS NULL OR e.Id = @ExpenseId)
         """;
 
     /// <summary>
@@ -122,7 +131,14 @@ public static class ReportFilterSql
         CategoryRootIdsJson = ToJsonArray(filter.CategoryRootIds),
         ExcludedCategoryIdsJson = ToJsonArray(filter.ExcludedCategoryIds),
         filter.SearchText,
+
+        // Bewusst als 0/1 statt als bool: die Spalte ist INTEGER, und ein
+        // Vergleich zwischen einem bool-Parameter und einer INTEGER-Spalte
+        // haengt sonst daran, wie der Treiber den Wert gerade abbildet.
+        IsIncome = filter.IsIncome is bool einnahme ? (einnahme ? 1 : 0) : (int?)null,
+
         filter.RecurringExpenseId,
+        filter.ExpenseId,
     };
 
     /// <summary>

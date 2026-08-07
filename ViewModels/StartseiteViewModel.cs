@@ -45,20 +45,60 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     /// <summary>Wird ausgeloest, wenn "Alle Buchungen ansehen" gewaehlt wird - siehe MainViewModel.</summary>
     public event EventHandler? AusgabenlisteAngefordert;
 
+    // ---- Spruenge aus den vier KPI-Kacheln ----
+    //
+    // Jede Kachel meldet nur an, WOHIN es gehen soll; die Startseite kennt
+    // die Navigation nicht (dasselbe Muster wie ZeitraumAngefordert und
+    // ErfassenAngefordert - der MainViewModel hoert zu und setzt um).
+
+    /// <summary>Anfang des Monats, dessen Ausgaben gezeigt werden sollen.</summary>
+    public event EventHandler<DateOnly>? AusgabenMonatAngefordert;
+
+    /// <summary>Anfang des Monats, dessen Einnahmen gezeigt werden sollen.</summary>
+    public event EventHandler<DateOnly>? EinnahmenMonatAngefordert;
+
+    public event EventHandler? OffenePostenAngefordert;
+
+    /// <summary>Id der Vorlage, die als naechste faellig ist.</summary>
+    public event EventHandler<int>? NaechsteFaelligkeitAngefordert;
+
+    /// <summary>Wird ausgeloest, wenn eine Zeile unter "Letzte Buchungen"
+    /// angeklickt wird - siehe MainViewModel.</summary>
+    public event EventHandler<LetzteAusgabeZeile>? BuchungAngefordert;
+
     [ObservableProperty] private string _monatUeberschrift = string.Empty;
 
     [ObservableProperty] private string _ausgabenMonatText = string.Empty;
     [ObservableProperty] private string _ausgabenMonatHinweis = string.Empty;
 
+    /// <summary>
+    /// Ob die Kachel ueberhaupt etwas zu zeigen hat. Ist sie leer, bleibt
+    /// ihr Knopf ausgegraut - ein Sprung ins Nichts ist schlimmer als kein
+    /// Sprung.
+    /// </summary>
+    [ObservableProperty] private bool _ausgabenMonatVorhanden;
+
     [ObservableProperty] private string _einnahmenMonatText = string.Empty;
     [ObservableProperty] private string _einnahmenMonatHinweis = string.Empty;
+    [ObservableProperty] private bool _einnahmenMonatVorhanden;
 
     [ObservableProperty] private string _offenePostenText = string.Empty;
     [ObservableProperty] private string _offenePostenHinweis = string.Empty;
+    [ObservableProperty] private bool _offenePostenVorhanden;
 
     [ObservableProperty] private string _naechsteFaelligkeitTitel = string.Empty;
     [ObservableProperty] private string _naechsteFaelligkeitHinweis = string.Empty;
     [ObservableProperty] private bool _naechsteFaelligkeitVorhanden;
+
+    // Die Vorlage hinter der vierten Kachel - fuer den Sprung in den
+    // Vorlagenbereich, der genau diese Zeile hervorheben soll.
+    private int? _naechsteVorlageId;
+
+    // Der Monat, aus dem die beiden Monatskacheln gerade gerechnet sind.
+    // Gemerkt statt beim Klick neu bestimmt: laeuft die Anwendung ueber
+    // Mitternacht des Monatsersten hinweg, zeigte die Liste sonst einen
+    // anderen Monat als die Kachel darueber.
+    private DateOnly _kachelMonat;
 
     public ObservableCollection<LetzteAusgabeZeile> LetzteBuchungen { get; } = new();
 
@@ -109,6 +149,40 @@ public sealed partial class StartseiteViewModel : ViewModelBase
 
     [RelayCommand]
     private void AlleBuchungenAnsehen() => AusgabenlisteAngefordert?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void AusgabenMonatOeffnen()
+        => AusgabenMonatAngefordert?.Invoke(this, _kachelMonat);
+
+    [RelayCommand]
+    private void EinnahmenMonatOeffnen()
+        => EinnahmenMonatAngefordert?.Invoke(this, _kachelMonat);
+
+    [RelayCommand]
+    private void OffenePostenOeffnen()
+        => OffenePostenAngefordert?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void NaechsteFaelligkeitOeffnen()
+    {
+        if (_naechsteVorlageId is int id)
+        {
+            NaechsteFaelligkeitAngefordert?.Invoke(this, id);
+        }
+    }
+
+    /// <summary>
+    /// Klick auf eine Zeile unter "Letzte Buchungen": zeigt genau diese
+    /// eine Buchung in der Ausgabenliste.
+    /// </summary>
+    [RelayCommand]
+    private void BuchungOeffnen(LetzteAusgabeZeile? zeile)
+    {
+        if (zeile is not null)
+        {
+            BuchungAngefordert?.Invoke(this, zeile);
+        }
+    }
 
     public StartseiteViewModel(
         ExpenseRepository expenseRepository,
@@ -207,6 +281,7 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     {
         var monatsAnfang = new DateOnly(heute.Year, heute.Month, 1);
         var naechsterMonat = monatsAnfang.AddMonths(1);
+        _kachelMonat = monatsAnfang;
 
         var buchungen = _expenseRepository.Query(
             new ReportFilter
@@ -229,12 +304,14 @@ public sealed partial class StartseiteViewModel : ViewModelBase
             .ToList();
 
         var ausgabenSumme = ausgaben.Sum(b => b.AmountCents);
+        AusgabenMonatVorhanden = ausgaben.Count > 0;
         AusgabenMonatText = EuroText.Format(ausgabenSumme);
         AusgabenMonatHinweis = ausgaben.Count == 0
             ? "Noch keine Ausgabe diesen Monat"
             : $"{ausgaben.Count} {(ausgaben.Count == 1 ? "Buchung" : "Buchungen")} · Ø {EuroText.Format(ausgabenSumme / ausgaben.Count)}";
 
         var einnahmenSumme = einnahmen.Sum(b => b.AmountCents);
+        EinnahmenMonatVorhanden = einnahmen.Count > 0;
         EinnahmenMonatText = EuroText.Format(einnahmenSumme);
         EinnahmenMonatHinweis = einnahmen.Count == 0
             ? "Noch keine Einnahme diesen Monat"
@@ -246,6 +323,7 @@ public sealed partial class StartseiteViewModel : ViewModelBase
         var offen = _openItemsRepository.GetOpen();
         var summeCents = offen.Sum(o => o.AmountCents);
         OffenePostenText = EuroText.Format(summeCents);
+        OffenePostenVorhanden = offen.Count > 0;
 
         if (offen.Count == 0)
         {
@@ -274,12 +352,14 @@ public sealed partial class StartseiteViewModel : ViewModelBase
 
         if (naechste is null)
         {
+            _naechsteVorlageId = null;
             NaechsteFaelligkeitVorhanden = false;
             NaechsteFaelligkeitTitel = "Keine aktive Vorlage";
             NaechsteFaelligkeitHinweis = string.Empty;
             return;
         }
 
+        _naechsteVorlageId = naechste.Vorlage.Id;
         NaechsteFaelligkeitVorhanden = true;
         NaechsteFaelligkeitTitel = naechste.Vorlage.Title;
         NaechsteFaelligkeitHinweis =
