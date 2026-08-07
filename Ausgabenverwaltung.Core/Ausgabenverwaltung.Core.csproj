@@ -27,6 +27,13 @@
     <EmbeddedResource Include="..\docs\migration_v1_to_v2.sql" Link="migration_v1_to_v2.sql" />
     <EmbeddedResource Include="..\docs\migration_v2_to_v3.sql" Link="migration_v2_to_v3.sql" />
     <EmbeddedResource Include="..\docs\migration_v3_to_v4.sql" Link="migration_v3_to_v4.sql" />
+
+    <!-- Die Aenderungsliste fuer den Anwender (siehe CLAUDE.md, Regel 15).
+         Sie wird EINGEBETTET und nicht zur Laufzeit geladen: die Seite
+         "Was ist neu" soll ohne Netzverbindung und ohne Datei neben der
+         Programmdatei auskommen - eine einzelne Programmdatei bringt
+         ihren eigenen Text mit. -->
+    <EmbeddedResource Include="..\CHANGELOG.md" Link="CHANGELOG.md" />
   </ItemGroup>
 
 </Project>

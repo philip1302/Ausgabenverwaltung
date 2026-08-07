@@ -201,15 +201,21 @@ ist, wenn veröffentlicht wird:
   Die Anwendung selbst ist davon unabhängig — sie holt die ganze Liste und
   nimmt die höchste Version.
 
-- **Der Beschreibungstext des Releases wird dem Anwender gezeigt.** Beim
-  ersten Start nach dem Austausch erscheint einmalig die Seite „Was ist
-  neu" mit dem Text der übernommenen Veröffentlichung
-  (`Core\Updates\ReleaseNotes.cs`). Weil dieser Text bei
-  `--generate-notes` aus den **Commit-Betreffs** entsteht, landen sie
-  damit vor den Augen des Anwenders — ein Grund mehr für den deutschen
-  Aussagesatz. Anmeldename und Adresse hinter jeder Zeile („by @… in
-  https://…") werden entfernt; ein Release ohne Text lässt die Seite
-  ausfallen, statt sie leer zu zeigen.
+- **Der Release-Text kommt aus `CHANGELOG.md`.** Er entsteht laufend:
+  jeder Commit mit einer Änderung für den Anwender trägt sie unter
+  `## Unveröffentlicht` ein, und beim Anheben der Versionsnummer wird
+  genau diese Überschrift zu `## X.Y.Z — TT.MM.JJJJ` (CLAUDE.md,
+  Regel 15). Zusammengesucht wird also nichts. Der Workflow
+  schneidet den Abschnitt der neuen Fassung heraus und übergibt ihn als
+  `--notes-file`; fehlt er, bricht die Veröffentlichung ab. Derselbe Text
+  steckt eingebettet in der Anwendung und erscheint dort nach dem
+  Austausch als Seite „Was ist neu" — geschrieben wird er also genau
+  einmal.
+
+  Bewusst **nicht** `--generate-notes`: das fasst *Pull Requests*
+  zusammen, nicht Commits. Hier wird direkt auf `master` gepusht, und
+  herausgekommen ist deshalb bei v1.2.1 bis v1.3.1 eine
+  Release-Beschreibung, die nur aus dem Vergleichs-Verweis bestand.
 
 Der Austausch selbst passiert nicht im laufenden Betrieb, sondern ganz früh
 beim nächsten Start (`Program.Main` → `Core\Updates\UpdateInstaller.cs`),

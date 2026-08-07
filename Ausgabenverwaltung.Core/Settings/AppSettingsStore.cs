@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Formatting;
 
@@ -92,12 +92,9 @@ public sealed class AppSettingsStore
 
                 // Leerer Text und fehlender Eintrag sind hier dasselbe:
                 // "nichts gemerkt". Eine Datei aus einer aelteren Fassung
-                // hat die drei Werte nicht, und dann bleibt die Seite
-                // "Was ist neu" beim naechsten Start still (siehe
-                // Updates.WasIstNeu).
+                // hat den Wert nicht, und dann bleibt die Seite "Was ist
+                // neu" beim naechsten Start still (siehe Updates.WasIstNeu).
                 LastSeenVersion = LeerAlsNull(document.LastSeenVersion),
-                PendingReleaseNotesVersion = LeerAlsNull(document.PendingReleaseNotesVersion),
-                PendingReleaseNotes = LeerAlsNull(document.PendingReleaseNotes),
             };
         }
         catch (Exception)
@@ -123,8 +120,6 @@ public sealed class AppSettingsStore
                 : null,
             KeepEntryValues = settings.KeepEntryValues,
             LastSeenVersion = settings.LastSeenVersion,
-            PendingReleaseNotesVersion = settings.PendingReleaseNotesVersion,
-            PendingReleaseNotes = settings.PendingReleaseNotes,
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -175,7 +170,5 @@ public sealed class AppSettingsStore
         public string? LastUpdateCheckUtc { get; set; }
         public bool? KeepEntryValues { get; set; }
         public string? LastSeenVersion { get; set; }
-        public string? PendingReleaseNotesVersion { get; set; }
-        public string? PendingReleaseNotes { get; set; }
     }
 }

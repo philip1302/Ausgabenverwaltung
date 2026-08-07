@@ -29,25 +29,13 @@ public sealed record ReleaseNoteBlock
 }
 
 /// <summary>
-/// Macht aus dem Beschreibungstext einer Veroeffentlichung
-/// (<see cref="ReleaseInfo.Body"/>) etwas Anzeigbares.
-///
-/// Der Text kommt als Markdown herein, und zwar aus
-/// <c>gh release create --generate-notes</c> (siehe PUBLISH.md). Er sieht
-/// deshalb immer aehnlich aus:
-///
-/// <code>
-/// ## What's Changed
-/// * Betragsfeld rechnet, Datumsfeld versteht Kurzformen by @philip1302 in https://…
-///
-/// **Full Changelog**: https://github.com/…/compare/v1.1.0...v1.2.0
-/// </code>
+/// Macht aus einem Abschnitt der Aenderungsliste
+/// (<see cref="Changelog"/>, CHANGELOG.md) etwas Anzeigbares.
 ///
 /// Bewusst KEIN Markdown-Darsteller: gezeigt werden Ueberschrift,
-/// Aufzaehlungspunkt und Absatz, mehr nicht. Ein vollstaendiger Darsteller
-/// waere eine Abhaengigkeit und eine Angriffsflaeche fuer einen Text, der
-/// von aussen kommt - und er wuerde genau das anzeigen, was hier stoert:
-/// Anmeldenamen und Adressen hinter jeder Zeile.
+/// Aufzaehlungspunkt und Absatz, mehr nicht. Genau so viel Form braucht
+/// eine Liste von Aenderungen, und ein vollstaendiger Darsteller waere
+/// eine Abhaengigkeit fuer nichts.
 ///
 /// Reine Textverarbeitung, deshalb vollstaendig pruefbar (Regel 7).
 /// Wirft nicht: unbrauchbarer Text ergibt eine leere Liste, und dann
@@ -56,28 +44,15 @@ public sealed record ReleaseNoteBlock
 public static partial class ReleaseNotes
 {
     /// <summary>
-    /// Mehr Abschnitte zeigt die Seite nicht. Eine Veroeffentlichung mit
-    /// hunderten Zeilen gibt es hier nicht; die Grenze schuetzt die
-    /// Anzeige vor einem Text, der aus welchem Grund auch immer ausufert.
+    /// Mehr Abschnitte zeigt die Seite nicht. Eine Fassung mit hunderten
+    /// Zeilen gibt es hier nicht; die Grenze schuetzt die Anzeige vor
+    /// einem Text, der aus welchem Grund auch immer ausufert.
     /// </summary>
     public const int Hoechstzahl = 200;
-
-    /// <summary>
-    /// Der Anhang, den GitHub an jede erzeugte Zeile haengt:
-    /// " by @philip1302 in https://github.com/…". Fuer den Anwender sagt
-    /// er nichts - in einem Vorhaben mit genau einem Verfasser schon gar
-    /// nicht.
-    /// </summary>
-    [GeneratedRegex(@"\s+by\s+@[\w.\-]+(\s+in\s+\S+)?\s*$")]
-    private static partial Regex GitHubAnhang();
 
     /// <summary>Markdown-Verweis "[Text](Adresse)" - der Text bleibt.</summary>
     [GeneratedRegex(@"\[([^\]]*)\]\([^)]*\)")]
     private static partial Regex Verweis();
-
-    /// <summary>Eine nackte Adresse mitten im Text.</summary>
-    [GeneratedRegex(@"https?://\S+")]
-    private static partial Regex Adresse();
 
     /// <summary>Aufzaehlungszeichen am Zeilenanfang, auch "1." und "2)".</summary>
     [GeneratedRegex(@"^([-*+]|\d+[.)])\s+")]
@@ -86,8 +61,8 @@ public static partial class ReleaseNotes
     private static readonly char[] Zeilenende = ['\n'];
 
     /// <summary>
-    /// Zerlegt den Beschreibungstext in Abschnitte. Leerer oder
-    /// unbrauchbarer Text ergibt eine leere Liste.
+    /// Zerlegt den Text in Abschnitte. Leerer oder unbrauchbarer Text
+    /// ergibt eine leere Liste.
     /// </summary>
     public static IReadOnlyList<ReleaseNoteBlock> Lies(string? koerper)
     {
@@ -98,15 +73,19 @@ public static partial class ReleaseNotes
 
         var abschnitte = new List<ReleaseNoteBlock>();
 
-        // Fliesstext kann ueber mehrere Zeilen laufen und wird erst an der
-        // naechsten Leerzeile (oder Ueberschrift oder Aufzaehlung)
-        // abgeschlossen.
-        var absatz = new StringBuilder();
+        // Der gerade offene Abschnitt. Ein Aufzaehlungspunkt wie ein
+        // Absatz darf sich ueber mehrere Zeilen ziehen - in einer Datei
+        // mit kurzen Zeilen (Stilvorgabe) ist das der Normalfall und
+        // nicht die Ausnahme. Geschlossen wird an der naechsten
+        // Leerzeile, Ueberschrift oder Aufzaehlung.
+        var offen = new StringBuilder();
+        var offeneArt = ReleaseNoteArt.Absatz;
 
-        void SchliesseAbsatz()
+        void Schliesse()
         {
-            Nimm(abschnitte, ReleaseNoteArt.Absatz, absatz.ToString());
-            absatz.Clear();
+            Nimm(abschnitte, offeneArt, offen.ToString());
+            offen.Clear();
+            offeneArt = ReleaseNoteArt.Absatz;
         }
 
         foreach (var rohzeile in koerper.ReplaceLineEndings("\n").Split(Zeilenende))
@@ -115,13 +94,13 @@ public static partial class ReleaseNotes
 
             if (zeile.Length == 0 || IstTrennlinie(zeile) || zeile.StartsWith("```", StringComparison.Ordinal))
             {
-                SchliesseAbsatz();
+                Schliesse();
                 continue;
             }
 
             if (zeile.StartsWith('#'))
             {
-                SchliesseAbsatz();
+                Schliesse();
                 Nimm(abschnitte, ReleaseNoteArt.Ueberschrift, zeile.TrimStart('#').Trim());
                 continue;
             }
@@ -129,20 +108,23 @@ public static partial class ReleaseNotes
             var aufzaehlung = Aufzaehlung().Match(zeile);
             if (aufzaehlung.Success)
             {
-                SchliesseAbsatz();
-                Nimm(abschnitte, ReleaseNoteArt.Punkt, zeile[aufzaehlung.Length..]);
+                Schliesse();
+                offeneArt = ReleaseNoteArt.Punkt;
+                offen.Append(zeile[aufzaehlung.Length..]);
                 continue;
             }
 
-            if (absatz.Length > 0)
+            // Fortsetzung dessen, was offen ist - ob eingerueckt oder
+            // nicht, spielt keine Rolle.
+            if (offen.Length > 0)
             {
-                absatz.Append(' ');
+                offen.Append(' ');
             }
 
-            absatz.Append(zeile);
+            offen.Append(zeile);
         }
 
-        SchliesseAbsatz();
+        Schliesse();
 
         return abschnitte.Count > Hoechstzahl
             ? abschnitte.GetRange(0, Hoechstzahl)
@@ -156,17 +138,9 @@ public static partial class ReleaseNotes
             return;
         }
 
-        var text = Bereinige(roh, out var enthieltAdresse);
+        var text = Bereinige(roh);
 
         if (text.Length == 0)
-        {
-            return;
-        }
-
-        // "**Full Changelog**: https://…" bleibt nach dem Entfernen der
-        // Adresse als blosse Beschriftung uebrig. Eine Zeile, die nur noch
-        // ankuendigt, was nicht mehr dasteht, ist schlechter als keine.
-        if (enthieltAdresse && text.EndsWith(':'))
         {
             return;
         }
@@ -175,17 +149,15 @@ public static partial class ReleaseNotes
     }
 
     /// <summary>
-    /// Nimmt einer Zeile die Auszeichnungen und den GitHub-Anhang.
+    /// Nimmt einer Zeile ihre Auszeichnungen. Aus einem Verweis bleibt
+    /// sein Text: eine Adresse laesst sich in einer Anwendung ohnehin
+    /// nicht anklicken, die davon nichts weiss.
     /// </summary>
-    private static string Bereinige(string roh, out bool enthieltAdresse)
+    private static string Bereinige(string roh)
     {
         var text = roh.Trim();
 
         text = Verweis().Replace(text, "$1");
-        text = GitHubAnhang().Replace(text, string.Empty);
-
-        enthieltAdresse = Adresse().IsMatch(text);
-        text = Adresse().Replace(text, string.Empty);
 
         // Nur die doppelten Zeichen fuer fett und kursiv fallen weg.
         // Einzelne Sterne und Unterstriche bleiben stehen: sie kommen in

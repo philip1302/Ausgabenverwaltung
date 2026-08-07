@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Ausgabenverwaltung.Core.Errors;
@@ -11,8 +11,8 @@ namespace Ausgabenverwaltung.ViewModels;
 
 /// <summary>
 /// Die Seite "Was ist neu" - sie erscheint einmalig beim ersten Start
-/// nach einem Austausch der Programmdatei und zeigt den
-/// Beschreibungstext der uebernommenen Veroeffentlichung.
+/// nach einem Austausch der Programmdatei und zeigt die Abschnitte der
+/// Aenderungsliste (CHANGELOG.md), die seither dazugekommen sind.
 ///
 /// Entschieden wird nichts hier, sondern in Core.Updates.WasIstNeu
 /// (Regel 7); formuliert wird in Core.Errors.UpdateText. Dieses
@@ -23,8 +23,8 @@ namespace Ausgabenverwaltung.ViewModels;
 /// Wegklicken: die Seite soll auch dann nicht ein zweites Mal aufgehen,
 /// wenn die Anwendung dazwischen abstuerzt oder ueber den Fensterknopf
 /// beendet wird. Der Preis waere, sie zu sehen, ohne sie gelesen zu
-/// haben - der Beschreibungstext bleibt dafuer auf der
-/// Veroeffentlichungsseite nachlesbar.
+/// haben - nachlesbar bleibt der Text in der Aenderungsliste des
+/// Vorhabens.
 /// </summary>
 public sealed partial class WasIstNeuViewModel : ViewModelBase
 {
@@ -48,8 +48,7 @@ public sealed partial class WasIstNeuViewModel : ViewModelBase
         var entscheidung = WasIstNeu.Treffe(
             laufendeVersion,
             gespeichert.LastSeenVersion,
-            gespeichert.PendingReleaseNotesVersion,
-            gespeichert.PendingReleaseNotes);
+            Changelog.Eingebettet());
 
         Sichtbar = entscheidung.Zeigen;
         Titel = $"Was ist neu in Fassung {entscheidung.VersionText}";
@@ -65,9 +64,9 @@ public sealed partial class WasIstNeuViewModel : ViewModelBase
                  && gespeichert.LastSeenVersion is not null)
         {
             // Die Fassung ist gewechselt, es gab aber nichts zu zeigen -
-            // von Hand ausgetauscht oder ohne Beschreibungstext
-            // veroeffentlicht. Kein Fall fuer den Anwender, wohl aber
-            // einer, den man im Protokoll wiederfinden will.
+            // zu ihr steht kein Abschnitt in der Aenderungsliste. Kein
+            // Fall fuer den Anwender, wohl aber einer, den man im
+            // Protokoll wiederfinden will (CLAUDE.md, Regel 15).
             AppLog.Current.Info(
                 LogEvents.UpdateNeuerungenUebersprungen(entscheidung.VersionText));
         }
@@ -85,9 +84,7 @@ public sealed partial class WasIstNeuViewModel : ViewModelBase
     public IReadOnlyList<NeuerungZeile> Abschnitte { get; }
 
     /// <summary>
-    /// Haelt fest, dass diese Fassung gesehen wurde, und raeumt den
-    /// gezeigten Beschreibungstext weg - er hat seinen Zweck erfuellt und
-    /// wuerde sonst bei der naechsten Aktualisierung noch daliegen.
+    /// Haelt fest, dass diese Fassung gesehen wurde.
     ///
     /// Ausdruecklich still: dass sich eine Einstellung nicht schreiben
     /// laesst, ist kein Grund, den Start mit einem Dialog zu unterbrechen.
@@ -105,8 +102,6 @@ public sealed partial class WasIstNeuViewModel : ViewModelBase
             einstellungen.Save(einstellungen.Load() with
             {
                 LastSeenVersion = entscheidung.MerkeVersion,
-                PendingReleaseNotesVersion = null,
-                PendingReleaseNotes = null,
             });
         }
         catch (Exception ex)

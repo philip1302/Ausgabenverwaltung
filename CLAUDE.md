@@ -123,6 +123,61 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
     `IMessenger`-Instanz, sonst wirken Registrierungen frueherer Tests
     in spaetere hinein.
 
+15. **`CHANGELOG.md` wird bei JEDEM Commit gepflegt, nicht erst beim
+    Veroeffentlichen.** Zwei Pflichten, die zusammengehoeren:
+
+    **a) Jeder Commit, der etwas fuer den Anwender aendert, traegt es im
+    selben Commit ein** — unter der obersten Ueberschrift
+    `## Unveroeffentlicht`. Gibt es sie noch nicht, wird sie angelegt:
+
+    ```
+    ## Unveroeffentlicht
+
+    ### Gruppe (optional)
+
+    - Ganze Saetze, jeder eine Aenderung.
+    ```
+
+    Nachtraeglich aus dem Log zusammengesucht wird es sonst nie richtig:
+    was eine Aenderung fuer den Anwender bedeutet, weiss man beim
+    Schreiben und nicht drei Wochen spaeter. Ein Commit ohne Wirkung auf
+    den Anwender (Umbau, Test, Doku, Werkzeug) traegt nichts ein — das
+    ist der Normalfall und kein Versaeumnis.
+
+    **b) Beim Anheben von `<Version>` wird `## Unveroeffentlicht` zur
+    Fassung** — im selben Commit, ohne den Text neu zu erfinden:
+
+    ```
+    ## 1.5.0 — 12.08.2026
+    ```
+
+    Steht dann nichts darunter, ist die Anhebung fragwuerdig: eine neue
+    Fassung, die dem Anwender nichts zu sagen hat, braucht er auch nicht.
+
+    Diese Datei ist kein Entwicklertagebuch, sondern **der Text, den der
+    Anwender zu sehen bekommt**: sie wird in die Baugruppe eingebettet
+    (`Core/Updates/Changelog.cs`) und nach einer Aktualisierung einmalig
+    als Seite "Was ist neu" gezeigt. Deshalb:
+    - Nur, was jemand beim **Benutzen** merkt. Umbauten, Tests,
+      Aufraeumarbeiten und Abhaengigkeiten kommen nicht vor — wen sie
+      betreffen, der liest das Protokoll der Aenderungen.
+    - **Kein Fachgesimpel**: keine Klassen-, Datei- oder Feldnamen, kein
+      "ViewModel", "Repository", "SQL", "Commit", "Migration".
+      `ChangelogTests` prueft eine Liste solcher Woerter mit.
+    - Ganze Saetze mit echten Umlauten, aus Sicht des Anwenders ("Das
+      Betragsfeld rechnet jetzt"), nicht aus Sicht des Codes.
+    - Der Nutzen gehoert dazu, wo er nicht offensichtlich ist — ein Satz,
+      warum es das jetzt gibt, ist mehr wert als drei Aufzaehlungspunkte.
+
+    `## Unveroeffentlicht` traegt keine lesbare Versionsnummer und wird
+    von der Anwendung deshalb uebergangen — ein noch nicht
+    veroeffentlichter Eintrag kann niemandem angezeigt werden. Wird die
+    Version angehoben, ohne die Ueberschrift umzubenennen, faellt das in
+    `ChangelogTests` auf; die Seite bliebe sonst stillschweigend aus. Der
+    Veroeffentlichungs-Workflow nimmt denselben Abschnitt als
+    Release-Text (siehe PUBLISH.md) — er wird also genau einmal
+    geschrieben.
+
 ## Stil
 - Kommentare auf Deutsch, Bezeichner auf Englisch
 - Ausfuehrliche Kommentare bei allem, was nicht offensichtlich ist

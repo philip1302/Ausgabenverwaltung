@@ -1,4 +1,4 @@
-using Ausgabenverwaltung.Core.Display;
+﻿using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Settings;
 
 namespace Ausgabenverwaltung.Tests;
@@ -212,34 +212,24 @@ public class AppSettingsStoreTests : IDisposable
     }
 
     /// <summary>
-    /// Die drei Werte hinter der Seite "Was ist neu": die gesehene Fassung
-    /// und der Beschreibungstext, der vor dem Neustart abgelegt und nach
-    /// dem Neustart gezeigt wird (siehe Core.Updates.WasIstNeu).
+    /// Der Wert hinter der Seite "Was ist neu": welche Fassung der
+    /// Anwender zuletzt gesehen hat (siehe Core.Updates.WasIstNeu).
     /// </summary>
     [Fact]
-    public void Gesehene_Fassung_und_gemerkte_Neuerungen_ueberstehen_den_Neustart()
+    public void Die_gesehene_Fassung_uebersteht_den_Neustart()
     {
         var speicher = new AppSettingsStore(SettingsPath);
 
-        speicher.Save(new AppSettings
-        {
-            LastSeenVersion = "1.1.0",
-            PendingReleaseNotesVersion = "v1.2.0",
-            PendingReleaseNotes = "## What's Changed\n* Etwas Neues",
-        });
+        speicher.Save(new AppSettings { LastSeenVersion = "1.4.0" });
 
-        var gelesen = speicher.Load();
-
-        Assert.Equal("1.1.0", gelesen.LastSeenVersion);
-        Assert.Equal("v1.2.0", gelesen.PendingReleaseNotesVersion);
-        Assert.Equal("## What's Changed\n* Etwas Neues", gelesen.PendingReleaseNotes);
+        Assert.Equal("1.4.0", speicher.Load().LastSeenVersion);
     }
 
-    // Eine Datei aus einer aelteren Fassung kennt die Felder nicht. Sie
-    // muessen dann leer sein und nicht etwa als leerer Text gelten - sonst
+    // Eine Datei aus einer aelteren Fassung kennt das Feld nicht. Es muss
+    // dann leer sein und nicht etwa als leerer Text gelten - sonst
     // erschiene die Seite "Was ist neu" mit nichts darauf.
     [Fact]
-    public void Ohne_die_Felder_bleibt_nichts_gemerkt()
+    public void Ohne_das_Feld_bleibt_nichts_gemerkt()
     {
         File.WriteAllText(SettingsPath, """
             {
@@ -248,10 +238,6 @@ public class AppSettingsStoreTests : IDisposable
             }
             """);
 
-        var gelesen = new AppSettingsStore(SettingsPath).Load();
-
-        Assert.Null(gelesen.LastSeenVersion);
-        Assert.Null(gelesen.PendingReleaseNotesVersion);
-        Assert.Null(gelesen.PendingReleaseNotes);
+        Assert.Null(new AppSettingsStore(SettingsPath).Load().LastSeenVersion);
     }
 }

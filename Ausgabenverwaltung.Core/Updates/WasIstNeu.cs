@@ -20,32 +20,35 @@ public sealed record WasIstNeuEntscheidung
     /// </summary>
     public string? MerkeVersion { get; init; }
 
-    /// <summary>Die laufende Fassung als Anzeigetext ("1.2.0").</summary>
+    /// <summary>Die laufende Fassung als Anzeigetext ("1.4.0").</summary>
     public string VersionText { get; init; } = string.Empty;
 
-    /// <summary>Die aufbereiteten Neuerungen, leer wenn nichts gezeigt wird.</summary>
+    /// <summary>
+    /// Der anzuzeigende Text, fertig aufbereitet. Werden mehrere
+    /// Fassungen auf einmal nachgeholt, traegt jede ihre Ueberschrift.
+    /// </summary>
     public IReadOnlyList<ReleaseNoteBlock> Abschnitte { get; init; } = [];
 }
 
 /// <summary>
 /// Entscheidet, ob nach einem Austausch der Programmdatei einmalig die
-/// Seite "Was ist neu" erscheint.
+/// Seite "Was ist neu" erscheint, und stellt ihren Inhalt zusammen.
 ///
-/// Die Anwendung merkt sich dafuer zweierlei in den Einstellungen: die
-/// zuletzt gesehene Fassung, und den Beschreibungstext der
-/// Veroeffentlichung, die beim letzten Lauf geladen und bereitgelegt
-/// wurde (siehe ViewModels/AktualisierungViewModel). Der Text wird also
-/// VOR dem Neustart abgelegt und NACH dem Neustart gezeigt - im neuen
-/// Prozess ist kein Netzzugriff mehr noetig, und die Seite steht sofort
-/// da, auch wenn GitHub gerade nicht erreichbar ist.
+/// Der Text kommt aus der eingebetteten Aenderungsliste
+/// (<see cref="Changelog"/>) und nicht aus dem Netz. Die Anwendung
+/// braucht dafuer keine Verbindung, und der Text gehoert unweigerlich zu
+/// der Fassung, die gerade laeuft.
 ///
-/// Gezeigt wird nur, was auch etwas hergibt. Drei Faelle bleiben deshalb
-/// bewusst still:
+/// Gemerkt wird nur EINE Zahl: die zuletzt gesehene Fassung. Aus ihr und
+/// der laufenden ergibt sich alles Uebrige - auch der Fall, dass jemand
+/// zwei Fassungen auf einmal ueberspringt: dann werden beide Abschnitte
+/// gezeigt, jeder mit seiner Ueberschrift.
+///
+/// Zwei Faelle bleiben bewusst still:
 /// - die erste Ausfuehrung ueberhaupt (nichts Gemerktes): wer noch nichts
 ///   Altes kennt, braucht keine Liste der Aenderungen daran;
-/// - eine von Hand ausgetauschte Programmdatei: dann liegt kein Text vor,
-///   und eine leere Seite "Was ist neu" ist schlechter als keine;
-/// - ein Text, der zu einer anderen Fassung gehoert als der laufenden.
+/// - eine Fassung ohne eigenen Abschnitt in der Aenderungsliste - eine
+///   leere Seite "Was ist neu" ist schlechter als keine.
 ///
 /// Entscheidet allein aus Werten - ohne Netz, ohne Platte, ohne Uhr - und
 /// ist deshalb vollstaendig pruefbar (Regel 7).
@@ -59,15 +62,14 @@ public static class WasIstNeu
     /// Die zuletzt gemerkte Fassung, <c>null</c> bei der ersten
     /// Ausfuehrung.
     /// </param>
-    /// <param name="notizenVersion">
-    /// Zu welcher Fassung der abgelegte Beschreibungstext gehoert.
+    /// <param name="changelogText">
+    /// Die Aenderungsliste, ueblicherweise aus
+    /// <see cref="Changelog.Eingebettet"/>.
     /// </param>
-    /// <param name="notizen">Der abgelegte Beschreibungstext selbst.</param>
     public static WasIstNeuEntscheidung Treffe(
         string? laufendeVersion,
         string? zuletztGesehen,
-        string? notizenVersion,
-        string? notizen)
+        string? changelogText)
     {
         // Ohne lesbare eigene Version laesst sich nichts vergleichen -
         // dann wird auch nichts gemerkt, sonst stuende hinterher ein
@@ -98,17 +100,35 @@ public static class WasIstNeu
                 : Nur(laufendText);
         }
 
-        // Ab hier ist die laufende Fassung echt neuer als die zuletzt
-        // gesehene. Gezeigt wird trotzdem nur mit passendem Text.
-        if (!AppVersion.TryParse(notizenVersion, out var notizV) || notizV != laufend)
+        // Alles, was seit der zuletzt gesehenen Fassung dazugekommen ist -
+        // die neueste zuerst. Ein uebersprungener Zwischenstand faellt so
+        // nicht unter den Tisch.
+        var nachzuholen = Changelog.Lies(changelogText)
+            .Where(eintrag => eintrag.Version > gesehen && eintrag.Version <= laufend)
+            .ToList();
+
+        if (nachzuholen.Count == 0)
         {
             return Nur(laufendText);
         }
 
-        var abschnitte = ReleaseNotes.Lies(notizen);
-        if (abschnitte.Count == 0)
+        var abschnitte = new List<ReleaseNoteBlock>();
+
+        foreach (var eintrag in nachzuholen)
         {
-            return Nur(laufendText);
+            // Die Fassungsueberschrift nur, wenn mehr als eine dabei ist:
+            // bei der einen erwarteten Fassung stuende sie doppelt, der
+            // Seitentitel nennt sie bereits.
+            if (nachzuholen.Count > 1)
+            {
+                abschnitte.Add(new ReleaseNoteBlock
+                {
+                    Art = ReleaseNoteArt.Ueberschrift,
+                    Text = "Fassung " + eintrag.Titel,
+                });
+            }
+
+            abschnitte.AddRange(eintrag.Inhalt);
         }
 
         return new WasIstNeuEntscheidung

@@ -852,25 +852,33 @@ Beim ersten Start danach eine Seite mit den Änderungen zeigen, gespeist
 aus dem Text des GitHub-Releases, den `GitHubReleases` ohnehin schon
 liest.
 
-**Abweichungen von der Vorgabe, bewusst:**
+**Abweichung von der Vorgabe, bewusst — die Quelle ist eine andere:**
 
-- `GitHubReleases` las den Beschreibungstext bisher **nicht** — der
-  Kommentar am Kopf von `ReleaseInfo` schloss ihn ausdrücklich aus. Er
-  wird jetzt als `Body` mitgenommen (ausgewertet wird er erst dort, wo er
-  gezeigt wird).
-- Der Text wird **vor** dem Neustart in den Einstellungen abgelegt
-  (`PendingReleaseNotes`) und **nach** dem Neustart gezeigt. So braucht
-  der erste Start nach dem Austausch keinen Netzzugriff, und die Seite
-  steht auch bei nicht erreichbarem GitHub sofort da.
+Die Vorgabe wollte den Text „aus dem GitHub-Release, den `GitHubReleases`
+ohnehin schon liest". Das trägt nicht: `--generate-notes` fasst *Pull
+Requests* zusammen, nicht Commits, und weil hier direkt auf `master`
+gepusht wird, bestand der Text von v1.2.1 bis v1.3.1 nur aus dem
+Vergleichs-Verweis. Die Seite hätte also nie etwas zu zeigen gehabt.
+
+Stattdessen:
+
+- Eine **`CHANGELOG.md`** im Wurzelverzeichnis, geschrieben für den
+  Anwender, vor jeder Anhebung der Versionsnummer (neue **Regel 15** in
+  CLAUDE.md). `ChangelogTests` prüft, dass die ausgelieferte Fassung
+  einen Abschnitt hat und dass darin kein Fachgesimpel steht.
+- Die Datei wird in die Baugruppe **eingebettet**. Die Anwendung bringt
+  ihren Text also selbst mit: keine Netzverbindung, keine Datei neben der
+  Programmdatei, und der Text gehört unweigerlich zu der Fassung, die
+  gerade läuft. `GitHubReleases` bleibt unangetastet.
+- Der Veröffentlichungs-Workflow nimmt **denselben** Abschnitt als
+  Release-Text (`--notes-file`) — geschrieben wird er genau einmal.
+- Wer eine Fassung überspringt, bekommt **alle** dazwischenliegenden
+  Abschnitte, jeder mit seiner Überschrift.
 - **Kein Markdown-Darsteller**: gezeigt werden Überschrift,
-  Aufzählungspunkt und Absatz. Der Anhang „by @… in https://…", den
-  `--generate-notes` an jede Zeile hängt, fällt weg — er sagt dem
-  Anwender nichts.
-- Die Seite bleibt in drei Fällen bewusst **aus**: bei der ersten
-  Ausführung überhaupt, bei einer von Hand ausgetauschten Programmdatei
-  (kein Text vorhanden) und bei einem Text, der zu einer anderen Fassung
-  gehört als der laufenden. Eine leere Seite „Was ist neu" ist schlechter
-  als keine.
+  Aufzählungspunkt und Absatz, mehr nicht.
+- Die Seite bleibt in zwei Fällen bewusst **aus**: bei der ersten
+  Ausführung überhaupt und bei einer Fassung ohne eigenen Abschnitt. Eine
+  leere Seite „Was ist neu" ist schlechter als keine.
 - Die gesehene Fassung wird **sofort** gemerkt, nicht erst beim
   Wegklicken — sonst ginge die Seite nach einem Absturz erneut auf.
 - Ein eigener Bereich ohne Sidebar-Platz (`NavigationGruppe.Keine`, wie

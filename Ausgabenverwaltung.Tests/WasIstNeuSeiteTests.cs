@@ -4,21 +4,23 @@ using Ausgabenverwaltung.ViewModels;
 namespace Ausgabenverwaltung.Tests;
 
 /// <summary>
-/// Was die Seite "Was ist neu" beim Erzeugen mit den Einstellungen macht -
-/// mit demselben ViewModel, das die Ansicht bindet, aber ohne Fenster.
+/// Die Seite "Was ist neu" mit demselben ViewModel, das die Ansicht
+/// bindet, aber ohne Fenster - und mit der ECHTEN, eingebetteten
+/// Aenderungsliste. Damit prueft sich nebenbei mit, dass CHANGELOG.md
+/// tatsaechlich in der Baugruppe steckt; faellt das Einbetten weg, faellt
+/// dieser Test.
 ///
 /// Die Entscheidung selbst steht in Core (siehe
 /// <see cref="WasIstNeuTests"/>); hier geht es um das, was danach
-/// geschrieben wird: die gesehene Fassung merken und den gezeigten
-/// Beschreibungstext wegraeumen. Ohne das erschiene die Seite bei jedem
-/// Start erneut.
+/// geschrieben wird: die gesehene Fassung merken. Ohne das erschiene die
+/// Seite bei jedem Start erneut.
 /// </summary>
 public class WasIstNeuSeiteTests : IDisposable
 {
-    private const string Notizen = """
-        ## What's Changed
-        * Markierte Buchungen lassen sich gemeinsam aendern
-        """;
+    // Eine Fassung, zu der die echte Aenderungsliste einen Abschnitt hat,
+    // und ihre Vorgaengerin.
+    private const string MitAbschnitt = "1.4.0";
+    private const string Davor = "1.3.1";
 
     private readonly DirectoryInfo _tempDir =
         Directory.CreateTempSubdirectory("ausgabenverwaltung-wasistneu-");
@@ -28,61 +30,37 @@ public class WasIstNeuSeiteTests : IDisposable
     public void Dispose() => _tempDir.Delete(recursive: true);
 
     [Fact]
-    public void Nach_einer_Aktualisierung_steht_die_Seite_mit_Titel_und_Abschnitten_bereit()
+    public void Nach_einer_Aktualisierung_steht_die_Seite_mit_Titel_und_Inhalt_bereit()
     {
         var speicher = Speicher;
-        speicher.Save(new AppSettings
-        {
-            LastSeenVersion = "1.1.0",
-            PendingReleaseNotesVersion = "v1.2.0",
-            PendingReleaseNotes = Notizen,
-        });
+        speicher.Save(new AppSettings { LastSeenVersion = Davor });
 
-        var seite = new WasIstNeuViewModel(speicher, "1.2.0");
+        var seite = new WasIstNeuViewModel(speicher, MitAbschnitt);
 
         Assert.True(seite.Sichtbar);
-        Assert.Contains("1.2.0", seite.Titel, StringComparison.Ordinal);
+        Assert.Contains(MitAbschnitt, seite.Titel, StringComparison.Ordinal);
         Assert.Contains("unverändert", seite.Einleitung, StringComparison.Ordinal);
 
-        Assert.Collection(
-            seite.Abschnitte,
-            zeile =>
-            {
-                Assert.True(zeile.IstUeberschrift);
-                Assert.False(zeile.IstPunkt);
-            },
-            zeile =>
-            {
-                Assert.False(zeile.IstUeberschrift);
-                Assert.True(zeile.IstPunkt);
-                Assert.Equal("Markierte Buchungen lassen sich gemeinsam aendern", zeile.Text);
-            });
+        Assert.NotEmpty(seite.Abschnitte);
+        Assert.Contains(seite.Abschnitte, zeile => zeile.IstPunkt);
+        Assert.All(seite.Abschnitte, zeile => Assert.NotEqual(string.Empty, zeile.Text));
     }
 
     // Gemerkt wird sofort und nicht erst beim Wegklicken: die Seite soll
     // auch dann nicht ein zweites Mal aufgehen, wenn die Anwendung
     // dazwischen ueber den Fensterknopf beendet wird.
     [Fact]
-    public void Die_gesehene_Fassung_wird_sofort_gemerkt_und_der_Text_geraeumt()
+    public void Die_gesehene_Fassung_wird_sofort_gemerkt()
     {
         var speicher = Speicher;
-        speicher.Save(new AppSettings
-        {
-            LastSeenVersion = "1.1.0",
-            PendingReleaseNotesVersion = "v1.2.0",
-            PendingReleaseNotes = Notizen,
-        });
+        speicher.Save(new AppSettings { LastSeenVersion = Davor });
 
-        _ = new WasIstNeuViewModel(speicher, "1.2.0");
+        _ = new WasIstNeuViewModel(speicher, MitAbschnitt);
 
-        var gespeichert = speicher.Load();
-
-        Assert.Equal("1.2.0", gespeichert.LastSeenVersion);
-        Assert.Null(gespeichert.PendingReleaseNotesVersion);
-        Assert.Null(gespeichert.PendingReleaseNotes);
+        Assert.Equal(MitAbschnitt, speicher.Load().LastSeenVersion);
 
         // Und beim naechsten Start bleibt es still.
-        Assert.False(new WasIstNeuViewModel(speicher, "1.2.0").Sichtbar);
+        Assert.False(new WasIstNeuViewModel(speicher, MitAbschnitt).Sichtbar);
     }
 
     // Die uebrigen Einstellungen stehen in derselben Datei - wer eine
@@ -96,12 +74,10 @@ public class WasIstNeuSeiteTests : IDisposable
             ExternalFolderPath = @"D:\Sicherungen",
             AutoUpdate = false,
             KeepEntryValues = true,
-            LastSeenVersion = "1.1.0",
-            PendingReleaseNotesVersion = "v1.2.0",
-            PendingReleaseNotes = Notizen,
+            LastSeenVersion = Davor,
         });
 
-        _ = new WasIstNeuViewModel(speicher, "1.2.0");
+        _ = new WasIstNeuViewModel(speicher, MitAbschnitt);
 
         var gespeichert = speicher.Load();
 
@@ -111,52 +87,39 @@ public class WasIstNeuSeiteTests : IDisposable
     }
 
     [Fact]
-    public void Ohne_Aktualisierung_wird_nichts_gezeigt_und_nichts_geschrieben()
-    {
-        var speicher = Speicher;
-        speicher.Save(new AppSettings
-        {
-            LastSeenVersion = "1.2.0",
-            PendingReleaseNotesVersion = "v1.3.0",
-            PendingReleaseNotes = Notizen,
-        });
-
-        var seite = new WasIstNeuViewModel(speicher, "1.2.0");
-
-        Assert.False(seite.Sichtbar);
-        Assert.Empty(seite.Abschnitte);
-
-        // Der bereitliegende Text gehoert zur naechsten Fassung und muss
-        // den Start unangetastet ueberstehen - sonst waere die Seite nach
-        // dem Austausch leer.
-        var gespeichert = speicher.Load();
-        Assert.Equal("v1.3.0", gespeichert.PendingReleaseNotesVersion);
-        Assert.Equal(Notizen, gespeichert.PendingReleaseNotes);
-    }
-
-    [Fact]
     public void Die_erste_Ausfuehrung_merkt_nur_den_Stand()
     {
         var speicher = Speicher;
 
-        var seite = new WasIstNeuViewModel(speicher, "1.2.0");
+        var seite = new WasIstNeuViewModel(speicher, MitAbschnitt);
 
         Assert.False(seite.Sichtbar);
-        Assert.Equal("1.2.0", speicher.Load().LastSeenVersion);
+        Assert.Empty(seite.Abschnitte);
+        Assert.Equal(MitAbschnitt, speicher.Load().LastSeenVersion);
+    }
+
+    // Version angehoben, aber kein Abschnitt geschrieben (CLAUDE.md,
+    // Regel 15): still bleiben, nicht mit leerer Seite aufgehen.
+    [Fact]
+    public void Eine_Fassung_ohne_Abschnitt_zeigt_keine_leere_Seite()
+    {
+        var speicher = Speicher;
+        speicher.Save(new AppSettings { LastSeenVersion = MitAbschnitt });
+
+        var seite = new WasIstNeuViewModel(speicher, "99.0.0");
+
+        Assert.False(seite.Sichtbar);
+        Assert.Empty(seite.Abschnitte);
+        Assert.Equal("99.0.0", speicher.Load().LastSeenVersion);
     }
 
     [Fact]
     public void Der_Weiter_Knopf_meldet_sich_ab()
     {
         var speicher = Speicher;
-        speicher.Save(new AppSettings
-        {
-            LastSeenVersion = "1.1.0",
-            PendingReleaseNotesVersion = "v1.2.0",
-            PendingReleaseNotes = Notizen,
-        });
+        speicher.Save(new AppSettings { LastSeenVersion = Davor });
 
-        var seite = new WasIstNeuViewModel(speicher, "1.2.0");
+        var seite = new WasIstNeuViewModel(speicher, MitAbschnitt);
 
         var gemeldet = 0;
         seite.Geschlossen += (_, _) => gemeldet++;

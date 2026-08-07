@@ -39,11 +39,9 @@ jobs:
       - name: Auschecken
         uses: actions/checkout@v4
         with:
-          # Volle Historie und alle Tags: fuer den Versionsvergleich
-          # unten und fuer "gh release create --generate-notes" (das
-          # vergleicht gegen den vorherigen Tag). fetch-tags explizit,
-          # weil actions/checkout das bei fetch-depth 0 sonst nicht
-          # zuverlaessig von selbst tut.
+          # Volle Historie und alle Tags: der Versionsvergleich unten
+          # braucht sie. fetch-tags explizit, weil actions/checkout das
+          # bei fetch-depth 0 sonst nicht zuverlaessig von selbst tut.
           fetch-depth: 0
           fetch-tags: true
 
@@ -140,12 +138,55 @@ jobs:
               }
           }
 
+          # Der Release-Text ist der Abschnitt dieser Fassung aus
+          # CHANGELOG.md - derselbe, den die Anwendung nach der
+          # Aktualisierung als "Was ist neu" zeigt (CLAUDE.md, Regel 15).
+          # Er wird also genau einmal geschrieben und steht danach an
+          # beiden Stellen.
+          #
+          # Bewusst NICHT "--generate-notes": das fasst Pull Requests
+          # zusammen, und hier wird direkt auf master gepusht - herauskaeme
+          # eine Release-Beschreibung, die nur aus dem
+          # Vergleichs-Verweis besteht.
+          $version = $tag.Substring(1)
+          $zeilen = Get-Content -LiteralPath 'CHANGELOG.md' -Encoding UTF8
+
+          $von = -1
+          for ($i = 0; $i -lt $zeilen.Count; $i++) {
+              if ($zeilen[$i] -match "^##\s+$([regex]::Escape($version))(\s|$)") {
+                  $von = $i + 1
+                  break
+              }
+          }
+
+          if ($von -lt 0) {
+              throw "CHANGELOG.md hat keinen Abschnitt '## $version' (CLAUDE.md, Regel 15)."
+          }
+
+          $bis = $zeilen.Count
+          for ($i = $von; $i -lt $zeilen.Count; $i++) {
+              if ($zeilen[$i] -match '^##\s') { $bis = $i; break }
+          }
+
+          if ($bis -le $von) {
+              throw "Der Abschnitt '## $version' in CHANGELOG.md ist leer."
+          }
+
+          $text = ($zeilen[$von..($bis - 1)] -join "`n").Trim()
+
+          if (-not $text) {
+              throw "Der Abschnitt '## $version' in CHANGELOG.md ist leer."
+          }
+
+          $notizen = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          [System.IO.File]::WriteAllText(
+              $notizen, $text, (New-Object System.Text.UTF8Encoding($false)))
+
           # Weder Entwurf noch Vorabversion (Vorgabe von "gh release
           # create"): Core\Updates\GitHubReleases.cs uebergeht beides bei
-          # der Selbstaktualisierung. --generate-notes fasst die Commits
-          # seit dem vorherigen Tag zusammen. Der Tag existiert noch
-          # nicht - gh legt ihn auf dem aktuellen master-Stand an.
+          # der Selbstaktualisierung. Der Tag existiert noch nicht - gh
+          # legt ihn auf dem aktuellen master-Stand an.
           gh release create $tag $assets `
               --title $tag `
               --target $env:GITHUB_SHA `
-              --generate-notes
+              --notes-file $notizen
