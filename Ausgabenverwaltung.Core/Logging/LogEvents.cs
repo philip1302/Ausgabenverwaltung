@@ -191,6 +191,18 @@ public static class LogEvents
     public static string RecurringExpenseDeleted(int id)
         => $"Wiederkehrende Ausgabe geloescht (Id {id}).";
 
+    /// <summary>
+    /// Der zweite, ausdruecklich gewaehlte Loeschweg: Vorlage samt der
+    /// daraus erzeugten Buchungen. Nur Id und Anzahl - was in den
+    /// geloeschten Buchungen stand, bleibt draussen (Regel 11). Dass die
+    /// Zahl hier steht, erklaert spaeter, warum eine Auswertung ploetzlich
+    /// niedriger ausfaellt.
+    /// </summary>
+    public static string TemplateDeletedWithExpenses(int templateId, int count)
+        => count == 1
+            ? $"Wiederkehrende Ausgabe geloescht (Id {templateId}), samt 1 daraus erzeugter Buchung."
+            : $"Wiederkehrende Ausgabe geloescht (Id {templateId}), samt {count} daraus erzeugten Buchungen.";
+
     public static string RecurringExpenseGeneratedThroughSet(int id, DateOnly through)
         => $"Wiederkehrende Ausgabe (Id {id}): Stand ohne Erzeugung auf "
            + $"{through.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)} gesetzt.";

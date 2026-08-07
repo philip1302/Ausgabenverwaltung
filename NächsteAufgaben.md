@@ -234,7 +234,9 @@ Beglichen-Datum, und alle Bereiche aktualisieren sich sofort.
 
 ---
 
-### [ ] 4. Vorlage löschen — mit den erzeugten Buchungen?
+### [x] 4. Vorlage löschen — mit den erzeugten Buchungen?
+
+**Erledigt in:** Vorlagen lassen sich samt ihren Buchungen loeschen
 
 **Ziel:** Beim Löschen einer Vorlage wird gefragt, was mit den daraus
 erzeugten Buchungen geschehen soll.

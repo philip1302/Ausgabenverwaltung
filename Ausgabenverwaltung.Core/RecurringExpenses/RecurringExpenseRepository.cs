@@ -219,7 +219,10 @@ public sealed class RecurringExpenseRepository
     /// Historie haengt - bei einer Vorlage haengt sie das nicht, weil die
     /// Werte beim Erzeugen kopiert wurden (Regel 6).
     ///
-    /// Der Normalfall bleibt trotzdem <see cref="Deactivate"/>.
+    /// Das ist die Voreinstellung, weil es die Historie erhaelt; wer die
+    /// Buchungen mit weghaben will, nimmt
+    /// <see cref="DeleteWithExpenses"/>. Der Normalfall bleibt trotzdem
+    /// <see cref="Deactivate"/>.
     /// </summary>
     public void Delete(int id)
     {
@@ -227,6 +230,64 @@ public sealed class RecurringExpenseRepository
         _connection.Execute(sql, new { Id = id });
 
         AppLog.Current.Info(LogEvents.RecurringExpenseDeleted(id));
+    }
+
+    /// <summary>
+    /// Loescht die Vorlage UND die daraus erzeugten Buchungen, beides in
+    /// EINER Transaktion. Der zweite, ausdruecklich gewaehlte Weg neben
+    /// <see cref="Delete"/> - siehe dort, warum das Behalten der Buchungen
+    /// die Voreinstellung bleibt.
+    ///
+    /// Die Reihenfolge ist Pflicht: erst die Buchungen, dann die Vorlage.
+    /// Andersherum griffe zuerst ON DELETE SET NULL, die Buchungen haetten
+    /// danach keine RecurringExpenseId mehr und waeren nicht mehr
+    /// aufzufinden.
+    ///
+    /// Nicht rueckgaengig zu machen - der Aufrufer sichert vorher (Regel 8).
+    /// </summary>
+    public void DeleteWithExpenses(int templateId)
+    {
+        using var transaction = _connection.BeginTransaction();
+        try
+        {
+            const string deleteExpensesSql = """
+                DELETE FROM Expense
+                WHERE RecurringExpenseId = @Id
+                """;
+            var anzahl = _connection.Execute(deleteExpensesSql, new { Id = templateId }, transaction);
+
+            const string deleteTemplateSql = """
+                DELETE FROM RecurringExpense
+                WHERE Id = @Id
+                """;
+            _connection.Execute(deleteTemplateSql, new { Id = templateId }, transaction);
+
+            transaction.Commit();
+
+            AppLog.Current.Info(LogEvents.TemplateDeletedWithExpenses(templateId, anzahl));
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Anzahl der aus EINER Vorlage erzeugten Buchungen. Fuer die
+    /// Nachfrage vor dem Loeschen - dort ist nur diese eine Zahl gefragt,
+    /// nicht die Neuberechnung aller Vorlagen aus
+    /// <see cref="GetGeneratedExpenseCounts"/>.
+    /// </summary>
+    public int CountGeneratedExpenses(int templateId)
+    {
+        const string sql = """
+            SELECT COUNT(*)
+            FROM   Expense
+            WHERE  RecurringExpenseId = @Id
+            """;
+
+        return _connection.ExecuteScalar<int>(sql, new { Id = templateId });
     }
 
     /// <summary>

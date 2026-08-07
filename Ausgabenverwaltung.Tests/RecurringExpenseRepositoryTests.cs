@@ -377,6 +377,102 @@ public class RecurringExpenseRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void DeleteWithExpenses_laeuft_auf_einer_Verbindung_mit_Fremdschluesselpruefung()
+    {
+        // Regel 2. Ohne sie greift ON DELETE SET NULL nicht, und die
+        // Reihenfolge in DeleteWithExpenses (erst Buchungen, dann Vorlage)
+        // waere Zierde statt Notwendigkeit.
+        Assert.Equal(1, _connection.ExecuteScalar<long>("PRAGMA foreign_keys"));
+    }
+
+    [Fact]
+    public void DeleteWithExpenses_loescht_die_Vorlage_und_genau_deren_Buchungen()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+        var andereVorlage = _repository.Create(
+            _categoryId, _payerId, 500, "Zeitung", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        var erzeugt = _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 1));
+        Assert.Equal(6, erzeugt.Count);
+
+        var handerfasst = _expenseRepository.Create(_categoryId, 700, new DateOnly(2026, 2, 2), _payerId);
+
+        _repository.DeleteWithExpenses(template.Id);
+
+        Assert.Null(_repository.GetById(template.Id));
+        Assert.Empty(GetGeneratedExpenses(template.Id));
+
+        // Die Buchungen der anderen Vorlage bleiben unangetastet, ...
+        Assert.Equal(3, GetGeneratedExpenses(andereVorlage.Id).Count);
+        Assert.NotNull(_repository.GetById(andereVorlage.Id));
+
+        // ... und die handerfasste erst recht: sie hat mit der Vorlage nie
+        // etwas zu tun gehabt.
+        Assert.NotNull(_expenseRepository.GetById(handerfasst.Id));
+    }
+
+    [Fact]
+    public void DeleteWithExpenses_rollt_bei_einem_Fehler_im_zweiten_Schritt_alles_zurueck()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        var erzeugt = _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 1));
+        Assert.Equal(3, erzeugt.Count);
+
+        // Kuenstlich verletzte Bedingung: das Loeschen der Vorlage - der
+        // ZWEITE Schritt - schlaegt fehl, nachdem die Buchungen im selben
+        // Vorgang bereits weg waren.
+        _connection.Execute("""
+            CREATE TRIGGER Vorlagenloeschung_verbieten
+            BEFORE DELETE ON RecurringExpense
+            BEGIN
+                SELECT RAISE(ABORT, 'Loeschen im Test unterbunden');
+            END
+            """);
+
+        try
+        {
+            Assert.ThrowsAny<Exception>(() => _repository.DeleteWithExpenses(template.Id));
+        }
+        finally
+        {
+            _connection.Execute("DROP TRIGGER Vorlagenloeschung_verbieten");
+        }
+
+        // Beides muss noch da sein - halb geloescht waere der schlimmste
+        // aller Ausgaenge: die Buchungen weg, die Vorlage erzeugt weiter.
+        Assert.NotNull(_repository.GetById(template.Id));
+        Assert.Equal(3, GetGeneratedExpenses(template.Id).Count);
+    }
+
+    [Fact]
+    public void CountGeneratedExpenses_zaehlt_nur_die_Buchungen_dieser_Vorlage()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Miete", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+        var andereVorlage = _repository.Create(
+            _categoryId, _payerId, 500, "Zeitung", "month", 1, 1, new DateOnly(2026, 1, 1), null);
+
+        _repository.GenerateDueOccurrences(new DateOnly(2026, 3, 1));
+        _expenseRepository.Create(_categoryId, 700, new DateOnly(2026, 2, 2), _payerId);
+
+        Assert.Equal(3, _repository.CountGeneratedExpenses(template.Id));
+        Assert.Equal(3, _repository.CountGeneratedExpenses(andereVorlage.Id));
+    }
+
+    [Fact]
+    public void CountGeneratedExpenses_liefert_null_fuer_eine_Vorlage_ohne_Buchungen()
+    {
+        var template = _repository.Create(
+            _categoryId, _payerId, 1000, "Kuenftig", "month", 1, 1, new DateOnly(2027, 1, 1), null);
+
+        Assert.Equal(0, _repository.CountGeneratedExpenses(template.Id));
+        Assert.Equal(0, _repository.CountGeneratedExpenses(99999));
+    }
+
+    [Fact]
     public void GetGeneratedExpenseCounts_zaehlt_je_Vorlage()
     {
         var mitBuchungen = _repository.Create(

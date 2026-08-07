@@ -2,13 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Entities;
+using Ausgabenverwaltung.Core.Errors;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.RecurringExpenses;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -28,6 +31,8 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     private readonly CategoryRepository _categoryRepository;
     private readonly PersonRepository _personRepository;
     private readonly RecurringExpenseScheduler _scheduler;
+    private readonly BackupService _backupService;
+    private readonly IMessenger _messenger;
 
     private VorlageZeile? _zuReaktivierendeZeile;
     private int? _zuLoeschendeId;
@@ -67,6 +72,59 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     private string? _loeschAnfrageText;
 
     public bool LoeschAnfrageAktiv => LoeschAnfrageText is not null;
+
+    /// <summary>
+    /// Wie viele Buchungen aus der zu loeschenden Vorlage stammen. Frisch
+    /// aus der Datenbank geholt und nicht aus der Zeile uebernommen: die
+    /// Liste kann seit dem letzten Laden alt geworden sein, und diese Zahl
+    /// steht gleich in einer Nachfrage, die nicht umkehrbar ist.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LoeschenMitBuchungenMoeglich))]
+    [NotifyPropertyChangedFor(nameof(LoeschenMitBuchungenText))]
+    [NotifyPropertyChangedFor(nameof(LoeschenBestaetigenText))]
+    private int _loeschenBuchungenAnzahl;
+
+    /// <summary>
+    /// Ob ueberhaupt zur Wahl steht, die Buchungen mitzuloeschen. Bei
+    /// einer Vorlage ohne erzeugte Buchungen entfaellt die Auswahl - eine
+    /// Frage ohne Gegenstand ist schlimmer als keine Frage.
+    /// </summary>
+    public bool LoeschenMitBuchungenMoeglich => LoeschenBuchungenAnzahl > 0;
+
+    /// <summary>
+    /// Die Voreinstellung ist bewusst "nicht mitloeschen": das erhaelt die
+    /// Historie. Wird bei jedem neuen Loeschversuch ausdruecklich
+    /// zurueckgesetzt, statt sich darauf zu verlassen, dass sie noch
+    /// stimmt.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LoeschenBestaetigenText))]
+    private bool _auchBuchungenLoeschen;
+
+    public string LoeschenMitBuchungenText => LoeschenBuchungenAnzahl == 1
+        ? "Auch die 1 erzeugte Buchung löschen"
+        : $"Auch die {LoeschenBuchungenAnzahl} erzeugten Buchungen löschen";
+
+    /// <summary>Beschriftung des Bestaetigungsknopfes - sie nennt, was
+    /// tatsaechlich verschwindet.</summary>
+    public string LoeschenBestaetigenText => AuchBuchungenLoeschen
+        ? (LoeschenBuchungenAnzahl == 1
+            ? "Vorlage und 1 Buchung löschen"
+            : $"Vorlage und {LoeschenBuchungenAnzahl} Buchungen löschen")
+        : "Löschen";
+
+    /// <summary>
+    /// Ein Fehler waehrend des Loeschens - gescheiterte Sicherung oder
+    /// gescheiterter Schreibvorgang. Steht IN der Nachfrage und nicht als
+    /// Band dahinter: das Overlay liegt darueber, ein Band im Hintergrund
+    /// waere nicht zu lesen.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LoeschFehlerSichtbar))]
+    private string? _loeschFehlerText;
+
+    public bool LoeschFehlerSichtbar => LoeschFehlerText is not null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ReaktivierungAnfrageAktiv))]
@@ -109,12 +167,22 @@ public sealed partial class VorlagenViewModel : ViewModelBase
         RecurringExpenseRepository recurringExpenseRepository,
         CategoryRepository categoryRepository,
         PersonRepository personRepository,
-        RecurringExpenseScheduler scheduler)
+        RecurringExpenseScheduler scheduler,
+        BackupService backupService,
+        IMessenger messenger)
     {
         _recurringExpenseRepository = recurringExpenseRepository;
         _categoryRepository = categoryRepository;
         _personRepository = personRepository;
         _scheduler = scheduler;
+        _backupService = backupService;
+        _messenger = messenger;
+
+        // Die Spalte "erzeugt" zaehlt Buchungen; wird anderswo eine
+        // geloescht oder eine Vorlagenbuchung bearbeitet, ist die Zahl hier
+        // sonst still veraltet (Regel 14).
+        _messenger.Register<VorlagenViewModel, BuchungenGeaendertNachricht>(
+            this, (empfaenger, _) => empfaenger.LadeListe());
 
         LadeListe();
     }
@@ -353,12 +421,15 @@ public sealed partial class VorlagenViewModel : ViewModelBase
         Bearbeiten = null;
         _zuLoeschendeId = zeile.Id;
 
-        var buchungen = zeile.ErzeugteAnzahl switch
+        LoeschenBuchungenAnzahl = _recurringExpenseRepository.CountGeneratedExpenses(zeile.Id);
+        AuchBuchungenLoeschen = false;
+
+        var buchungen = LoeschenBuchungenAnzahl switch
         {
             0 => "Aus dieser Vorlage wurde bisher nichts erzeugt.",
             1 => "Die 1 daraus bereits erzeugte Buchung bleibt erhalten und verliert lediglich "
                  + "ihre Zuordnung zur Vorlage.",
-            _ => $"Die {zeile.ErzeugteAnzahl} daraus bereits erzeugten Buchungen bleiben erhalten "
+            _ => $"Die {LoeschenBuchungenAnzahl} daraus bereits erzeugten Buchungen bleiben erhalten "
                  + "und verlieren lediglich ihre Zuordnung zur Vorlage.",
         };
 
@@ -371,23 +442,65 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     [RelayCommand]
     private void LoeschenBestaetigen()
     {
-        if (_zuLoeschendeId is int id)
+        if (_zuLoeschendeId is not int id)
         {
-            SchreibFehlerText = Schreibvorgang.Versuche(
-                "Beim Loeschen einer Vorlage",
-                () => _recurringExpenseRepository.Delete(id));
-
-            if (SchreibFehlerText is not null)
-            {
-                // Die Nachfrage bleibt stehen - der Versuch laesst sich
-                // gleich wiederholen.
-                return;
-            }
+            LoeschenAbbrechen();
+            return;
         }
 
-        _zuLoeschendeId = null;
-        LoeschAnfrageText = null;
+        // Die Zahl wird hier festgehalten: sie steht gleich in der
+        // Erfolgsmeldung, die Eigenschaft selbst wird davor geraeumt.
+        var mitBuchungen = AuchBuchungenLoeschen && LoeschenMitBuchungenMoeglich;
+        var anzahl = LoeschenBuchungenAnzahl;
+
+        if (mitBuchungen && !SichereVorNichtUmkehrbaremSchritt(
+                "Vor dem Löschen der Buchungen", out var sicherungsFehler))
+        {
+            LoeschFehlerText = sicherungsFehler
+                + "\n\nGelöscht wurde deshalb nichts — es ist alles unverändert.";
+            return;
+        }
+
+        LoeschFehlerText = Schreibvorgang.Versuche(
+            mitBuchungen
+                ? "Beim Loeschen einer Vorlage samt ihrer Buchungen"
+                : "Beim Loeschen einer Vorlage",
+            () =>
+            {
+                if (mitBuchungen)
+                {
+                    _recurringExpenseRepository.DeleteWithExpenses(id);
+                }
+                else
+                {
+                    _recurringExpenseRepository.Delete(id);
+                }
+            });
+
+        if (LoeschFehlerText is not null)
+        {
+            // Die Nachfrage bleibt stehen - der Versuch laesst sich
+            // gleich wiederholen.
+            return;
+        }
+
+        LoeschenAbbrechen();
         LadeListe();
+
+        // In beiden Faellen aendert sich etwas an den Buchungen: entweder
+        // sind sie weg, oder sie haben ihre Zuordnung zur Vorlage verloren
+        // (ON DELETE SET NULL) und fallen damit aus einem Vorlagenfilter
+        // heraus (Regel 14).
+        _messenger.Send(new BuchungenGeaendertNachricht());
+
+        if (mitBuchungen)
+        {
+            ZeigeErgebnis(
+                Array.Empty<Expense>(),
+                leerText: anzahl == 1
+                    ? "Vorlage und 1 daraus erzeugte Buchung wurden gelöscht."
+                    : $"Vorlage und {anzahl} daraus erzeugte Buchungen wurden gelöscht.");
+        }
     }
 
     [RelayCommand]
@@ -395,6 +508,9 @@ public sealed partial class VorlagenViewModel : ViewModelBase
     {
         _zuLoeschendeId = null;
         LoeschAnfrageText = null;
+        LoeschFehlerText = null;
+        LoeschenBuchungenAnzahl = 0;
+        AuchBuchungenLoeschen = false;
     }
 
     // ---------------- Erzeugen und Sprung ----------------
@@ -535,12 +651,45 @@ public sealed partial class VorlagenViewModel : ViewModelBase
             : $"{erzeugt.Count} Buchungen wurden erzeugt.";
     }
 
+    /// <summary>
+    /// Legt vor einem nicht umkehrbaren Schritt eine Sicherung an
+    /// (Regel 8, dieselbe Behandlung wie beim Zusammenfuehren von
+    /// Kategorien). Liefert false, wenn dabei etwas schiefging - dann
+    /// unterbleibt der Schritt: ein nicht umkehrbarer Vorgang ohne Netz
+    /// ist genau das, was die Sicherung verhindern soll.
+    ///
+    /// <paramref name="anlass"/> beginnt den Satz ("Vor dem Löschen der
+    /// Buchungen").
+    /// </summary>
+    private bool SichereVorNichtUmkehrbaremSchritt(string anlass, out string fehlerText)
+    {
+        // Lokale Zeit wie bei jeder Sicherung - der Dateiname soll zum
+        // Kalendertag des Anwenders passen.
+        var sicherung = _backupService.RunNow(DateTime.Now);
+
+        if (!sicherung.NeedsAttention)
+        {
+            fehlerText = string.Empty;
+            return true;
+        }
+
+        fehlerText =
+            $"{anlass} wird automatisch gesichert, weil sich der Vorgang nicht "
+            + "rückgängig machen lässt. Genau diese Sicherung ist fehlgeschlagen.\n\n"
+            + FileErrorText.ForBackup(sicherung.PrimaryProblem);
+
+        return false;
+    }
+
     private void SchliesseBaender()
     {
         _zuReaktivierendeZeile = null;
         ReaktivierungAnfrageText = null;
         _zuLoeschendeId = null;
         LoeschAnfrageText = null;
+        LoeschFehlerText = null;
+        LoeschenBuchungenAnzahl = 0;
+        AuchBuchungenLoeschen = false;
 
         // Auch der Fehler von vorhin: er gehoerte zu dem Vorgang, der
         // gerade weggeraeumt wird, und wuerde sonst ueber dem naechsten

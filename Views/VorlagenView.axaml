@@ -276,9 +276,26 @@
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel Spacing="12">
                     <TextBlock Text="{Binding LoeschAnfrageText}" TextWrapping="Wrap" />
+
+                    <!-- Die Wahl gibt es nur, wenn es etwas zu waehlen gibt:
+                         ohne erzeugte Buchungen bleibt es beim schlichten
+                         Loeschen. Voreinstellung ist "behalten" - das
+                         erhaelt die Historie. -->
+                    <CheckBox IsVisible="{Binding LoeschenMitBuchungenMoeglich}"
+                              IsChecked="{Binding AuchBuchungenLoeschen}"
+                              Content="{Binding LoeschenMitBuchungenText}" />
+
+                    <!-- Fehler beim Sichern oder Loeschen: die Nachfrage
+                         bleibt stehen, der Versuch laesst sich wiederholen
+                         (Regel 13). -->
+                    <Border Classes="banner fehler" IsVisible="{Binding LoeschFehlerSichtbar}">
+                        <TextBlock Text="{Binding LoeschFehlerText}" TextWrapping="Wrap" />
+                    </Border>
+
                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                         <Button Classes="ghost" Content="Abbrechen" Command="{Binding LoeschenAbbrechenCommand}" />
-                        <Button Classes="danger" Content="Löschen" Command="{Binding LoeschenBestaetigenCommand}" />
+                        <Button Classes="danger" Content="{Binding LoeschenBestaetigenText}"
+                                Command="{Binding LoeschenBestaetigenCommand}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
