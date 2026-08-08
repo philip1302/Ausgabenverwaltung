@@ -282,15 +282,28 @@
                                         <Button Classes="secondary klein" Content="Bearbeiten"
                                                 Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).BearbeitenOeffnenCommand}"
                                                 CommandParameter="{Binding}" />
-                                        <Button Classes="secondary klein" Content="Deaktivieren"
-                                                IsVisible="{Binding IstAktiv}"
-                                                ToolTip.Tip="Stoppt die künftige Erzeugung. Bereits erzeugte Buchungen bleiben unverändert."
-                                                Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).DeaktivierenCommand}"
-                                                CommandParameter="{Binding}" />
-                                        <Button Classes="secondary klein" Content="Aktivieren"
-                                                IsVisible="{Binding !IstAktiv}"
-                                                Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).AktivierenCommand}"
-                                                CommandParameter="{Binding}" />
+
+                                        <!-- "Deaktivieren" und "Aktivieren" schliessen sich
+                                             aus, sind aber unterschiedlich lang. Ohne einen
+                                             Platz FESTER Breite bestimmte der laengere Text
+                                             die Breite der Zelle, und "Löschen" stand bei
+                                             einer pausierten Vorlage einige Pixel weiter
+                                             links als bei einer aktiven - beim Durchgehen der
+                                             Liste trifft man dann daneben. -->
+                                        <Panel Width="{anzeige:Breite 112}">
+                                            <Button Classes="secondary klein" Content="Deaktivieren"
+                                                    HorizontalAlignment="Stretch"
+                                                    IsVisible="{Binding IstAktiv}"
+                                                    ToolTip.Tip="Stoppt die künftige Erzeugung. Bereits erzeugte Buchungen bleiben unverändert."
+                                                    Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).DeaktivierenCommand}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Classes="secondary klein" Content="Aktivieren"
+                                                    HorizontalAlignment="Stretch"
+                                                    IsVisible="{Binding !IstAktiv}"
+                                                    Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).AktivierenCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </Panel>
+
                                         <Button Classes="danger klein" Content="Löschen"
                                                 Command="{Binding #Wurzel.((vm:VorlagenViewModel)DataContext).LoeschenCommand}"
                                                 CommandParameter="{Binding}" />

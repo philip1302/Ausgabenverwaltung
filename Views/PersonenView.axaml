@@ -127,14 +127,25 @@
                                     <Button Classes="secondary klein" Content="Umbenennen"
                                             Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).BearbeitenStartenCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Classes="secondary klein" Content="Archivieren"
-                                            Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).ArchivierenCommand}"
-                                            CommandParameter="{Binding}"
-                                            IsVisible="{Binding KannArchiviertWerden}" />
-                                    <Button Classes="secondary klein" Content="Wiederherstellen"
-                                            Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).WiederherstellenCommand}"
-                                            CommandParameter="{Binding}"
-                                            IsVisible="{Binding IsArchived}" />
+
+                                    <!-- "Archivieren" und "Wiederherstellen" schliessen sich
+                                         aus, sind aber unterschiedlich lang, und bei der
+                                         eigenen Person steht hier gar nichts. Ein Platz
+                                         FESTER Breite haelt den Knopf in jeder Zeile an
+                                         derselben Stelle - sonst sitzt er je Zeile
+                                         woanders, obwohl er dasselbe tut. -->
+                                    <Panel Width="{anzeige:Breite 140}">
+                                        <Button Classes="secondary klein" Content="Archivieren"
+                                                HorizontalAlignment="Stretch"
+                                                Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).ArchivierenCommand}"
+                                                CommandParameter="{Binding}"
+                                                IsVisible="{Binding KannArchiviertWerden}" />
+                                        <Button Classes="secondary klein" Content="Wiederherstellen"
+                                                HorizontalAlignment="Stretch"
+                                                Command="{Binding #Wurzel.((vm:PersonenViewModel)DataContext).WiederherstellenCommand}"
+                                                CommandParameter="{Binding}"
+                                                IsVisible="{Binding IsArchived}" />
+                                    </Panel>
                                 </StackPanel>
                             </Grid>
                         </Border>

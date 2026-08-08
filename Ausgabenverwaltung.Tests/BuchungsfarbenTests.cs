@@ -231,4 +231,25 @@ public class BuchungsfarbenTests
         Assert.True(offeneEinnahme.IstOffen);
         Assert.Equal("Erhalten", offeneEinnahme.AbhakenButtonText);
     }
+
+    /// <summary>
+    /// Die Form dieses Textes ist festgenagelt, weil die Aktionsspalte der
+    /// Offene-Posten-Liste einen Platz FESTER Breite dafuer reserviert
+    /// (Views/OffenePostenView.axaml). Wird der Text laenger - etwa
+    /// "beglichen am Donnerstag, 05.08.2026" - passt er dort nicht mehr
+    /// hinein und wird stillschweigend abgeschnitten. Der feste Platz ist
+    /// noetig, damit der Knopf dahinter in jeder Zeile an derselben Stelle
+    /// sitzt; wer diesen Text verlaengert, muss dort mitziehen.
+    /// </summary>
+    [Theory]
+    [InlineData(false, "beglichen am 05.08.2026")]
+    [InlineData(true, "erhalten am 05.08.2026")]
+    public void Der_Beglichen_Text_bleibt_kurz_genug_fuer_seinen_Platz(
+        bool istEinnahme, string erwartet)
+    {
+        var zeile = new OffenerPostenZeile(
+            Item(isIncome: istEinnahme, new DateOnly(2026, 8, 5)));
+
+        Assert.Equal(erwartet, zeile.BeglichenText);
+    }
 }

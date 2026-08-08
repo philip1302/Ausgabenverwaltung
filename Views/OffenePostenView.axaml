@@ -129,7 +129,7 @@
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Disabled">
         <DockPanel Width="{Binding #Waagerecht.Viewport.Width}"
-                   MinWidth="{anzeige:BreitePlusKategorie 840}">
+                   MinWidth="{anzeige:BreitePlusKategorie 860}">
         <!-- Breite aus der Zeilenliste statt geschaetzter Bildlaufleiste -
              siehe die gleichlautende Stelle in PersonenView. -->
         <Border DockPanel.Dock="Top"
@@ -137,7 +137,7 @@
                 HorizontalAlignment="Left"
                 IsVisible="{Binding !KeineEintraege}"
                 Padding="4,0,4,4">
-            <Grid anzeige:Raster.Spalten="32,90,16,Kategorie,16,110,24,*,16,100,24,270">
+            <Grid anzeige:Raster.Spalten="32,90,16,Kategorie,16,110,24,*,16,100,24,290">
                 <TextBlock Grid.Column="0" />
                 <Button Grid.Column="1" Classes="kopf" Content="{Binding DatumHeaderText}"
                         Command="{Binding SpalteSortierenCommand}" CommandParameter="Datum" />
@@ -198,7 +198,7 @@
                                                 </ContextMenu>
                                             </Border.ContextMenu>
                                             <StackPanel>
-                                                <Grid anzeige:Raster.Spalten="32,90,16,Kategorie,16,110,24,*,16,100,24,270">
+                                                <Grid anzeige:Raster.Spalten="32,90,16,Kategorie,16,110,24,*,16,100,24,290">
                                                     <CheckBox Grid.Column="0"
                                                               IsChecked="{Binding IstAusgewaehlt}"
                                                               IsVisible="{Binding !IstBeglichen}"
@@ -224,31 +224,78 @@
                                                                Classes="tabellenzelle mitte"
                                                                Classes.beglichen="{Binding IstBeglichen}" />
 
-                                                    <StackPanel Grid.Column="11" Orientation="Horizontal" Spacing="6"
-                                                                IsVisible="{Binding !IstBeglichen}">
-                                                        <Button Classes="secondary klein" Content="{Binding AbhakenButtonText}"
+                                                    <!-- Zwei FESTE Plaetze statt eines
+                                                         waagerechten StackPanels. Vorher
+                                                         bestimmte der Inhalt die Breite, und
+                                                         der ist hier in jeder Zeile ein
+                                                         anderer: der erste Knopf heisst je
+                                                         nach Buchungsart "Abhaken" oder
+                                                         "Erhalten", und bei einer beglichenen
+                                                         Zeile steht dort ein Datumstext
+                                                         wechselnder Laenge. Jeder dieser
+                                                         Unterschiede schob alles dahinter um
+                                                         einige Pixel - "Datum…" und
+                                                         "Rückgängig" standen von Zeile zu
+                                                         Zeile woanders. Eine Aktion, die je
+                                                         Zeile wandert, laesst sich nicht
+                                                         zielsicher treffen, und beim Abarbeiten
+                                                         einer Liste trifft man daneben.
+
+                                                         Vorn die Hauptaktion bzw. der
+                                                         Beglichen-Text, dahinter die
+                                                         Nebenaktion - beide Spalten gelten fuer
+                                                         offene und beglichene Zeilen
+                                                         gleichermassen, damit die Aktionen EINE
+                                                         senkrechte Linie bilden.
+
+                                                         Weiterhin nebeneinander und nicht
+                                                         untereinander: eine zweizeilige Zelle
+                                                         machte die beglichenen Zeilen hoeher
+                                                         als die offenen daneben. -->
+                                                    <Grid Grid.Column="11"
+                                                          anzeige:Raster.Spalten="180,6,92">
+                                                        <!-- Feste Knopfbreite, damit "Abhaken"
+                                                             und "Erhalten" gleich breit sind.
+                                                             Der Platz ist deutlich breiter als
+                                                             der Knopf, weil derselbe Platz den
+                                                             laengeren Beglichen-Text tragen
+                                                             muss: "beglichen am 05.08.2026"
+                                                             misst in der Normalstufe 168 Pixel
+                                                             und ist der laengste hier
+                                                             moegliche Text. Deshalb sind es
+                                                             180 und nicht knapp 170 - kursiv
+                                                             faellt etwas breiter aus als der
+                                                             gemessene gerade Schnitt. -->
+                                                        <Button Grid.Column="0"
+                                                                Classes="secondary klein"
+                                                                Content="{Binding AbhakenButtonText}"
+                                                                Width="{anzeige:Breite 110}"
+                                                                HorizontalAlignment="Left"
+                                                                IsVisible="{Binding !IstBeglichen}"
                                                                 ToolTip.Tip="{Binding AbhakenToolTip}"
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbhakenCommand}"
                                                                 CommandParameter="{Binding}" />
-                                                        <Button Classes="ghost klein" Content="Datum…"
+                                                        <TextBlock Grid.Column="0"
+                                                                   Text="{Binding BeglichenText}"
+                                                                   IsVisible="{Binding IstBeglichen}"
+                                                                   FontStyle="Italic" Foreground="{DynamicResource TextTertiaerFarbe}"
+                                                                   VerticalAlignment="Center" />
+
+                                                        <Button Grid.Column="2" Classes="ghost klein"
+                                                                Content="Datum…"
+                                                                HorizontalAlignment="Stretch"
+                                                                IsVisible="{Binding !IstBeglichen}"
                                                                 ToolTip.Tip="Mit abweichendem Datum abhaken"
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).AbweichendesDatumOeffnenCommand}"
                                                                 CommandParameter="{Binding}" />
-                                                    </StackPanel>
-                                                    <!-- Nebeneinander und nicht untereinander:
-                                                         eine zweizeilige Zelle machte die
-                                                         beglichenen Zeilen hoeher als die
-                                                         offenen daneben. -->
-                                                    <StackPanel Grid.Column="11" Orientation="Horizontal" Spacing="6"
-                                                                IsVisible="{Binding IstBeglichen}">
-                                                        <TextBlock Text="{Binding BeglichenText}"
-                                                                   FontStyle="Italic" Foreground="{DynamicResource TextTertiaerFarbe}"
-                                                                   VerticalAlignment="Center" />
-                                                        <Button Classes="ghost klein" Content="Rückgängig"
+                                                        <Button Grid.Column="2" Classes="ghost klein"
+                                                                Content="Rückgängig"
+                                                                HorizontalAlignment="Stretch"
+                                                                IsVisible="{Binding IstBeglichen}"
                                                                 ToolTip.Tip="Begleichung rückgängig machen"
                                                                 Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).RueckgaengigZeileCommand}"
                                                                 CommandParameter="{Binding}" />
-                                                    </StackPanel>
+                                                    </Grid>
                                                 </Grid>
 
                                                 <!-- Eingabe eines abweichenden Begleichungsdatums -->

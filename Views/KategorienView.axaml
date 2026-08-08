@@ -282,14 +282,27 @@
                                     <Button Classes="zeilenaktion" Content="Umbenennen"
                                             Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).BearbeitenStartenCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Classes="zeilenaktion" Content="Archivieren"
-                                            IsVisible="{Binding !IsArchived}"
-                                            Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).ArchivierenCommand}"
-                                            CommandParameter="{Binding}" />
-                                    <Button Classes="zeilenaktion" Content="Wiederherstellen"
-                                            IsVisible="{Binding IsArchived}"
-                                            Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).WiederherstellenCommand}"
-                                            CommandParameter="{Binding}" />
+                                    <!-- "Archivieren" und "Wiederherstellen" schliessen sich
+                                         aus, sind aber unterschiedlich lang. Ein Platz FESTER
+                                         Breite ist hier doppelt wichtig: die Aktionsspalte
+                                         dieser Ansicht ist "Auto", wurde also je Zeile
+                                         unterschiedlich breit - und weil davor eine
+                                         Sternspalte steht, verschob das nicht nur "Löschen"
+                                         und die Pfeile dahinter, sondern auch die Spalte mit
+                                         der Ausgabenanzahl DAVOR. Mit fester Breite messen
+                                         alle Zeilen gleich. -->
+                                    <Panel Width="{anzeige:Breite 118}">
+                                        <Button Classes="zeilenaktion" Content="Archivieren"
+                                                HorizontalAlignment="Stretch"
+                                                IsVisible="{Binding !IsArchived}"
+                                                Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).ArchivierenCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Classes="zeilenaktion" Content="Wiederherstellen"
+                                                HorizontalAlignment="Stretch"
+                                                IsVisible="{Binding IsArchived}"
+                                                Command="{Binding #Wurzel.((vm:KategorienViewModel)DataContext).WiederherstellenCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </Panel>
                                     <!-- Loeschen steht NEBEN dem Archivieren, nicht an
                                          seiner Stelle (Regel 8) - moeglich nur, wenn die
                                          Kategorie nirgends verwendet wird; das Band unter

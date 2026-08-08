@@ -15,6 +15,14 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Die Knöpfe am Zeilenende stehen jetzt in jeder Zeile an derselben Stelle.
+  Vorher richteten sie sich nach der Länge des Textes davor und wanderten
+  dadurch von Zeile zu Zeile um einige Pixel: bei den offenen Posten
+  verschoben „Abhaken" und „Erhalten" den Knopf dahinter, bei den
+  wiederkehrenden Ausgaben taten „Deaktivieren" und „Aktivieren" dasselbe
+  mit „Löschen", und bei den Kategorien verschob „Wiederherstellen" sogar
+  die Spalte mit der Anzahl davor. Wer eine Liste von oben nach unten
+  durcharbeitet, klickt jetzt nicht mehr daneben.
 - Die Ausgabenliste lässt sich als CSV-Datei speichern — „Als CSV
   exportieren" über der Tabelle. Exportiert wird genau das, was gerade in
   der Liste steht: der Filter gilt also mit. Die Datei öffnet sich in Excel
