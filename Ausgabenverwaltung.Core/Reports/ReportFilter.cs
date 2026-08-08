@@ -62,7 +62,15 @@ public sealed class ReportFilter
     public SettlementStatus Status { get; init; } = SettlementStatus.Alle;
 
     /// <summary>
-    /// Optionale Volltextsuche in der Bemerkung (Note). NULL = kein Filter.
+    /// Optionale Volltextsuche. Sie greift in DREI Feldern: Bemerkung
+    /// (Note), Zahlername und vollem Kategoriepfad - wer "Strom" sucht,
+    /// meint die Kategorie mindestens so oft wie das Wort in einer
+    /// Bemerkung. Die drei Teile sind ODER-verknuepft, ein Treffer in
+    /// einem genuegt. NULL = kein Filter.
+    ///
+    /// Beim Kategoriepfad zaehlt der GANZE Pfad und nicht nur der Name der
+    /// gebuchten Kategorie: "Wohnen" findet also auch die Buchung unter
+    /// "Wohnen > Nebenkosten > Strom".
     /// </summary>
     public string? SearchText { get; init; }
 

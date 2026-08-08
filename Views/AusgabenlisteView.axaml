@@ -282,14 +282,18 @@
                         </StackPanel>
 
                         <StackPanel>
-                            <TextBlock Text="Suche in der Bemerkung" Classes="filterbeschriftung" />
+                            <TextBlock Text="Suche" Classes="filterbeschriftung" />
                             <!-- Ziel von Strg+F (siehe
-                                 AusgabenlisteView.axaml.cs). -->
+                                 AusgabenlisteView.axaml.cs). Der
+                                 Platzhalter nennt alle drei durchsuchten
+                                 Felder: eine Suche, die mehr findet als
+                                 angeschrieben steht, wirkt wie ein
+                                 Fehler. -->
                             <TextBox x:Name="Suchfeld"
                                      Text="{Binding Suchtext}"
                                      Width="{anzeige:Breite 220}"
-                                     ToolTip.Tip="Strg + F springt aus jedem Bereich hierher"
-                                     PlaceholderText="Volltext…" />
+                                     ToolTip.Tip="Durchsucht Bemerkung, Kategorie und Zahler. Bei der Kategorie zählt der ganze Pfad: „Wohnen“ findet auch „Wohnen › Nebenkosten › Strom“. Strg + F springt aus jedem Bereich hierher."
+                                     PlaceholderText="Bemerkung, Kategorie, Zahler…" />
                         </StackPanel>
                     </StackPanel>
 

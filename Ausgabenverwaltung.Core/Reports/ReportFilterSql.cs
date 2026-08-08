@@ -98,7 +98,40 @@ public static class ReportFilterSql
                   SELECT Id FROM Ausgenommen
               ))
 
-        AND  (@SearchText IS NULL OR e.Note LIKE '%' || @SearchText || '%')
+        -- Volltextsuche in DREI Feldern, mit sichtbarem OR: Bemerkung,
+        -- Zahlername und voller Kategoriepfad. Ein Treffer in einem
+        -- genuegt. NULL => keine Einschraenkung.
+        --
+        -- Der Kategoriepfad wird hier eigens aufgebaut, statt ihn vom
+        -- Aufrufer zu verlangen: Summarize und die Auswertung joinen die
+        -- Kategorie ueberhaupt nicht, und der Vertrag oben soll bei zwei
+        -- Tabellen bleiben. Die Unterabfrage entscheidet ausserdem PRO
+        -- BUCHUNG - das muss sie, weil EvaluateMatrix jede Buchung ueber
+        -- ihre Ahnen vervielfacht.
+        --
+        -- Durchsucht wird der GANZE Pfad und nicht nur der Name der
+        -- gebuchten Kategorie: "Wohnen" findet damit auch die Buchung
+        -- unter "Wohnen > Nebenkosten > Strom", was beim Suchen fast
+        -- immer gemeint ist. Trennzeichen wie in
+        -- Categories.CategoryPaths.Separator.
+        --
+        -- Dass e.Note NULL sein kann, stoert hier nicht mehr: NULL OR wahr
+        -- ist wahr, eine Buchung ohne Bemerkung ist also ueber Zahler oder
+        -- Kategorie weiterhin zu finden.
+        AND  (@SearchText IS NULL
+              OR e.Note LIKE '%' || @SearchText || '%'
+              OR p.Name LIKE '%' || @SearchText || '%'
+              OR e.CategoryId IN (
+                  WITH RECURSIVE Suchpfad(Id, FullPath) AS (
+                      SELECT Id, Name FROM Category WHERE ParentId IS NULL
+                      UNION ALL
+                      SELECT c.Id, Suchpfad.FullPath || ' › ' || c.Name
+                      FROM   Category c
+                      JOIN   Suchpfad ON c.ParentId = Suchpfad.Id
+                  )
+                  SELECT Id FROM Suchpfad
+                  WHERE  FullPath LIKE '%' || @SearchText || '%'
+              ))
 
         -- Nur Einnahmen (1) bzw. nur Ausgaben (0). Ein leerer Wert
         -- schraenkt nicht ein - dieselbe Regel wie bei allen uebrigen

@@ -266,10 +266,14 @@
                         </StackPanel>
 
                         <StackPanel>
-                            <TextBlock Text="Suche in der Bemerkung" Classes="filterbeschriftung" />
+                            <TextBlock Text="Suche" Classes="filterbeschriftung" />
+                            <!-- Dieselbe Suche wie in der Ausgabenliste -
+                                 beide bauen denselben Filter, also muss
+                                 hier auch dasselbe angeschrieben stehen. -->
                             <TextBox Text="{Binding Suchtext}"
                                      Width="{anzeige:Breite 200}"
-                                     PlaceholderText="Volltext…" />
+                                     ToolTip.Tip="Durchsucht Bemerkung, Kategorie und Zahler. Bei der Kategorie zählt der ganze Pfad: „Wohnen“ findet auch „Wohnen › Nebenkosten › Strom“."
+                                     PlaceholderText="Bemerkung, Kategorie, Zahler…" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>

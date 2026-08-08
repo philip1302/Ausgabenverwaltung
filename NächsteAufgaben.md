@@ -862,10 +862,32 @@ von der Aktionsspalte, die sonst mit jedem neuen Punkt breiter wird.
   übrigen Aktionen auffindbar bleiben. Die `MinWidth` des waagerechten
   Bildlaufs sinkt entsprechend von 1100 auf 1000.
 
-### [ ] 15. Suche über Bemerkung, Kategorie und Zahler
+### [x] 15. Suche über Bemerkung, Kategorie und Zahler
+
+**Erledigt in:** Die Suche findet auch Kategorie und Zahler
+
 Heute durchsucht `ReportFilter.SearchText` nur `Note`. Auf
 Kategoriepfad und Zahlername ausweiten — in `ReportFilterSql`, mit
 sichtbarem `OR`. Der Platzhaltertext im Suchfeld muss das sagen.
+
+**Umsetzung:**
+
+- Der Kategoriepfad wird **in `ReportFilterSql` selbst** per rekursiver
+  CTE gebildet, statt ihn vom Aufrufer zu verlangen. `Summarize` und die
+  beiden Auswertungsabfragen joinen die Kategorie überhaupt nicht — der
+  Vertrag der Klasse bleibt so bei `Expense e` und `Person p`, und Liste,
+  Trefferzahl, Summe und Auswertung sehen zwangsläufig dieselbe
+  Treffermenge. Die Unterabfrage entscheidet pro Buchung, was sie muss:
+  `EvaluateMatrix` vervielfacht jede Buchung über ihre Ahnen.
+- Durchsucht wird der **ganze Pfad**, nicht nur der Name der gebuchten
+  Kategorie — „Wohnen" findet auch die Buchung unter
+  „Wohnen › Nebenkosten › Strom".
+- Nebenwirkung, ausdrücklich gewollt: Buchungen **ohne** Bemerkung fielen
+  bei gesetzter Suche bisher immer heraus (`NULL LIKE …` ist NULL). Über
+  Kategorie und Zahler sind sie jetzt zu finden.
+- Die Beschriftung wechselt von „Suche in der Bemerkung" auf „Suche", der
+  Platzhalter auf „Bemerkung, Kategorie, Zahler…" — in **beiden** Ansichten,
+  weil beide denselben Filter bauen.
 
 ### [ ] 16. Wiederherstellen aus der Anwendung
 Der Nachfolger von Punkt 6. Geführter Ablauf: Sicherung wählen → prüfen

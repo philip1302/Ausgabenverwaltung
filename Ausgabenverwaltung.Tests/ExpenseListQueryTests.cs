@@ -578,6 +578,106 @@ public class ExpenseListQueryTests : IDisposable
     }
 
     [Fact]
+    public void Query_mit_SearchText_findet_die_Kategorie()
+    {
+        _expenses.Create(_stromId, 100, new DateOnly(2026, 3, 1), _selfId, note: "Abschlag");
+        _expenses.Create(_pferdeId, 200, new DateOnly(2026, 3, 2), _selfId, note: "Hufschmied");
+
+        var item = Assert.Single(Query(Alles(searchText: "Strom")));
+
+        Assert.Equal(100, item.AmountCents);
+    }
+
+    /// <summary>
+    /// Gesucht wird im GANZEN Pfad, nicht nur im Namen der gebuchten
+    /// Kategorie: "Wohnen" ist der Ast, unter dem die Buchung haengt, und
+    /// genau so sucht man auch.
+    /// </summary>
+    [Fact]
+    public void Query_mit_SearchText_findet_auch_eine_uebergeordnete_Kategorie()
+    {
+        _expenses.Create(_stromId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_pferdeId, 200, new DateOnly(2026, 3, 2), _selfId);
+
+        var item = Assert.Single(Query(Alles(searchText: "Wohnen")));
+
+        Assert.Equal(100, item.AmountCents);
+    }
+
+    [Fact]
+    public void Query_mit_SearchText_findet_den_Zahler()
+    {
+        _expenses.Create(_wohnenId, 100, new DateOnly(2026, 3, 1), _otherId);
+        _expenses.Create(_wohnenId, 200, new DateOnly(2026, 3, 2), _selfId);
+
+        var item = Assert.Single(Query(Alles(searchText: "mitbewohner")));
+
+        Assert.Equal(100, item.AmountCents);
+    }
+
+    /// <summary>
+    /// Eine Buchung ohne Bemerkung fiel bei gesetzter Suche frueher immer
+    /// heraus (NULL LIKE ... ist NULL). Ueber Kategorie und Zahler ist sie
+    /// jetzt zu finden - das ist der Punkt an der ODER-Verknuepfung.
+    /// </summary>
+    [Fact]
+    public void Query_mit_SearchText_findet_auch_Buchungen_ohne_Bemerkung()
+    {
+        _expenses.Create(_stromId, 100, new DateOnly(2026, 3, 1), _selfId);
+
+        var item = Assert.Single(Query(Alles(searchText: "Nebenkosten")));
+
+        Assert.Equal(100, item.AmountCents);
+    }
+
+    /// <summary>
+    /// Die drei Suchfelder sind untereinander ODER-verknuepft, gegenueber
+    /// den anderen Filtern aber UND: ein Kategorietreffer hebt die
+    /// Zahlerauswahl nicht auf.
+    /// </summary>
+    [Fact]
+    public void Query_SearchText_schraenkt_zusammen_mit_anderen_Filtern_ein()
+    {
+        _expenses.Create(_stromId, 100, new DateOnly(2026, 3, 1), _otherId);
+        _expenses.Create(_stromId, 200, new DateOnly(2026, 3, 2), _selfId);
+
+        var item = Assert.Single(
+            Query(Alles(searchText: "Strom", payerId: _otherId)));
+
+        Assert.Equal(100, item.AmountCents);
+    }
+
+    /// <summary>
+    /// Liste und Fusszeile muessen bei derselben Suche dieselbe
+    /// Treffermenge sehen - die Erweiterung steht deshalb in
+    /// ReportFilterSql und nicht in der Listenabfrage.
+    /// </summary>
+    [Fact]
+    public void Summarize_sucht_in_denselben_drei_Feldern_wie_Query()
+    {
+        _expenses.Create(_stromId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_wohnenId, 200, new DateOnly(2026, 3, 2), _otherId);
+        _expenses.Create(_pferdeId, 400, new DateOnly(2026, 3, 3), _selfId);
+
+        var filter = Alles(searchText: "Wohnen");
+
+        var summary = _expenses.Summarize(filter);
+
+        Assert.Equal(Query(filter).Count, summary.Count);
+        Assert.Equal(2, summary.Count);
+        Assert.Equal(-300, summary.SumCents);
+    }
+
+    [Fact]
+    public void Query_ohne_SearchText_schraenkt_nicht_ein()
+    {
+        _expenses.Create(_stromId, 100, new DateOnly(2026, 3, 1), _selfId);
+        _expenses.Create(_pferdeId, 200, new DateOnly(2026, 3, 2), _otherId);
+
+        Assert.Equal(2, Query(Alles(searchText: null)).Count);
+    }
+
+    [Fact]
     public void Query_kombiniert_mehrere_Filter_gleichzeitig()
     {
         _expenses.Create(_stromId, 100, new DateOnly(2026, 3, 1), _otherId, note: "Strom Maerz");

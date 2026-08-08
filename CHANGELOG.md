@@ -15,6 +15,14 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Die Suche in der Ausgabenliste und in der Auswertung durchsucht jetzt
+  nicht mehr nur die Bemerkung, sondern auch Kategorie und Zahler. „Strom"
+  findet damit die Buchungen der Kategorie Strom, auch wenn niemand das
+  Wort in die Bemerkung geschrieben hat, und „Anna" findet alles, was Anna
+  bezahlt hat. Bei der Kategorie zählt der ganze Pfad: „Wohnen" findet auch
+  die Buchung unter „Wohnen › Nebenkosten › Strom". Buchungen ohne
+  Bemerkung fielen bei einer Suche bisher immer heraus — jetzt sind sie über
+  Kategorie und Zahler zu finden.
 - Ein Rechtsklick auf eine Zeile öffnet jetzt ein Menü mit allem, was sich
   mit ihr anstellen lässt — in der Ausgabenliste, bei den offenen Posten
   und bei den wiederkehrenden Ausgaben. In der Ausgabenliste kommt damit
