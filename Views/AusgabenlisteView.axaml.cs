@@ -64,6 +64,18 @@ public partial class AusgabenlisteView : UserControl
         viewModel.FokusSucheErledigt();
     }
 
+    // Wie breit die Filterleiste tatsaechlich ist, weiss nur die Ansicht;
+    // OB das reicht, entscheidet Core (Core.Display.Filterleiste). Reine
+    // Weitergabe einer Messung, keine Fachlogik - dasselbe Muster wie beim
+    // Fokuswunsch darueber (Regel 7).
+    private void Filterleiste_SizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (DataContext is AusgabenlisteViewModel viewModel)
+        {
+            viewModel.PasseAnBreiteAn(e.NewSize.Width);
+        }
+    }
+
     // Verlaesst der Anwender das Feld, steht dort die ausgerechnete
     // Normalform ("12,50+3,20" wird zu "15,70", "heute" zum Datum) -
     // dieselbe Verdrahtung wie in der Erfassungsmaske. Der DataContext

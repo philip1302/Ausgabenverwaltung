@@ -1468,8 +1468,54 @@ Entwicklungsrechner nichts zu tun scheint.
 ### [x] 23. Die Filterleiste bricht nicht um und läuft aus ihrer Karte heraus
 
 **Erledigt in:** Der Anwendungsname stimmt auf macOS, die Filterleiste bricht um
+**Nachgebessert in:** Die Filterleiste klappt ein und zeigt ihre Filter als Chips
 
-**Umsetzung:**
+**Nachtrag vom 08.08.2026 — Umbrechen allein genügte nicht.** Paul: „Das
+sieht schrecklich aus, wenn man es kleinzieht." Zu Recht: acht Gruppen sehr
+unterschiedlicher Breite (110 bis 330) und Höhe (ein Datumsfeld gegen vier
+Schnellwahlknöpfe) ergeben beim Umbrechen eine ausgefranste Treppe — und
+acht Gruppen untereinander nehmen die halbe Seite ein, die Liste rutscht
+aus dem Blick. Ein reiner Layout-Umbau löst das zweite Problem nicht.
+
+Recherchierte Muster:
+
+- **Filterleiste + Überlauf hinter einem Knopf + Chips der angewandten
+  Filter darunter** — HashiCorps Helios beschreibt genau diese
+  Dreiteilung ([Filter patterns](https://helios.hashicorp.design/patterns/filter-patterns))
+- **Priority+** — was hineinpasst bleibt, der Rest wandert in ein
+  „Mehr"-Menü, statt umzubrechen ([CSS-Tricks](https://css-tricks.com/the-priority-navigation-pattern/))
+- **Angewandte Filter über den Ergebnissen zeigen**, statt sie beim
+  Einklappen verschwinden zu lassen
+  ([Smart Interface Design Patterns](https://smart-interface-design-patterns.com/articles/filtering-ux/))
+
+Umgesetzt ist das erste, von Paul gewählt:
+
+- `Core/Display/Filterleiste.cs` entscheidet anhand der Breite, ob
+  aufgeklappt bleibt (Schwelle 520). Die Ansicht meldet nur die Messung
+  (Regel 7). **Sobald der Anwender selbst umschaltet, gilt seine
+  Entscheidung** — ein Umschalten, das gleich wieder zurückspringt, ist
+  schlimmer als gar keines.
+- `Core/Reports/FilterChips.cs` baut aus dem Filterzustand die Chips. In
+  Core, weil beide Leisten dieselben Zustände gleich benennen müssen —
+  dieselbe Begründung wie bei `FilterCaption`.
+- **Die Chips sind die Bedingung dafür, dass die Leiste verschwinden
+  darf.** Ohne sie wäre das Einklappen ein Verstecken, und genau das ist
+  der in Punkt 2 benannte häufigste Grund für „meine Buchungen sind weg".
+  Jeder Chip hebt genau seinen Filter auf.
+- Zwei Feinheiten: beide Status-Häkchen zusammen ergeben **keinen** Chip
+  (sie schränken nicht ein), und der Vorgabezeitraum ebenfalls nicht (er
+  ist der Ausgangspunkt, kein Filter) — sonst trüge der Knopf nie die
+  Zahl null.
+- Die **Gruppierung** der Auswertung bekommt bewusst keinen Chip: sie
+  schränkt nichts ein, und „Gruppierung aufheben" ergibt keinen Sinn.
+- Das **Suchfeld** ist in die immer sichtbare Zeile gewandert — das am
+  häufigsten benutzte Feld soll nicht hinter einem Klick liegen. Strg+F
+  trifft es dort unverändert.
+
+**Weiterhin nur in der laufenden Anwendung zu beurteilen:** wie es
+aussieht. Die Schwelle 520 ist gerechnet, nicht gesehen.
+
+**Ursprüngliche Umsetzung:**
 
 - Beide Reihen in beiden Ansichten sind jetzt `WrapPanel` mit
   `ItemSpacing`/`LineSpacing` — die gibt es in Avalonia 12.1, nachgesehen

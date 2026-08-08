@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Categories;
+using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
@@ -130,6 +131,169 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     public string ZahlerFilterText => FilterCaption.Payers(
         ZahlerOptionen.Where(option => option.IstGewaehlt)
                       .Select(option => option.Bezeichnung).ToList());
+
+    // ---------------- Ein- und Ausklappen ----------------
+
+    /// <summary>
+    /// Ob die Filterleiste ihre Felder zeigt. Eingeklappt bleibt eine
+    /// Zeile mit Suche und Filterknopf stehen; worauf gefiltert wird,
+    /// sagen die Chips darunter.
+    /// </summary>
+    [ObservableProperty]
+    private bool _filterAufgeklappt = true;
+
+    // Sobald der Anwender selbst auf- oder zugeklappt hat, entscheidet er
+    // und nicht mehr die Fensterbreite. Ein Umschalten, das gleich wieder
+    // von selbst zurueckspringt, ist schlimmer als gar keines.
+    private bool _klappzustandVonHand;
+
+    [RelayCommand]
+    private void FilterUmschalten()
+    {
+        _klappzustandVonHand = true;
+        FilterAufgeklappt = !FilterAufgeklappt;
+    }
+
+    /// <summary>
+    /// Meldet die verfuegbare Breite der Filterleiste. Wird von der
+    /// Ansicht beim Groessenwechsel gerufen - wie breit ein Bereich
+    /// tatsaechlich ist, weiss nur sie; ob das reicht, entscheidet Core
+    /// (<see cref="Filterleiste"/>).
+    /// </summary>
+    public void PasseAnBreiteAn(double breite)
+    {
+        if (_klappzustandVonHand)
+        {
+            return;
+        }
+
+        FilterAufgeklappt = Filterleiste.PasstAufgeklappt(breite);
+    }
+
+    // ---------------- Aktive Filter als Chips ----------------
+
+    /// <summary>
+    /// Jeder gesetzte Filter als wegklickbarer Chip. Steht IMMER unter der
+    /// Leiste, auch eingeklappt - das ist die Bedingung dafuer, dass die
+    /// Leiste ueberhaupt verschwinden darf.
+    /// </summary>
+    public ObservableCollection<FilterChip> AktiveFilter { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HatAktiveFilter))]
+    [NotifyPropertyChangedFor(nameof(FilterKnopfText))]
+    private int _aktiveFilterAnzahl;
+
+    public bool HatAktiveFilter => AktiveFilterAnzahl > 0;
+
+    /// <summary>Die Anzahl steht am Knopf, damit eingeklappt sichtbar
+    /// bleibt, DASS gefiltert wird - was, sagen die Chips.</summary>
+    public string FilterKnopfText =>
+        AktiveFilterAnzahl == 0 ? "Filter" : $"Filter ({AktiveFilterAnzahl})";
+
+    private void AktualisiereAktiveFilter()
+    {
+        var chips = FilterChips.Bestimme(new FilterZustand
+        {
+            // Der Vorgabezeitraum ist kein Filter - nur eine ausdrueckliche
+            // Abweichung bekommt einen Chip.
+            Zeitraum = ZeitraumWeichtAb() ? $"{VonText} – {BisText}" : null,
+            Kategorien = KategorieAuswahl().RootIds.Count == 0
+                         && KategorieAuswahl().ExcludedIds.Count == 0
+                ? null
+                : KategorieFilterText,
+            Zahler = ZahlerOptionen.Any(option => option.IstGewaehlt) ? ZahlerFilterText : null,
+            StatusOffen = StatusOffen,
+            StatusBeglichen = StatusBeglichen,
+            NurEinnahmen = NurEinnahmen,
+            NurAusgaben = NurAusgaben,
+            MeineKosten = MeineKosten,
+            Suche = Suchtext,
+        });
+
+        AktiveFilter.Clear();
+        foreach (var chip in chips)
+        {
+            AktiveFilter.Add(chip);
+        }
+
+        AktiveFilterAnzahl = AktiveFilter.Count;
+    }
+
+    // Weicht der eingestellte Zeitraum vom Vorgabezeitraum (laufendes
+    // Jahr) ab? Verglichen wird der TEXT und nicht das Datum: genau der
+    // steht in den beiden Feldern, und genau er wuerde im Chip stehen.
+    private bool ZeitraumWeichtAb()
+    {
+        var vorgabe = DateRangePresets.ThisYear(DateOnly.FromDateTime(DateTime.Now));
+
+        return VonText != GermanDateInput.ToText(vorgabe.From)
+            || BisText != GermanDateInput.ToText(vorgabe.ToExclusive.AddDays(-1));
+    }
+
+    /// <summary>
+    /// Hebt genau einen Filter auf. Der Weg vom Chip zurueck - ohne ihn
+    /// muesste der Anwender die Leiste aufklappen und das Feld suchen,
+    /// und dann waere das Einklappen ein Rueckschritt.
+    /// </summary>
+    [RelayCommand]
+    private void FilterAufheben(FilterChip? chip)
+    {
+        if (chip is null)
+        {
+            return;
+        }
+
+        _ladenGesperrt = true;
+
+        switch (chip.Art)
+        {
+            case FilterArt.Zeitraum:
+                AktiverZeitraumSchluessel = null;
+                SetzeVorgabeZeitraum();
+                break;
+
+            case FilterArt.Kategorien:
+                foreach (var knoten in KategorieWurzeln)
+                {
+                    knoten.SetzeStill(false);
+                }
+
+                OnPropertyChanged(nameof(KategorieFilterText));
+                break;
+
+            case FilterArt.Zahler:
+                foreach (var option in ZahlerOptionen)
+                {
+                    option.SetzeStill(false);
+                }
+
+                OnPropertyChanged(nameof(ZahlerFilterText));
+                break;
+
+            case FilterArt.Status:
+                StatusOffen = false;
+                StatusBeglichen = false;
+                break;
+
+            case FilterArt.Buchungsart:
+                NurEinnahmen = false;
+                NurAusgaben = false;
+                break;
+
+            case FilterArt.MeineKosten:
+                MeineKosten = false;
+                break;
+
+            case FilterArt.Suche:
+                Suchtext = string.Empty;
+                break;
+        }
+
+        _ladenGesperrt = false;
+
+        LadeDaten();
+    }
 
     // Namen der Kategorien fuer die Beschriftung oben - beim Aufbau des
     // Baums mitgefuellt, damit die Beschriftung nicht jedes Mal durch den
@@ -1396,6 +1560,11 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         // dastand. Sobald sich der Filter bewegt, sagt "Gespeichert: …"
         // nichts mehr ueber das, was jetzt zu sehen ist.
         ExportHinweis = null;
+
+        // Hier und nicht in jedem Filter-Setter: LadeDaten laeuft nach
+        // JEDER Filteraenderung genau einmal, die Chips koennen also nicht
+        // hinter dem Zustand zurueckbleiben.
+        AktualisiereAktiveFilter();
     }
 
     private bool TryBaueFilter(out ReportFilter filter)

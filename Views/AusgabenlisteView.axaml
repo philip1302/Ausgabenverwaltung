@@ -3,6 +3,7 @@
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
              xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
              xmlns:categories="using:Ausgabenverwaltung.Core.Categories"
+             xmlns:reports="using:Ausgabenverwaltung.Core.Reports"
              xmlns:entities="using:Ausgabenverwaltung.Core.Entities"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="650"
@@ -107,8 +108,77 @@
             <!-- ============ Filterleiste ============
                  Eigene Karte statt einer reinen Trennlinie (UI/UX-Redesign,
                  Abschnitt 5.4). -->
-            <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16">
+            <!-- Die Filterleiste klappt ein, wenn das Fenster schmal wird
+                 (Core.Display.Filterleiste entscheidet, die Breite meldet
+                 das Code-Behind). Aufgeklappt ist sie wie bisher;
+                 eingeklappt bleibt eine Zeile mit Suche und Filterknopf,
+                 und WORAUF gefiltert wird, sagen die Chips darunter.
+
+                 Freies Umbrechen allein genuegte nicht: acht verschieden
+                 breite und verschieden hohe Gruppen ergeben beim
+                 Schrumpfen eine ausgefranste Treppe, die obendrein die
+                 halbe Seite einnimmt - die Liste, um die es geht, rutscht
+                 aus dem Blick. Muster: Filterleiste mit Ueberlauf hinter
+                 einem Knopf plus Chips der angewandten Filter darunter
+                 (HashiCorp Helios, "Filter patterns"). -->
+            <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16"
+                    SizeChanged="Filterleiste_SizeChanged">
                 <StackPanel Spacing="8">
+                    <!-- Immer sichtbar: Suche und der Knopf, der die
+                         uebrigen Filter zeigt oder verbirgt. Die Suche
+                         steht hier und nicht unten im Raster, weil sie das
+                         am haeufigsten benutzte Feld ist - sie soll nicht
+                         hinter einem Klick liegen. -->
+                    <Grid ColumnDefinitions="*,8,Auto,8,Auto">
+                        <TextBox Grid.Column="0"
+                                 x:Name="Suchfeld"
+                                 Text="{Binding Suchtext}"
+                                 MaxWidth="{anzeige:Breite 420}"
+                                 HorizontalAlignment="Left"
+                                 ToolTip.Tip="Durchsucht Bemerkung, Kategorie und Zahler. Bei der Kategorie zählt der ganze Pfad: „Wohnen“ findet auch „Wohnen › Nebenkosten › Strom“. Strg + F springt aus jedem Bereich hierher."
+                                 PlaceholderText="Bemerkung, Kategorie, Zahler…" />
+
+                        <Button Grid.Column="2" Classes="secondary"
+                                Content="{Binding FilterKnopfText}"
+                                Classes.aktiv="{Binding HatAktiveFilter}"
+                                ToolTip.Tip="Zeigt oder verbirgt die Filterfelder. Die Zahl sagt, wie viele Filter gerade gesetzt sind."
+                                Command="{Binding FilterUmschaltenCommand}" />
+
+                        <Button Grid.Column="4" Classes="ghost" Content="Zurücksetzen"
+                                IsVisible="{Binding HatAktiveFilter}"
+                                Command="{Binding FilterZuruecksetzenCommand}" />
+                    </Grid>
+
+                    <!-- Die Chips stehen INNERHALB der Karte und bleiben
+                         auch eingeklappt sichtbar. Ohne sie waere das
+                         Einklappen ein Verstecken, und ein Filter, der
+                         wirkt, ohne sich zu zeigen, ist der haeufigste
+                         Grund fuer "meine Buchungen sind weg". -->
+                    <ItemsControl ItemsSource="{Binding AktiveFilter}"
+                                  IsVisible="{Binding HatAktiveFilter}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel ItemSpacing="6" LineSpacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="reports:FilterChip">
+                                <Border Classes="filterchip">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding Beschriftung}"
+                                                   VerticalAlignment="Center" />
+                                        <Button Classes="chipkreuz" Content="✕"
+                                                ToolTip.Tip="Diesen Filter aufheben"
+                                                Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).FilterAufhebenCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Die Filterfelder selbst - nur aufgeklappt. -->
+                    <StackPanel Spacing="8" IsVisible="{Binding FilterAufgeklappt}">
                     <!-- Zeitraum
 
                          Jede Spalte ist ein Raster "Beschriftung, Rest"
@@ -301,21 +371,13 @@
                                       ToolTip.Tip="Eigene Buchungen plus alles, was von anderen noch offen ist — was ich getragen habe und noch auf mich zukommt." />
                         </StackPanel>
 
-                        <StackPanel>
-                            <TextBlock Text="Suche" Classes="filterbeschriftung" />
-                            <!-- Ziel von Strg+F (siehe
-                                 AusgabenlisteView.axaml.cs). Der
-                                 Platzhalter nennt alle drei durchsuchten
-                                 Felder: eine Suche, die mehr findet als
-                                 angeschrieben steht, wirkt wie ein
-                                 Fehler. -->
-                            <TextBox x:Name="Suchfeld"
-                                     Text="{Binding Suchtext}"
-                                     Width="{anzeige:Breite 220}"
-                                     ToolTip.Tip="Durchsucht Bemerkung, Kategorie und Zahler. Bei der Kategorie zählt der ganze Pfad: „Wohnen“ findet auch „Wohnen › Nebenkosten › Strom“. Strg + F springt aus jedem Bereich hierher."
-                                     PlaceholderText="Bemerkung, Kategorie, Zahler…" />
-                        </StackPanel>
+                        <!-- Die Suche steht nicht mehr hier, sondern oben
+                             in der immer sichtbaren Zeile: sie ist das am
+                             haeufigsten benutzte Feld und soll nicht
+                             hinter dem Aufklappen liegen. Strg+F trifft
+                             sie dort unveraendert. -->
                     </WrapPanel>
+                    </StackPanel>
 
                     <!-- Einschraenkung auf eine Vorlage. Sie steht in keinem
                          Bedienelement der Filterleiste, deshalb muss sie hier

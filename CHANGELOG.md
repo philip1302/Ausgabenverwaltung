@@ -15,12 +15,20 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
-- Die Filterleiste in Ausgabenliste und Auswertung bricht jetzt um, wenn
-  das Fenster schmaler wird. Vorher liefen die hinteren Filter aus ihrer
-  Karte heraus über den rechten Rand hinweg und waren dort auch nicht mehr
-  erreichbar — anders als die Tabelle darunter ließ sich die Leiste nicht
-  seitlich schieben. Zusammengehörende Felder wie „Von" und „Bis" bleiben
-  dabei beieinander.
+- Die Filterleiste in Ausgabenliste und Auswertung lässt sich jetzt
+  einklappen und tut das bei schmalem Fenster von selbst. Übrig bleibt
+  eine Zeile mit dem Suchfeld und einem Knopf, der sagt, wie viele Filter
+  gesetzt sind. Vorher liefen die hinteren Filter aus ihrer Karte heraus
+  über den rechten Rand hinweg und waren dort auch nicht erreichbar; wer
+  das Fenster kleiner zog, bekam eine ausgefranste Treppe, die die halbe
+  Seite einnahm.
+- Jeder gesetzte Filter steht jetzt als kleiner Chip unter der Leiste und
+  lässt sich dort einzeln mit einem Klick aufheben — auch eingeklappt.
+  Damit bleibt immer sichtbar, worauf gerade gefiltert wird; ein Filter,
+  der wirkt, ohne sich zu zeigen, ist der häufigste Grund für „meine
+  Buchungen sind weg". Das Suchfeld ist aus dem Filterblock nach oben in
+  die immer sichtbare Zeile gewandert, weil es das am häufigsten benutzte
+  ist.
 - Auf einem Mac steht im Menü oben links jetzt „Ausgabenverwaltung" statt
   des Namens des verwendeten Baukastens.
 - Der Hinweis auf eine neue Fassung sagt jetzt, was zu tun ist, und der

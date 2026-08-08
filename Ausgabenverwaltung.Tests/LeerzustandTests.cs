@@ -3,6 +3,7 @@ using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.People;
+using Ausgabenverwaltung.Core.Reports;
 using Ausgabenverwaltung.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 
@@ -180,5 +181,83 @@ public class LeerzustandTests : IDisposable
         liste.AusgabeErfassenCommand.Execute(null);
 
         Assert.Equal(1, gerufen);
+    }
+
+    // ---------------- Chips der aktiven Filter ----------------
+
+    /// <summary>
+    /// Frisch geoeffnet ist nichts gefiltert - der Knopf traegt keine Zahl
+    /// und es steht kein Chip da. Sonst saehe jede Ansicht dauerhaft
+    /// gefiltert aus.
+    /// </summary>
+    [Fact]
+    public void Frisch_geoeffnet_gibt_es_keine_aktiven_Filter()
+    {
+        var liste = NeueListe();
+
+        Assert.Empty(liste.AktiveFilter);
+        Assert.False(liste.HatAktiveFilter);
+        Assert.Equal("Filter", liste.FilterKnopfText);
+    }
+
+    [Fact]
+    public void Eine_Suche_erscheint_als_Chip_und_zaehlt_am_Knopf()
+    {
+        var liste = NeueListe();
+        liste.Suchtext = "Rewe";
+
+        var chip = Assert.Single(liste.AktiveFilter);
+
+        Assert.Equal(FilterArt.Suche, chip.Art);
+        Assert.Equal("Filter (1)", liste.FilterKnopfText);
+    }
+
+    /// <summary>
+    /// Der eigentliche Zweck des Chips: er hebt GENAU seinen Filter auf.
+    /// Ohne das muesste der Anwender die Leiste aufklappen und das Feld
+    /// suchen - dann waere das Einklappen ein Rueckschritt.
+    /// </summary>
+    [Fact]
+    public void Das_Kreuz_am_Chip_hebt_genau_diesen_Filter_auf()
+    {
+        var liste = NeueListe();
+        liste.Suchtext = "Rewe";
+        liste.MeineKosten = true;
+
+        Assert.Equal(2, liste.AktiveFilter.Count);
+
+        var suche = liste.AktiveFilter.Single(chip => chip.Art == FilterArt.Suche);
+        liste.FilterAufhebenCommand.Execute(suche);
+
+        Assert.Equal(string.Empty, liste.Suchtext);
+        Assert.True(liste.MeineKosten);
+
+        var uebrig = Assert.Single(liste.AktiveFilter);
+        Assert.Equal(FilterArt.MeineKosten, uebrig.Art);
+    }
+
+    /// <summary>
+    /// Solange der Anwender nicht selbst umschaltet, richtet sich der
+    /// Klappzustand nach der Breite. Danach gilt seine Entscheidung - ein
+    /// Umschalten, das gleich wieder von selbst zurueckspringt, ist
+    /// schlimmer als gar keines.
+    /// </summary>
+    [Fact]
+    public void Die_Breite_klappt_die_Leiste_ein_bis_der_Anwender_entscheidet()
+    {
+        var liste = NeueListe();
+
+        liste.PasseAnBreiteAn(360);
+        Assert.False(liste.FilterAufgeklappt);
+
+        liste.PasseAnBreiteAn(1200);
+        Assert.True(liste.FilterAufgeklappt);
+
+        // Ab jetzt entscheidet der Anwender.
+        liste.FilterUmschaltenCommand.Execute(null);
+        Assert.False(liste.FilterAufgeklappt);
+
+        liste.PasseAnBreiteAn(1200);
+        Assert.False(liste.FilterAufgeklappt);
     }
 }

@@ -99,6 +99,17 @@ public partial class ReportView : UserControl
             : Math.Round(versatz * skalierung, MidpointRounding.AwayFromZero) / skalierung;
     }
 
+    // Wie breit die Filterleiste ist, weiss nur die Ansicht; OB das reicht,
+    // entscheidet Core (Core.Display.Filterleiste). Reine Weitergabe einer
+    // Messung, keine Fachlogik (Regel 7) - wortgleich zur Ausgabenliste.
+    private void Filterleiste_SizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (DataContext is ReportViewModel viewModel)
+        {
+            viewModel.PasseAnBreiteAn(e.NewSize.Width);
+        }
+    }
+
     // Dateiauswahl und Schreiben sind Aufgabe der Oberflaeche; der
     // CSV-Text selbst entsteht in Core (Reports.ReportCsv), und der Text
     // einer Fehlermeldung ebenfalls (Errors.FileErrorText) - Regel 7.

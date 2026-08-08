@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
              xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
+             xmlns:reports="using:Ausgabenverwaltung.Core.Reports"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="650"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -96,8 +97,58 @@
                  Eigene Karte statt einer reinen Trennlinie (UI/UX-Redesign,
                  Abschnitt 2.7) - grenzt den Filterbereich klarer vom
                  Inhalt ab. -->
-            <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16">
+            <!-- Aufbau wortgleich zur Ausgabenliste (siehe dort): immer
+                 sichtbar eine Zeile mit Suche und Filterknopf, darunter
+                 die Chips der aktiven Filter, und nur aufgeklappt die
+                 Felder selbst. Es ist dieselbe Leiste; verhielte sie sich
+                 in zwei Bereichen verschieden, waere das schlimmer als
+                 jede der beiden Fassungen fuer sich. -->
+            <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16"
+                    SizeChanged="Filterleiste_SizeChanged">
                 <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,8,Auto,8,Auto">
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding Suchtext}"
+                                 MaxWidth="{anzeige:Breite 420}"
+                                 HorizontalAlignment="Left"
+                                 ToolTip.Tip="Durchsucht Bemerkung, Kategorie und Zahler. Bei der Kategorie zählt der ganze Pfad: „Wohnen“ findet auch „Wohnen › Nebenkosten › Strom“."
+                                 PlaceholderText="Bemerkung, Kategorie, Zahler…" />
+
+                        <Button Grid.Column="2" Classes="secondary"
+                                Content="{Binding FilterKnopfText}"
+                                Classes.aktiv="{Binding HatAktiveFilter}"
+                                ToolTip.Tip="Zeigt oder verbirgt die Filterfelder. Die Zahl sagt, wie viele Filter gerade gesetzt sind."
+                                Command="{Binding FilterUmschaltenCommand}" />
+
+                        <Button Grid.Column="4" Classes="ghost" Content="Zurücksetzen"
+                                IsVisible="{Binding HatAktiveFilter}"
+                                Command="{Binding FilterZuruecksetzenCommand}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding AktiveFilter}"
+                                  IsVisible="{Binding HatAktiveFilter}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel ItemSpacing="6" LineSpacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="reports:FilterChip">
+                                <Border Classes="filterchip">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding Beschriftung}"
+                                                   VerticalAlignment="Center" />
+                                        <Button Classes="chipkreuz" Content="✕"
+                                                ToolTip.Tip="Diesen Filter aufheben"
+                                                Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).FilterAufhebenCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Spacing="8" IsVisible="{Binding FilterAufgeklappt}">
                     <!-- Zeitraum
 
                          Jede Spalte ist ein Raster "Beschriftung, Rest"
@@ -274,17 +325,10 @@
                                       ToolTip.Tip="Eigene Buchungen, alle noch nicht beglichenen Ausgaben anderer sowie alle bereits beglichenen Einnahmen von anderen im Zeitraum — was ich getragen habe und noch auf mich zukommt." />
                         </StackPanel>
 
-                        <StackPanel>
-                            <TextBlock Text="Suche" Classes="filterbeschriftung" />
-                            <!-- Dieselbe Suche wie in der Ausgabenliste -
-                                 beide bauen denselben Filter, also muss
-                                 hier auch dasselbe angeschrieben stehen. -->
-                            <TextBox Text="{Binding Suchtext}"
-                                     Width="{anzeige:Breite 200}"
-                                     ToolTip.Tip="Durchsucht Bemerkung, Kategorie und Zahler. Bei der Kategorie zählt der ganze Pfad: „Wohnen“ findet auch „Wohnen › Nebenkosten › Strom“."
-                                     PlaceholderText="Bemerkung, Kategorie, Zahler…" />
-                        </StackPanel>
+                        <!-- Die Suche steht oben in der immer sichtbaren
+                             Zeile, nicht mehr hier. -->
                     </WrapPanel>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

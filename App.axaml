@@ -311,6 +311,43 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentFarbe}" />
         </Style>
 
+        <!-- ==== Chip eines aktiven Filters ====
+             Steht unter der Filterleiste und bleibt sichtbar, auch wenn
+             sie eingeklappt ist. Das ist die Bedingung dafuer, dass sie
+             ueberhaupt verschwinden darf: ein Filter, der wirkt, ohne sich
+             zu zeigen, ist der haeufigste Grund fuer "meine Buchungen sind
+             weg".
+
+             Bewusst zurueckhaltend gefaerbt - die Chips sagen, was gerade
+             gilt, und sind keine Warnung. Der bestehende
+             Vorlagenfilter-Hinweis bleibt daneben, was er ist: der traegt
+             eine Einschraenkung, die in keinem Bedienelement steht. -->
+        <Style Selector="Border.filterchip">
+            <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="10,3,4,3" />
+        </Style>
+        <Style Selector="Border.filterchip TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+        </Style>
+        <!-- Das Kreuz ist Teil des Chips und kein eigener Knopf: kein
+             Rahmen, keine Flaeche, nur beim Zeigen eine Andeutung. -->
+        <Style Selector="Button.chipkreuz">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.chipkreuz:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource FehlerText}" />
+        </Style>
+
         <!-- ==== Leerzustand ====
              EINE Bauform fuer "hier steht nichts": Symbol, ein Satz, und
              der Knopf, der den Zustand aufloest. Vorher gab es drei

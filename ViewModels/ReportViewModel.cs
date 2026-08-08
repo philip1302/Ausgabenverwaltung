@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Categories;
+using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.Formatting;
@@ -101,6 +102,137 @@ public sealed partial class ReportViewModel : ViewModelBase
         FilterCaption.Categories(KategorieAuswahl(), _kategorieNamen);
 
     /// <summary>Beschriftung der Zahler-Auswahl in der Filterleiste.</summary>
+    // ---------------- Ein- und Ausklappen, aktive Filter ----------------
+    //
+    // Wortgleich zur Ausgabenliste: es ist dieselbe Leiste, und wenn sie
+    // sich in zwei Bereichen verschieden verhielte, waere das schlimmer
+    // als jede der beiden Fassungen fuer sich.
+
+    [ObservableProperty]
+    private bool _filterAufgeklappt = true;
+
+    private bool _klappzustandVonHand;
+
+    [RelayCommand]
+    private void FilterUmschalten()
+    {
+        _klappzustandVonHand = true;
+        FilterAufgeklappt = !FilterAufgeklappt;
+    }
+
+    public void PasseAnBreiteAn(double breite)
+    {
+        if (_klappzustandVonHand)
+        {
+            return;
+        }
+
+        FilterAufgeklappt = Filterleiste.PasstAufgeklappt(breite);
+    }
+
+    public ObservableCollection<FilterChip> AktiveFilter { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HatAktiveFilter))]
+    [NotifyPropertyChangedFor(nameof(FilterKnopfText))]
+    private int _aktiveFilterAnzahl;
+
+    public bool HatAktiveFilter => AktiveFilterAnzahl > 0;
+
+    public string FilterKnopfText =>
+        AktiveFilterAnzahl == 0 ? "Filter" : $"Filter ({AktiveFilterAnzahl})";
+
+    private void AktualisiereAktiveFilter()
+    {
+        var chips = FilterChips.Bestimme(new FilterZustand
+        {
+            Zeitraum = ZeitraumWeichtAb() ? $"{VonText} – {BisText}" : null,
+            Kategorien = KategorieAuswahl().RootIds.Count == 0
+                         && KategorieAuswahl().ExcludedIds.Count == 0
+                ? null
+                : KategorieFilterText,
+            Zahler = ZahlerOptionen.Any(option => option.IstGewaehlt) ? ZahlerFilterText : null,
+            StatusOffen = StatusOffen,
+            StatusBeglichen = StatusBeglichen,
+            MeineKosten = MeineKosten,
+            Suche = Suchtext,
+        });
+
+        AktiveFilter.Clear();
+        foreach (var chip in chips)
+        {
+            AktiveFilter.Add(chip);
+        }
+
+        AktiveFilterAnzahl = AktiveFilter.Count;
+    }
+
+    // Die Gruppierung (Jahr/Quartal/Monat) bekommt bewusst KEINEN Chip:
+    // sie schraenkt nichts ein, sondern sagt nur, wie fein die Spalten
+    // stehen. Ein Chip dafuer waere ein Filter, den es aufzuheben gaebe -
+    // und "Gruppierung aufheben" ergibt keinen Sinn.
+    private bool ZeitraumWeichtAb()
+    {
+        var vorgabe = DateRangePresets.ThisYear(DateOnly.FromDateTime(DateTime.Now));
+
+        return VonText != GermanDateInput.ToText(vorgabe.From)
+            || BisText != GermanDateInput.ToText(vorgabe.ToExclusive.AddDays(-1));
+    }
+
+    [RelayCommand]
+    private void FilterAufheben(FilterChip? chip)
+    {
+        if (chip is null)
+        {
+            return;
+        }
+
+        _ladenGesperrt = true;
+
+        switch (chip.Art)
+        {
+            case FilterArt.Zeitraum:
+                AktiverZeitraumSchluessel = null;
+                SetzeVorgabeZeitraum();
+                break;
+
+            case FilterArt.Kategorien:
+                foreach (var knoten in KategorieWurzeln)
+                {
+                    knoten.SetzeStill(false);
+                }
+
+                OnPropertyChanged(nameof(KategorieFilterText));
+                break;
+
+            case FilterArt.Zahler:
+                foreach (var option in ZahlerOptionen)
+                {
+                    option.SetzeStill(false);
+                }
+
+                OnPropertyChanged(nameof(ZahlerFilterText));
+                break;
+
+            case FilterArt.Status:
+                StatusOffen = false;
+                StatusBeglichen = false;
+                break;
+
+            case FilterArt.MeineKosten:
+                MeineKosten = false;
+                break;
+
+            case FilterArt.Suche:
+                Suchtext = string.Empty;
+                break;
+        }
+
+        _ladenGesperrt = false;
+
+        LadeDaten();
+    }
+
     public string ZahlerFilterText => FilterCaption.Payers(
         ZahlerOptionen.Where(option => option.IstGewaehlt)
                       .Select(option => option.Bezeichnung).ToList());
@@ -631,6 +763,7 @@ public sealed partial class ReportViewModel : ViewModelBase
             SummenZeile = null;
             KeineTreffer = true;
             NochNichtsErfasst = !_expenseRepository.HasAny();
+            AktualisiereAktiveFilter();
             return;
         }
 
@@ -642,6 +775,8 @@ public sealed partial class ReportViewModel : ViewModelBase
         // Nur nachfragen, wenn nichts dasteht - sonst liefe die Abfrage bei
         // jeder Filteraenderung mit, ohne je etwas zu entscheiden.
         NochNichtsErfasst = KeineTreffer && !_expenseRepository.HasAny();
+
+        AktualisiereAktiveFilter();
     }
 
     private void FuegeZeilenEin(IReadOnlyList<ReportMatrixRow> rows)
