@@ -47,9 +47,25 @@ public class MeldungsGrundsaetzeTests
             Nimm($"Zielwahl/{problem}", FileErrorText.ForBackupTargetChoice(problem));
             Nimm($"Pruefung/{problem}", FileErrorText.ForBackupVerification(problem, "ausgaben-2026-08-07.zip"));
             Nimm($"Schreibfehler/{problem}", DatabaseErrorText.WriteFailed(problem));
+            Nimm($"Wiederherstellen/{problem}", FileErrorText.ForRestore(problem, "ausgaben-2026-08-07.zip"));
+            Nimm($"WiederherstellenKopie/{problem}", FileErrorText.ForRestoreSafetyCopy(problem));
         }
 
         Nimm("PruefungZuNeu", FileErrorText.ForBackupFromNewerVersion("ausgaben-2026-08-07.zip", 5, 4));
+
+        // ---- Wiederherstellen ----
+        // Keine Fehlertexte, aber Meldungen, die dieselbe Last tragen: sie
+        // stehen vor der einzigen Aktion, die den ganzen Datenbestand
+        // austauscht, und muessen deshalb genauso sagen, was mit den Daten
+        // geschieht.
+        Nimm("Wiederherstellen/Folgen", RestoreText.Folgen("ausgaben-2026-08-07.zip", 1284, 1190));
+        Nimm("Wiederherstellen/FolgenGleich", RestoreText.Folgen("ausgaben-2026-08-07.zip", 12, 12));
+        Nimm("Wiederherstellen/FolgenMehr", RestoreText.Folgen("ausgaben-2026-08-07.zip", 5, 40));
+        Nimm("Wiederherstellen/Bereitgelegt", RestoreText.Bereitgelegt(
+            "ausgaben-2026-08-07.zip", "ausgaben-vor-wiederherstellung-2026-08-08_1432.db"));
+        Nimm("Wiederherstellen/Uebernommen", RestoreText.Uebernommen(
+            "ausgaben-2026-08-07.zip", "ausgaben-vor-wiederherstellung-2026-08-08_1432.db"));
+        Nimm("Wiederherstellen/Verworfen", RestoreText.Verworfen());
 
         // ---- Zustand der Datensicherung ----
         foreach (var stufe in Enum.GetValues<BackupHealthLevel>())

@@ -1,5 +1,6 @@
 using Avalonia;
 using System;
+using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.Startup;
@@ -33,6 +34,24 @@ sealed class Program
     /// <summary>Was beim Ermitteln der Pfade schiefging, sonst NULL.</summary>
     internal static Exception? Pfadfehler { get; private set; }
 
+    /// <summary>
+    /// Was die Uebernahme einer bereitliegenden Wiederherstellung ergab.
+    /// NULL im Normalfall - dann lag nichts bereit. <see cref="App"/> gibt
+    /// den Text an den Bereich "Datensicherung" weiter, von dem aus der
+    /// Vorgang angestossen wurde.
+    ///
+    /// Steht hier und nicht in StartupResult, weil die Uebernahme VOR dem
+    /// Start der Datenbank laeuft - sie entscheidet ja, welche Datenbank
+    /// ueberhaupt gestartet wird.
+    /// </summary>
+    internal static string? Wiederherstellungsmeldung { get; private set; }
+
+    /// <summary>
+    /// Ob die Meldung ein Fehlschlag ist. Nur zusammen mit
+    /// <see cref="Wiederherstellungsmeldung"/> von Belang.
+    /// </summary>
+    internal static bool WiederherstellungGescheitert { get; private set; }
+
     // Vor AppMain darf nichts aus Avalonia benutzt werden - es ist noch
     // nichts eingerichtet. Protokoll, Pfade und die Doppelstart-Pruefung
     // kommen alle ohne aus, und genau deshalb stehen sie hier: sie
@@ -46,7 +65,7 @@ sealed class Program
         // erst und haelt die Einzelinstanz-Sperre noch. Ohne dieses
         // Warten wuerde der Start gleich unten als Doppelstart abgewiesen
         // und die Anwendung waere nach dem Update schlicht weg.
-        UpdateInstaller.WarteAufVorgaenger(args);
+        Neustart.WarteAufVorgaenger(args);
 
         // Vor allem anderen: liegt eine geladene Fassung bereit? Der
         // Austausch gehoert genau hierher - vor Datenbank, Fenster und
@@ -58,6 +77,12 @@ sealed class Program
         }
 
         ErmittleDatenbankPfad();
+
+        // Und danach, aber immer noch vor allem Weiteren: liegt eine
+        // Sicherung zum Einspielen bereit? Derselbe Zeitpunkt aus demselben
+        // Grund wie beim Programmaustausch - hier haengt nichts an der
+        // Datenbankdatei, gleich haengt die ganze Anwendung daran.
+        UebernehmeWiederherstellungFalls();
 
         if (DatenbankPfad is not null && !BelegePlatz(DatenbankPfad))
         {
@@ -138,6 +163,41 @@ sealed class Program
         {
             AppLog.Current.Exception("Beim Uebernehmen einer Aktualisierung", ex);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Spielt eine bereitliegende Sicherung ein, falls eine bereitliegt.
+    /// Anders als beim Programmaustausch endet dieser Prozess danach NICHT:
+    /// die Datei ist ersetzt, bevor sie irgendwer geoeffnet hat, und der
+    /// Start laeuft ganz normal weiter - nur eben auf dem eingespielten
+    /// Stand.
+    ///
+    /// Scheitert etwas, wird die Vorbereitung verworfen und mit der
+    /// bisherigen Datenbank gestartet (siehe
+    /// <see cref="BackupRestore"/>). Beides bekommt der Anwender zu lesen,
+    /// sonst bliebe offen, auf welchem Stand er gerade arbeitet.
+    /// </summary>
+    private static void UebernehmeWiederherstellungFalls()
+    {
+        if (DatenbankPfad is not string datenbankPfad)
+        {
+            return;
+        }
+
+        var (ergebnis, zettel) = BackupRestore.TryUebernehmen(datenbankPfad);
+
+        switch (ergebnis)
+        {
+            case BackupRestore.Ergebnis.Uebernommen when zettel is not null:
+                Wiederherstellungsmeldung = RestoreText.Uebernommen(
+                    zettel.Quelldatei, zettel.Sicherheitskopie);
+                break;
+
+            case BackupRestore.Ergebnis.Gescheitert:
+                Wiederherstellungsmeldung = RestoreText.Verworfen();
+                WiederherstellungGescheitert = true;
+                break;
         }
     }
 

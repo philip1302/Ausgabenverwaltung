@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.IO;
 using Ausgabenverwaltung.Core.Backups;
 using Ausgabenverwaltung.Core.Database;
@@ -9,6 +10,7 @@ using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.Core.Startup;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Dapper;
 
 namespace Ausgabenverwaltung.ViewModels;
 
@@ -24,19 +26,24 @@ namespace Ausgabenverwaltung.ViewModels;
 /// Statustexte und zwei verschieden gebaute Fehlerkaesten Teilaussagen
 /// nebeneinander, die der Anwender selbst verrechnen musste.
 ///
-/// Gesichert, aufgeraeumt, geprueft und beurteilt wird nichts hier: das
-/// steckt in Core (<see cref="BackupService"/>, <see cref="BackupHealth"/>,
-/// <see cref="BackupVerification"/>, <see cref="BackupRetention"/>,
-/// <see cref="BackupTarget"/>) - Regel 7. Hier entstehen nur Anzeigetexte
+/// Gesichert, aufgeraeumt, geprueft, beurteilt und wiederhergestellt wird
+/// nichts hier: das steckt in Core (<see cref="BackupService"/>,
+/// <see cref="BackupHealth"/>, <see cref="BackupVerification"/>,
+/// <see cref="BackupRetention"/>, <see cref="BackupTarget"/>,
+/// <see cref="BackupRestore"/>) - Regel 7. Hier entstehen nur Anzeigetexte
 /// und die Verdrahtung.
 ///
-/// Wiederherstellen gibt es bewusst NICHT als Funktion (siehe
-/// <see cref="WiederherstellungHinweis"/>).
+/// Wiederherstellen ist ein GEFUEHRTER Ablauf in drei Schritten
+/// (<see cref="WiederherstellenBeginnen"/>): pruefen, Folgen beziffern und
+/// Dateinamen abtippen, dann bereitlegen und neu starten. Die Reibung ist
+/// hier absichtlich hoch - es ist die einzige Aktion der Anwendung, die den
+/// ganzen Datenbestand austauscht.
 /// </summary>
 public sealed partial class DatensicherungViewModel : ViewModelBase
 {
     private readonly BackupService _backupService;
     private readonly AppSettingsStore _settingsStore;
+    private readonly IDbConnection _connection;
 
     /// <summary>
     /// Der letzte Sicherungslauf dieser Sitzung - Grundlage der beiden
@@ -49,13 +56,20 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
     private string? _entfernterZielPfad;
     private DateTime? _entfernterZielZeitstempel;
 
+    // Der Schema-Stand der gerade gepruefen Sicherung, nur fuer den
+    // Begleitzettel und das Protokoll. Aus der Pruefung von Schritt 1
+    // gemerkt, statt in Schritt 3 erneut zu entpacken.
+    private int? _wiederherstellenSchemaVersion;
+
     public DatensicherungViewModel(
         BackupService backupService,
         AppSettingsStore settingsStore,
-        StartupResult startupResult)
+        StartupResult startupResult,
+        IDbConnection connection)
     {
         _backupService = backupService;
         _settingsStore = settingsStore;
+        _connection = connection;
 
         DatenbankPfad = startupResult.DatabaseFilePath;
         SicherungsordnerPfad = backupService.PrimaryFolderPath;
@@ -172,16 +186,79 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
     public bool RueckgaengigSichtbar => RueckgaengigText is not null;
 
     public string WiederherstellungHinweis =>
-        "Wiederherstellen geschieht bewusst von Hand und nicht aus der Anwendung heraus: "
-        + "Eine Wiederherstellungsfunktion, die im Fehlerfall die falsche Datei überschreibt, "
-        + "richtet mehr Schaden an als die zwei Handgriffe im Explorer.\n\n"
+        "„Wiederherstellen“ an einer Sicherungszeile führt durch den Vorgang: die Datei "
+        + "wird geprüft, danach steht da, wie viele Buchungen die aktive Datenbank und "
+        + "wie viele die Sicherung enthält. Zum Bestätigen ist der Dateiname abzutippen — "
+        + "das ist Absicht, denn dies ist die einzige Stelle, an der der gesamte "
+        + "Datenbestand ausgetauscht wird.\n\n"
+        + "Die bisherige Datenbank wird vorher unter eigenem Namen gesichert und bleibt "
+        + "im Sicherungsordner liegen; der Weg zurück bleibt also offen. Eingespielt "
+        + "wird beim anschließenden Neustart, weil die Datei im laufenden Betrieb "
+        + "geöffnet ist.\n\n"
+        + "Von Hand geht es weiterhin auch, etwa wenn die Anwendung gar nicht mehr "
+        + "startet:\n"
         + "1. Anwendung schließen.\n"
         + "2. Gewünschte ZIP-Datei im Sicherungsordner entpacken — darin liegt eine Datei "
         + "namens „ausgaben.db“.\n"
         + "3. Diese Datei an den Ort der aktiven Datenbank kopieren und die dortige Datei "
         + "ersetzen. Vorher lohnt es sich, die bisherige Datei umzubenennen statt sie zu "
-        + "überschreiben.\n"
+        + "überschreiben. Etwaige Dateien „ausgaben.db-wal“ und „ausgaben.db-shm“ daneben "
+        + "müssen weg — sie gehören zur alten Datei.\n"
         + "4. Anwendung wieder starten.";
+
+    // ================= Wiederherstellen =================
+    //
+    // Ein gefuehrter Ablauf in drei Schritten. Die Zwischenstufe ist der
+    // Punkt: zwischen "Wiederherstellen" und dem tatsaechlichen Einspielen
+    // liegt eine Seite, die die Folgen beziffert und einen Tippvorgang
+    // verlangt. Reibung nach Schadensausmass - hier ist es das Maximum, das
+    // die Anwendung anrichten kann.
+
+    /// <summary>
+    /// Die Sicherung, um die es im Ablauf gerade geht. NULL = kein Ablauf
+    /// laeuft.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WiederherstellenLaeuft))]
+    [NotifyPropertyChangedFor(nameof(WiederherstellenAufforderung))]
+    private SicherungZeile? _wiederherstellenZeile;
+
+    public bool WiederherstellenLaeuft => WiederherstellenZeile is not null;
+
+    /// <summary>Die bezifferten Folgen - der Text, auf den es ankommt.</summary>
+    [ObservableProperty]
+    private string _wiederherstellenFolgenText = string.Empty;
+
+    /// <summary>
+    /// Was der Anwender abtippen muss. Wird bei jedem neuen Ablauf geleert -
+    /// eine stehen gebliebene Eingabe waere eine Bestaetigung fuer eine
+    /// Datei, die niemand mehr ansieht.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WiederherstellenBestaetigt))]
+    private string _wiederherstellenEingabe = string.Empty;
+
+    public string WiederherstellenAufforderung => WiederherstellenZeile is null
+        ? string.Empty
+        : RestoreText.Abtippen(WiederherstellenZeile.Dateiname);
+
+    /// <summary>
+    /// Ob der getippte Name passt - das Tor vor dem Einspielen
+    /// (<see cref="RestoreConfirmation"/>).
+    /// </summary>
+    public bool WiederherstellenBestaetigt =>
+        WiederherstellenZeile is not null
+        && RestoreConfirmation.Matches(WiederherstellenEingabe, WiederherstellenZeile.Dateiname);
+
+    /// <summary>
+    /// Nach dem Bereitlegen: der Neustart steht noch aus. Solange das Band
+    /// steht, ist die Wiederherstellung vorbereitet, aber nicht vollzogen.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NeustartOffen))]
+    private string? _neustartText;
+
+    public bool NeustartOffen => NeustartText is not null;
 
     /// <summary>
     /// Laedt Einstellungen und Dateiliste neu und beurteilt den Zustand
@@ -315,6 +392,192 @@ public sealed partial class DatensicherungViewModel : ViewModelBase
         MeldeErfolg(
             $"Die Sicherung „{zeile.Dateiname}“ ist lesbar und vollständig: "
             + $"{BackupVerificationText.Merkmal(ergebnis)}.");
+    }
+
+    /// <summary>
+    /// Schritt 1: die gewaehlte Sicherung pruefen und die Folgen beziffern.
+    /// Eingespielt wird hier noch nichts - erst
+    /// <see cref="WiederherstellenBestaetigen"/> tut das.
+    ///
+    /// Eine unlesbare Sicherung und eine aus einer neueren Programmversion
+    /// kommen gar nicht in den Ablauf: die erste ergaebe eine leere
+    /// Datenbank, die zweite liesse den naechsten Start am zu neuen Schema
+    /// scheitern (Startup.StartupService) - und dann waere die Anwendung
+    /// nicht mehr zu oeffnen.
+    /// </summary>
+    [RelayCommand]
+    private void WiederherstellenBeginnen(SicherungZeile? zeile)
+    {
+        if (zeile is null)
+        {
+            return;
+        }
+
+        var ergebnis = BackupVerification.Verify(zeile.VollerPfad);
+
+        AppLog.Current.Info(
+            LogEvents.BackupVerified(zeile.Dateiname, ergebnis.IsReadable, ergebnis.SchemaVersion));
+
+        // Das Pruefmerkmal bleibt an der Zeile stehen, genau wie bei der
+        // ausdruecklichen Pruefung - der Anwender hat die Datei ja gerade
+        // pruefen lassen, nur eben auf einem anderen Weg.
+        zeile.PruefungText = BackupVerificationText.Merkmal(ergebnis);
+        zeile.PruefungIstFehler = !ergebnis.IsReadable || ergebnis.IsSchemaTooNew;
+
+        if (!ergebnis.IsReadable)
+        {
+            WiederherstellenAbbrechen();
+            MeldeFehler(FileErrorText.ForBackupVerification(ergebnis.Problem, zeile.Dateiname));
+            return;
+        }
+
+        if (ergebnis.IsSchemaTooNew)
+        {
+            WiederherstellenAbbrechen();
+            MeldeFehler(FileErrorText.ForBackupFromNewerVersion(
+                zeile.Dateiname,
+                ergebnis.SchemaVersion ?? 0,
+                DatabaseInitializer.ExpectedSchemaVersion));
+            return;
+        }
+
+        _wiederherstellenSchemaVersion = ergebnis.SchemaVersion;
+
+        WiederherstellenEingabe = string.Empty;
+        WiederherstellenZeile = zeile;
+        WiederherstellenFolgenText = RestoreText.Folgen(
+            zeile.Dateiname,
+            ZaehleAktiveBuchungen(),
+            ergebnis.ExpenseCount ?? 0);
+
+        MeldungText = null;
+    }
+
+    /// <summary>
+    /// Schritt 3: bereitlegen. Die Sicherheitskopie und das Entpacken
+    /// besorgt Core (<see cref="BackupRestore.Vorbereiten"/>); eingespielt
+    /// wird beim naechsten Start.
+    /// </summary>
+    [RelayCommand]
+    private void WiederherstellenBestaetigen()
+    {
+        if (WiederherstellenZeile is not { } zeile || !WiederherstellenBestaetigt)
+        {
+            return;
+        }
+
+        var vorbereitung = BackupRestore.Vorbereiten(
+            _connection,
+            zeile.VollerPfad,
+            DatenbankPfad,
+            SicherungsordnerPfad,
+            _wiederherstellenSchemaVersion,
+            DateTime.Now);
+
+        if (!vorbereitung.Erfolgreich)
+        {
+            // Der Ablauf bleibt stehen, samt abgetipptem Namen (Regel 13):
+            // wer den Platz auf der Platte freigeraeumt hat, soll einen Knopf
+            // druecken und nicht von vorn anfangen. Geaendert hat sich
+            // nichts, was die Bezifferung ungueltig machte - ersetzt wurde
+            // ja nichts.
+            MeldeFehler(vorbereitung.SicherheitskopieGescheitert
+                ? FileErrorText.ForRestoreSafetyCopy(vorbereitung.Problem)
+                : FileErrorText.ForRestore(vorbereitung.Problem, zeile.Dateiname));
+
+            return;
+        }
+
+        var dateiname = zeile.Dateiname;
+        var sicherheitskopie = vorbereitung.Sicherheitskopie ?? string.Empty;
+
+        WiederherstellenAbbrechen();
+        Aktualisiere();
+
+        // Kein Erfolgsband, sondern ein eigenes: der Vorgang ist NICHT
+        // fertig, es fehlt der Neustart. Ein "Erledigt" waere hier eine
+        // Unwahrheit.
+        NeustartText = RestoreText.Bereitgelegt(dateiname, sicherheitskopie);
+    }
+
+    /// <summary>
+    /// Bricht den Ablauf ab. Auch der Weg, auf dem eine gescheiterte
+    /// PRUEFUNG die Zwischenstufe raeumt - da ist die Sicherung selbst
+    /// untauglich, und eine Bezifferung dazu fuehrte zu nichts. Ein
+    /// gescheitertes Bereitlegen raeumt dagegen nicht: dort ist die
+    /// Sicherung in Ordnung und nur der Datentraeger im Weg (Regel 13).
+    /// </summary>
+    [RelayCommand]
+    private void WiederherstellenAbbrechen()
+    {
+        WiederherstellenZeile = null;
+        WiederherstellenEingabe = string.Empty;
+        WiederherstellenFolgenText = string.Empty;
+        _wiederherstellenSchemaVersion = null;
+    }
+
+    /// <summary>
+    /// Startet die Anwendung neu, damit die bereitliegende Sicherung
+    /// eingespielt wird. Zuerst den Nachfolger starten, dann selbst enden -
+    /// laesst sich kein Nachfolger starten, endet hier gar nichts, sonst
+    /// waere die Anwendung weg.
+    ///
+    /// Klappt der Neustart nicht, ist nichts verloren: die Sicherung liegt
+    /// weiter bereit und wird beim naechsten Start von Hand uebernommen.
+    /// </summary>
+    [RelayCommand]
+    private void JetztNeuStarten()
+    {
+        if (!Neustart.StarteSichSelbst())
+        {
+            MeldeFehler(
+                "Die Anwendung ließ sich nicht neu starten. Die Sicherung liegt "
+                + "weiterhin bereit und wird eingespielt, sobald die Anwendung das "
+                + "nächste Mal gestartet wird — bitte dazu einmal schließen und "
+                + "wieder öffnen. Die erfassten Daten sind unverändert.");
+            return;
+        }
+
+        if (Avalonia.Application.Current?.ApplicationLifetime
+            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.Shutdown();
+        }
+    }
+
+    /// <summary>
+    /// Setzt die Meldung ueber eine beim Start uebernommene oder verworfene
+    /// Wiederherstellung. Wird von <see cref="App"/> gerufen, weil die
+    /// Uebernahme vor allem anderen laeuft (siehe Program) und ihr Ergebnis
+    /// sonst nirgends ankaeme.
+    /// </summary>
+    public void MeldeWiederherstellung(string text, bool istFehler)
+    {
+        MeldungIstFehler = istFehler;
+        MeldungText = text;
+    }
+
+    /// <summary>
+    /// Die Buchungen der AKTIVEN Datenbank - die eine Haelfte der
+    /// Bezifferung; die andere kommt aus der Sicherung selbst
+    /// (<see cref="BackupVerificationResult.ExpenseCount"/>).
+    ///
+    /// Dieselbe Abfrage wie in <see cref="BackupVerification"/>, damit
+    /// beide Zahlen dasselbe zaehlen und der Vergleich traegt.
+    /// </summary>
+    private int ZaehleAktiveBuchungen()
+    {
+        try
+        {
+            return _connection.ExecuteScalar<int>("SELECT COUNT(*) FROM Expense");
+        }
+        catch (Exception ex)
+        {
+            // Die Bezifferung ist eine Hilfe, kein Tor. Scheitert sie, geht
+            // der Ablauf mit 0 weiter - abtippen muss der Anwender trotzdem.
+            AppLog.Current.Exception("Beim Zaehlen der aktiven Buchungen", ex);
+            return 0;
+        }
     }
 
     /// <summary>

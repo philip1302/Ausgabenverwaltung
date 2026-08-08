@@ -17,7 +17,8 @@
          │                          [ Jetzt sichern ]   │
          └──────────────────────────────────────────────┘
            Ziele          (Karte, je Ziel EINE Zeile)
-           Sicherungen    (Karte, je Zeile ein „Prüfen“)
+           Einspielen     (Karte, nur waehrend des gefuehrten Ablaufs)
+           Sicherungen    (Karte, je Zeile „Prüfen“ und „Wiederherstellen“)
            ▸ Hilfe        (Expander, im Normalfall zu)
 
          Vorher trugen Banner, Meldungsband, zwei Statustexte und zwei
@@ -97,6 +98,26 @@
                            TextWrapping="Wrap" VerticalAlignment="Center" />
                 <Button Grid.Column="1" Classes="ghost" Content="Schliessen"
                         Command="{Binding MeldungSchliessenCommand}" />
+            </Grid>
+        </Border>
+
+        <!-- ============ Band: Neustart steht aus ============
+             Nach dem Bereitlegen. Bewusst KEIN Erfolgsband: eingespielt
+             ist noch nichts, das geschieht erst beim Neustart. Ein Band,
+             das "erledigt" sagt, waere hier eine Unwahrheit. Es hat auch
+             kein "Schliessen" - der offene Vorgang laesst sich nicht
+             wegklicken. -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding NeustartOffen}"
+                Classes="banner hinweis"
+                Margin="0,0,0,8">
+            <Grid ColumnDefinitions="*,16,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding NeustartText}"
+                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="2" Classes="primary" Content="Jetzt neu starten"
+                        VerticalAlignment="Center"
+                        Command="{Binding JetztNeuStartenCommand}"
+                        ToolTip.Tip="Schließt die Anwendung und startet sie sofort wieder. Beim Start wird die Sicherung eingespielt." />
             </Grid>
         </Border>
 
@@ -222,6 +243,54 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ============ Wiederherstellen: die Zwischenstufe ============
+                     Zwischen "Wiederherstellen" und dem Einspielen liegt
+                     diese Karte. Sie tut zwei Dinge, die kein Dialog mit
+                     Ja/Nein tut: sie beziffert die Folgen, und sie verlangt
+                     das Abtippen des Dateinamens.
+
+                     Reibung nach Schadensausmass - und dies ist das
+                     Maximum, das die Anwendung anrichten kann. Anderswo auf
+                     dieser Seite genuegt ein Undo-Band (Ziel entfernen);
+                     hier gibt es kein Zurueck ausser der Sicherheitskopie,
+                     also wird ausdruecklich bestaetigt. -->
+                <Border Classes="karte" IsVisible="{Binding WiederherstellenLaeuft}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Sicherung einspielen" Classes="abschnitt" />
+
+                        <!-- Die bezifferten Folgen. Als Warnband, weil hier
+                             etwas verloren gehen kann - und nicht als
+                             Fehlerband, weil noch nichts passiert ist. -->
+                        <Border Classes="banner warnung">
+                            <TextBlock Text="{Binding WiederherstellenFolgenText}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+
+                        <TextBlock Text="{Binding WiederherstellenAufforderung}"
+                                   TextWrapping="Wrap" />
+
+                        <TextBox Text="{Binding WiederherstellenEingabe, Mode=TwoWay}"
+                                 Width="{anzeige:Breite 320}"
+                                 HorizontalAlignment="Left"
+                                 PlaceholderText="Dateiname der Sicherung" />
+
+                        <Grid ColumnDefinitions="Auto,8,Auto">
+                            <!-- Bleibt ausgegraut, bis der Name stimmt.
+                                 Ausgegraut statt versteckt: ein Knopf, der
+                                 erst auftaucht, wenn man das Richtige
+                                 getippt hat, laesst offen, ob es ueberhaupt
+                                 einen gibt. -->
+                            <Button Grid.Column="0" Classes="danger"
+                                    Content="Jetzt einspielen"
+                                    IsEnabled="{Binding WiederherstellenBestaetigt}"
+                                    Command="{Binding WiederherstellenBestaetigenCommand}"
+                                    ToolTip.Tip="Sichert die bisherige Datenbank, legt die Sicherung bereit und fordert den Neustart an." />
+                            <Button Grid.Column="2" Classes="ghost" Content="Abbrechen"
+                                    Command="{Binding WiederherstellenAbbrechenCommand}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- ============ Vorhandene Sicherungen ============
                      Neu: jede Zeile laesst sich pruefen. Eine Sicherung
                      ist nur so viel wert wie ihre Wiederherstellbarkeit -
@@ -243,7 +312,7 @@
                              Dateiname, Datum, Groesse, Aktion. Dazwischen
                              feste Gutter-Spalten (ungerade Indizes), damit
                              die Spaltengrenzen exakt aufeinander fallen. -->
-                        <Grid anzeige:Raster.Spalten="*,16,150,16,100,16,90" Margin="0,8,0,0">
+                        <Grid anzeige:Raster.Spalten="*,16,150,16,100,16,90,8,170" Margin="0,8,0,0">
                             <TextBlock Grid.Column="0" Text="Datei"   Classes="tabellenkopf" />
                             <TextBlock Grid.Column="2" Text="Datum"   Classes="tabellenkopf" />
                             <TextBlock Grid.Column="4" Text="Größe"   Classes="tabellenkopf zahl" />
@@ -254,7 +323,7 @@
                                 <DataTemplate x:DataType="vm:SicherungZeile">
                                     <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="0,6">
                                         <StackPanel Spacing="2">
-                                            <Grid anzeige:Raster.Spalten="*,16,150,16,100,16,90">
+                                            <Grid anzeige:Raster.Spalten="*,16,150,16,100,16,90,8,170">
                                                 <!-- Einzeilig und notfalls gekuerzt, damit ein
                                                      langer Dateiname weder umbricht noch die
                                                      Spalten dahinter verschiebt. -->
@@ -268,6 +337,16 @@
                                                         HorizontalAlignment="Right"
                                                         ToolTip.Tip="Entpackt die Sicherung, öffnet die Datenbank darin und zählt die Buchungen — ohne die aktiven Daten anzufassen."
                                                         Command="{Binding #Wurzel.((vm:DatensicherungViewModel)DataContext).SicherungPruefenCommand}"
+                                                        CommandParameter="{Binding}" />
+                                                <!-- „danger“, weil dahinter der gesamte
+                                                     Datenbestand ausgetauscht wird. Der Knopf
+                                                     tut das nicht selbst: er oeffnet die
+                                                     Zwischenstufe darunter. -->
+                                                <Button Grid.Column="8" Classes="danger klein"
+                                                        Content="Wiederherstellen"
+                                                        HorizontalAlignment="Right"
+                                                        ToolTip.Tip="Prüft die Sicherung und zeigt, was das Einspielen kosten würde. Eingespielt wird erst nach dem Abtippen des Dateinamens."
+                                                        Command="{Binding #Wurzel.((vm:DatensicherungViewModel)DataContext).WiederherstellenBeginnenCommand}"
                                                         CommandParameter="{Binding}" />
                                             </Grid>
                                             <TextBlock Text="{Binding PruefungText}"

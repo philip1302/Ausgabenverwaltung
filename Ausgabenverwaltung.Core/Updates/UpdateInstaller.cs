@@ -27,21 +27,6 @@ namespace Ausgabenverwaltung.Core.Updates;
 public static class UpdateInstaller
 {
     /// <summary>
-    /// Aufrufmerkmal fuer den neu gestarteten Prozess: warte, bis der
-    /// Vorgaenger wirklich beendet ist. Ohne dieses Warten wuerde
-    /// <see cref="Startup.SingleInstance"/> den Neustart als Doppelstart
-    /// abweisen, und die Anwendung waere nach dem Update schlicht weg.
-    /// </summary>
-    public const string WarteMerkmal = "--warte-auf-prozess";
-
-    /// <summary>
-    /// Wie lange der neue Prozess auf das Ende des alten wartet. Grosszuegig
-    /// bemessen: laenger zu warten kostet nur Sekunden, zu frueh
-    /// aufzugeben kostet den Start.
-    /// </summary>
-    private static readonly TimeSpan WarteHoechstdauer = TimeSpan.FromSeconds(15);
-
-    /// <summary>
     /// Das Ergebnis eines Uebernahmeversuchs.
     /// </summary>
     public enum Ergebnis
@@ -229,30 +214,15 @@ public static class UpdateInstaller
     /// <summary>
     /// Startet die soeben uebernommene Fassung. Der eigene Prozess muss
     /// sich unmittelbar danach beenden - der neue wartet darauf.
+    ///
+    /// Das Starten selbst und das Verabreden mit dem Nachfolger stehen in
+    /// <see cref="Startup.Neustart"/>; hier bleibt nur, was der
+    /// Aktualisierung eigen ist: unter macOS ist das Ziel das Bundle,
+    /// starten muss man die Datei darin.
     /// </summary>
     public static bool StarteNeuenProzess(string zielPfad)
-    {
-        try
-        {
-            var start = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = AusfuehrbareDatei(zielPfad),
-                UseShellExecute = false,
-                WorkingDirectory = Path.GetDirectoryName(zielPfad) ?? string.Empty,
-            };
-
-            start.ArgumentList.Add(WarteMerkmal);
-            start.ArgumentList.Add(
-                Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
-
-            return System.Diagnostics.Process.Start(start) is not null;
-        }
-        catch (Exception ex)
-        {
-            AppLog.Current.Exception("Beim Starten der aktualisierten Fassung", ex);
-            return false;
-        }
-    }
+        => Startup.Neustart.Starte(
+            AusfuehrbareDatei(zielPfad), Path.GetDirectoryName(zielPfad) ?? string.Empty);
 
     /// <summary>
     /// Unter macOS ist das Ziel das Bundle, gestartet werden muss aber
@@ -269,44 +239,4 @@ public static class UpdateInstaller
         return Path.Combine(zielPfad, "Contents", "MacOS", name);
     }
 
-    /// <summary>
-    /// Wartet auf das Ende des Vorgaengerprozesses, dessen Kennung als
-    /// <see cref="WarteMerkmal"/>-Argument hereinkam. Ohne dieses Warten
-    /// stolperte der Neustart ueber die Einzelinstanz-Sperre des noch
-    /// endenden Vorgaengers.
-    ///
-    /// Kehrt auch zurueck, wenn der Prozess laengst weg ist oder die
-    /// Kennung unbrauchbar war - gewartet wird auf ein Ende, nicht auf
-    /// eine Bestaetigung.
-    /// </summary>
-    public static void WarteAufVorgaenger(string[] argumente)
-    {
-        try
-        {
-            var index = Array.IndexOf(argumente, WarteMerkmal);
-            if (index < 0 || index + 1 >= argumente.Length)
-            {
-                return;
-            }
-
-            if (!int.TryParse(
-                    argumente[index + 1], CultureInfo.InvariantCulture, out var pid))
-            {
-                return;
-            }
-
-            using var vorgaenger = System.Diagnostics.Process.GetProcessById(pid);
-            vorgaenger.WaitForExit((int)WarteHoechstdauer.TotalMilliseconds);
-        }
-        catch (ArgumentException)
-        {
-            // GetProcessById wirft, wenn es den Prozess nicht mehr gibt -
-            // genau der Zustand, auf den gewartet wurde.
-        }
-        catch (Exception)
-        {
-            // Auch sonst gilt: nicht warten zu koennen ist kein Grund,
-            // den Start abzubrechen.
-        }
-    }
 }

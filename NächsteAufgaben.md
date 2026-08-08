@@ -889,7 +889,10 @@ sichtbarem `OR`. Der Platzhaltertext im Suchfeld muss das sagen.
   Platzhalter auf „Bemerkung, Kategorie, Zahler…" — in **beiden** Ansichten,
   weil beide denselben Filter bauen.
 
-### [ ] 16. Wiederherstellen aus der Anwendung
+### [x] 16. Wiederherstellen aus der Anwendung
+
+**Erledigt in:** Eine Sicherung laesst sich aus der Anwendung einspielen
+
 Der Nachfolger von Punkt 6. Geführter Ablauf: Sicherung wählen → prüfen
 (`BackupVerification`) → **Folgen beziffern** („Die aktive Datenbank
 enthält 1 284 Buchungen, diese Sicherung 1 190 — 94 Buchungen wären
@@ -897,6 +900,68 @@ danach weg") → aktive Datenbank vorher unter neuem Namen sichern →
 ersetzen → Neustart anfordern. Eingabebestätigung des Dateinamens, wie
 bei Aktionen mit weiterem Wirkungskreis üblich. Erst umsetzen, wenn
 Punkt 6 steht.
+
+**Umsetzung — „ersetzen" geht nicht im Betrieb:**
+
+Die aktive `ausgaben.db` ist die ganze Laufzeit über geöffnet (eine
+Verbindung als DI-Singleton, dazu `-wal`/`-shm` daneben). Sie im laufenden
+Betrieb zu ersetzen ist unter Windows nicht möglich. Genau dieselbe Lage
+hat die Selbstaktualisierung bei der Programmdatei, und der Ablauf folgt
+deshalb demselben, schon bewährten Muster (`Updates/UpdateInstaller`):
+
+1. **Im Betrieb** (`Core/Backups/BackupRestore.Vorbereiten`): bisherige
+   Datenbank per `VACUUM INTO` als
+   `ausgaben-vor-wiederherstellung-<Zeitpunkt>.db` in den Sicherungsordner —
+   der Name fällt bewusst durch das Raster von `BackupFileName`, sonst
+   würde die Kopie als Sicherung gezählt und irgendwann von
+   `BackupRetention` gelöscht. Dann die Sicherung neben die aktive
+   Datenbank entpacken (`.wiederherstellung.tmp` → umbenennen) und als
+   **Letztes** einen Begleitzettel mit Prüfsumme dazu
+   (`Core/Backups/RestoreStaging`). Scheitert die Sicherheitskopie, wird
+   gar nichts vorbereitet — ohne Weg zurück keine Wiederherstellung.
+2. **Beim nächsten Start** (`BackupRestore.TryUebernehmen`, gerufen in
+   `Program.Main` direkt nach dem Ermitteln des Datenbankpfads und **vor**
+   der Einzelinstanz-Sperre): Prüfsumme ein zweites Mal prüfen, dann zwei
+   Umbenennungen über `.vorher` — die bisherige Datei ist bis zuletzt
+   vorhanden. **Danach müssen `-wal` und `-shm` der alten Datenbank weg**:
+   `File.Move` nimmt sie nicht mit, sie lägen also neben der neuen Datei,
+   und ein fremdes Schreibprotokoll ist genau der Datenverlust, den der
+   Ablauf verhindern soll. Verloren geht dabei nichts, die
+   Sicherheitskopie aus `VACUUM INTO` enthält deren Inhalt.
+3. Der Neustart läuft über `Core/Startup/Neustart` — dorthin sind
+   `WarteMerkmal`/`WarteAufVorgaenger` aus `UpdateInstaller` gewandert, weil
+   es jetzt **zwei** Anlässe für einen Selbstneustart gibt und zwei
+   Fassungen desselben Aufrufmerkmals auseinanderliefen. Erst den
+   Nachfolger starten, dann selbst enden; lässt sich kein Nachfolger
+   starten, endet nichts und die Sicherung wird beim nächsten Start von
+   Hand übernommen.
+
+**Weitere Entscheidungen:**
+
+- **Eine zu neue Sicherung kommt gar nicht in den Ablauf.** Sie ließe den
+  nächsten Start an `SchemaVersionTooNewException` scheitern — die
+  Anwendung wäre nicht mehr zu öffnen. Eine ältere ist unbedenklich: der
+  Start migriert sie und sichert davor selbst noch einmal.
+- **Die Eingabebestätigung ist neu** — im Programm gab es dafür kein
+  Muster. `Core/Backups/RestoreConfirmation.Matches` ist die prüfbare
+  Hälfte (Regel 7), Groß-/Kleinschreibung und Leerzeichen sind egal, alles
+  andere muss stimmen. Der Knopf ist **ausgegraut statt versteckt**.
+- **Ein gescheitertes Bereitlegen räumt den Ablauf nicht** (Regel 13): die
+  Sicherung ist in Ordnung, nur der Datenträger war im Weg — wer Platz
+  geschaffen hat, drückt einen Knopf statt neu anzufangen. Eine gescheiterte
+  *Prüfung* räumt dagegen, dort ist die Datei selbst untauglich.
+- **Das Band nach dem Bereitlegen sagt nicht „erledigt"**, denn es fehlt
+  der Neustart, und bis dahin gelten die bisherigen Daten. Es hat auch kein
+  „Schließen" — ein offener Vorgang lässt sich nicht wegklicken.
+- **Nach dem Neustart wird gemeldet, was geschah** — übernommen oder
+  verworfen. Der Text kommt über `Program` in den Bereich
+  „Datensicherung", weil die Übernahme vor Datenbank und Fenster läuft;
+  ohne diese Meldung bliebe offen, auf welchem Stand die Anwendung gerade
+  arbeitet.
+- `WiederherstellungHinweis` beschrieb bisher, dass es diese Funktion
+  bewusst *nicht* gibt. Der Text beschreibt jetzt den geführten Ablauf und
+  behält die Anleitung von Hand — sie wird gebraucht, wenn die Anwendung
+  gar nicht mehr startet.
 
 ### [ ] 17. CSV-Export der Ausgabenliste
 `Core/Reports/ReportCsv.cs` hat das Muster bereits (`de-DE`, Semikolon,

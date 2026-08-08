@@ -218,4 +218,88 @@ public static class FileErrorText
              + "Der Ordner wurde deshalb nicht als zweites Ziel übernommen. "
              + "Das bisherige Ziel gilt unverändert weiter.";
     }
+
+    /// <summary>
+    /// Die Sicherheitskopie vor einer Wiederherstellung ist nicht
+    /// entstanden. Der ernstere der beiden Fehlschlaege, weil er den
+    /// Rueckweg betrifft - deshalb wird auch gar nichts vorbereitet, und
+    /// der Text muss sagen, dass das die richtige Entscheidung war.
+    /// </summary>
+    public static string ForRestoreSafetyCopy(StorageProblem problem)
+    {
+        var erklaerung = problem switch
+        {
+            StorageProblem.DiskFull =>
+                "Für die Kopie ist auf dem Datenträger kein Platz mehr frei. "
+                + "Bitte Platz schaffen und es noch einmal versuchen.",
+
+            StorageProblem.AccessDenied or StorageProblem.ReadOnly =>
+                "In den Sicherungsordner darf nicht geschrieben werden.",
+
+            StorageProblem.PathNotFound =>
+                "Der Sicherungsordner ist nicht erreichbar.",
+
+            StorageProblem.FileInUse =>
+                "Eine Datei im Sicherungsordner ist von einem anderen Programm "
+                + "geöffnet. Bitte dieses schließen und es noch einmal versuchen.",
+
+            StorageProblem.DatabaseLocked =>
+                "Die laufende Datenbank ließ sich für die Kopie nicht lesen, weil "
+                + "gerade etwas anderes darauf schreibt. Bitte einen Augenblick "
+                + "warten und es noch einmal versuchen.",
+
+            StorageProblem.DatabaseCorrupt =>
+                "Beim Lesen der laufenden Datenbank sind Schäden aufgefallen, "
+                + "deshalb ließ sich keine Kopie anlegen.",
+
+            _ =>
+                "Der Grund lässt sich nicht genauer bestimmen.",
+        };
+
+        return "Vor dem Einspielen wird die bisherige Datenbank gesichert, und "
+             + "genau das ist nicht gelungen. " + erklaerung + "\n\n"
+             + "Es wurde deshalb nichts vorbereitet und nichts ersetzt: die "
+             + "erfassten Daten sind unverändert. Ohne Weg zurück wird keine "
+             + "Sicherung eingespielt.";
+    }
+
+    /// <summary>
+    /// Das Bereitlegen der gewaehlten Sicherung ist gescheitert. Die
+    /// Sicherheitskopie stand zu diesem Zeitpunkt schon - das darf im Text
+    /// nicht fehlen, sonst klingt es nach einem halb vollzogenen Austausch.
+    /// </summary>
+    public static string ForRestore(StorageProblem problem, string fileName)
+    {
+        var erklaerung = problem switch
+        {
+            StorageProblem.DiskFull =>
+                "Die Sicherung muss zum Einspielen entpackt werden, und dafür ist "
+                + "auf dem Datenträger kein Platz mehr frei. Bitte Platz schaffen "
+                + "und es noch einmal versuchen.",
+
+            StorageProblem.AccessDenied or StorageProblem.ReadOnly =>
+                "In den Ordner der Datenbank darf nicht geschrieben werden.",
+
+            StorageProblem.PathNotFound =>
+                "Die Sicherung ist nicht mehr erreichbar. Möglicherweise wurde ein "
+                + "Wechseldatenträger abgezogen oder ein Netzlaufwerk getrennt.",
+
+            StorageProblem.FileInUse =>
+                "Die Sicherung ist von einem anderen Programm geöffnet. Bitte "
+                + "dieses schließen und es noch einmal versuchen.",
+
+            StorageProblem.DatabaseCorrupt =>
+                "Die Sicherung enthält keine brauchbare Datenbankdatei. Bitte eine "
+                + "andere Sicherung wählen und diese vorher prüfen.",
+
+            _ =>
+                "Der Grund lässt sich nicht genauer bestimmen.",
+        };
+
+        return $"Die Sicherung „{fileName}“ ließ sich nicht zum Einspielen "
+             + "bereitlegen. " + erklaerung + "\n\n"
+             + "Ersetzt wurde nichts: die erfassten Daten sind unverändert, und die "
+             + "Anwendung startet auch nicht neu. Die Sicherheitskopie der bisherigen "
+             + "Datenbank ist trotzdem angelegt worden und liegt im Sicherungsordner.";
+    }
 }

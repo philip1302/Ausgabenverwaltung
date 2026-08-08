@@ -15,6 +15,18 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Eine Sicherung lässt sich jetzt aus der Anwendung heraus wieder
+  einspielen, ohne Umweg über den Datei-Explorer. „Wiederherstellen" an
+  einer Sicherungszeile prüft zuerst die Datei und sagt dann, was das
+  Einspielen kostet: „Die aktive Datenbank enthält 1.284 Buchungen, diese
+  Sicherung 1.190 — 94 Buchungen wären danach weg." Bestätigt wird durch
+  Abtippen des Dateinamens; das ist Absicht, denn es ist die einzige Stelle,
+  an der der gesamte Datenbestand ausgetauscht wird. Die bisherige Datenbank
+  wird vorher unter eigenem Namen gesichert und bleibt liegen, der Weg
+  zurück bleibt also offen. Eingespielt wird beim anschließenden Neustart,
+  weil die Datei im laufenden Betrieb geöffnet ist — ein Knopf im Band
+  erledigt ihn. Eine beschädigte Sicherung und eine aus einer neueren
+  Programmfassung werden gar nicht erst angeboten.
 - Die Suche in der Ausgabenliste und in der Auswertung durchsucht jetzt
   nicht mehr nur die Bemerkung, sondern auch Kategorie und Zahler. „Strom"
   findet damit die Buchungen der Kategorie Strom, auch wenn niemand das

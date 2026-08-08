@@ -102,7 +102,7 @@ public class SicherungsfehlerTests : IDisposable
             Backup = dienst.RunNow(DateTime.Now),
         };
 
-        var vm = new DatensicherungViewModel(dienst, einstellungen, startergebnis);
+        var vm = new DatensicherungViewModel(dienst, einstellungen, startergebnis, connection);
 
         // Der Fehlertext steht seit dem Umbau nicht mehr in einem eigenen
         // Kasten je Ziel, sondern in der Zeile des betroffenen Ziels -
@@ -137,7 +137,7 @@ public class SicherungsfehlerTests : IDisposable
             IsFirstStart = false,
             GeneratedExpenses = [],
             Backup = kaputt.RunNow(DateTime.Now),
-        });
+        }, connection);
 
         Assert.True(vm.Ziel1.ProblemSichtbar);
 
@@ -194,7 +194,7 @@ public class SicherungsfehlerTests : IDisposable
             DatabaseFilePath = DbPfad,
             IsFirstStart = false,
             GeneratedExpenses = [],
-        });
+        }, connection);
 
         vm.SetzeZweitesZiel(UnbeschreibbarerOrdner);
 
@@ -226,7 +226,7 @@ public class SicherungsfehlerTests : IDisposable
             DatabaseFilePath = DbPfad,
             IsFirstStart = false,
             GeneratedExpenses = [],
-        });
+        }, connection);
 
         vm.SicherungJetztCommand.Execute(null);
 
@@ -259,7 +259,7 @@ public class SicherungsfehlerTests : IDisposable
             DatabaseFilePath = DbPfad,
             IsFirstStart = false,
             GeneratedExpenses = [],
-        });
+        }, connection);
 
         vm.SetzeZweitesZiel(zweitesZiel);
         vm.SicherungJetztCommand.Execute(null);
@@ -298,7 +298,7 @@ public class SicherungsfehlerTests : IDisposable
             DatabaseFilePath = DbPfad,
             IsFirstStart = false,
             GeneratedExpenses = [],
-        });
+        }, connection);
 
         vm.SicherungJetztCommand.Execute(null);
 

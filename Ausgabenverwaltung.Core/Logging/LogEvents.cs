@@ -78,6 +78,34 @@ public static class LogEvents
             : $"Sicherung geprueft: {fileName} ist NICHT lesbar.";
 
     /// <summary>
+    /// Eine Wiederherstellung wurde bereitgelegt - ersetzt ist damit noch
+    /// nichts, das geschieht erst beim naechsten Start. Wie bei
+    /// <see cref="BackupVerified"/> bleiben die Buchungsanzahlen draussen:
+    /// hier steht, WELCHE Datei eingespielt werden soll, nicht wie viel in
+    /// ihr steckt.
+    /// </summary>
+    public static string RestorePrepared(string fileName, int? schemaVersion)
+        => $"Wiederherstellung vorbereitet: {fileName} liegt bereit, "
+           + $"Schema-Version {schemaVersion}. Uebernommen wird sie beim naechsten Start.";
+
+    /// <summary>
+    /// Die Uebernahme beim Start hat die aktive Datenbank ersetzt. Das
+    /// gewichtigste Ereignis, das die Anwendung protokolliert - danach ist
+    /// der ganze Datenbestand ein anderer.
+    /// </summary>
+    public static string RestoreTakenOver(string fileName, int? schemaVersion)
+        => $"Wiederherstellung uebernommen: die aktive Datenbank wurde durch {fileName} "
+           + $"ersetzt, Schema-Version {schemaVersion}.";
+
+    /// <summary>
+    /// Eine bereitliegende Wiederherstellung liess sich nicht uebernehmen
+    /// und wurde verworfen. Ersetzt wurde nichts.
+    /// </summary>
+    public static string RestoreDiscarded(string fileName)
+        => $"Wiederherstellung VERWORFEN: die bereitgelegte Datei aus {fileName} passte "
+           + "nicht zu ihrem Begleitzettel. Die aktive Datenbank blieb unveraendert.";
+
+    /// <summary>
     /// Erzeugung wiederkehrender Buchungen. Nur die Anzahl - Titel,
     /// Betrag und Bemerkung der erzeugten Buchungen bleiben draussen.
     /// </summary>

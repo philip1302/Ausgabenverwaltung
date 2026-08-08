@@ -144,12 +144,34 @@ public partial class App : Application
 
         desktop.MainWindow = hauptfenster;
 
+        MeldeWiederherstellung();
+
         // Ab jetzt auf weitere Startversuche horchen: statt eines zweiten
         // Fensters kommt dieses hier nach vorn.
         Program.Einzelinstanz?.StartListening(
             () => Dispatcher.UIThread.Post(() => HoleNachVorn(hauptfenster)));
 
         SucheNachNeuerFassung();
+    }
+
+    /// <summary>
+    /// Gibt das Ergebnis einer beim Start uebernommenen Wiederherstellung
+    /// an den Bereich "Datensicherung" weiter - dort wurde sie angestossen,
+    /// dort sieht nach, wer wissen will, ob sie geklappt hat.
+    ///
+    /// Der Umweg ueber <see cref="Program"/> ist noetig, weil die
+    /// Uebernahme vor Datenbank und Fenster laeuft: sie entscheidet ja,
+    /// welche Datenbank ueberhaupt geoeffnet wird.
+    /// </summary>
+    private void MeldeWiederherstellung()
+    {
+        if (_services is null || Program.Wiederherstellungsmeldung is not string text)
+        {
+            return;
+        }
+
+        _services.GetRequiredService<DatensicherungViewModel>()
+            .MeldeWiederherstellung(text, Program.WiederherstellungGescheitert);
     }
 
     /// <summary>
