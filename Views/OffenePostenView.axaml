@@ -123,7 +123,7 @@
              waagerechte Bildlauf seinen Inhalt mit unbegrenzter Breite,
              und eine lange Bemerkung wuerde die Spalten dahinter nach
              rechts schieben. Die MinWidth ist die Summe der uebrigen
-             Spalten (698) plus rund 140 Pixel Rest fuer die Bemerkung;
+             Spalten (718) plus rund 140 Pixel Rest fuer die Bemerkung;
              die einstellbare Kategoriebreite kommt hinzu. -->
         <ScrollViewer x:Name="Waagerecht"
                       HorizontalScrollBarVisibility="Auto"

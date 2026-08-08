@@ -1052,3 +1052,208 @@ Stattdessen:
 - Ein eigener Bereich ohne Sidebar-Platz (`NavigationGruppe.Keine`, wie
   „Darstellung"), kein Dialogfenster: eine Seite lässt sich rollen und in
   der eingestellten Schriftgröße lesen, ohne den Start aufzuhalten.
+
+---
+
+## Batch 5 — Was beim Benutzen aufgefallen ist (Punkte 21–23)
+
+### [ ] 21. Das Aktualisierungsband sagt nicht, was zu tun ist
+
+**Ziel:** Wer das Band liest, weiß danach genau, was er drücken soll und
+was dann passiert. Heute muss er es raten.
+
+**Was heute nicht stimmt** (`Views/MainWindow.axaml`,
+`ViewModels/AktualisierungViewModel.cs`, `Core/Errors/UpdateText.cs`)
+
+1. **Text und Knopf sagen Verschiedenes.** `UpdateText.Bereitgelegt`
+   endet mit „Wer nicht warten möchte, startet die Anwendung gleich
+   neu." — der Knopf daneben heißt aber **„Jetzt beenden"** und tut auch
+   nur das. Die Anwendung ist danach weg, und der Anwender sitzt vor
+   einem geschlossenen Programm, das er selbst wieder starten muss.
+   Wer „startet gleich neu" liest und „beenden" gedrückt bekommt, hält
+   das für einen Fehler.
+2. **Drei Knöpfe ohne Rangfolge:** „Veröffentlichungsseite" (`secondary`),
+   „Jetzt beenden" (`primary`), „Schließen" (`ghost`). Der auffälligste
+   ist damit der, der die Anwendung beendet — auf einem Band, das
+   gleichzeitig beteuert, es laufe alles unverändert weiter.
+3. **Beim reinen Hinweis fehlt die Anleitung.** `UpdateText.NurHinweis`
+   sagt „lädt die neue Fassung von der Veröffentlichungsseite und
+   ersetzt die Programmdatei von Hand". Offen bleibt: *welche* der dort
+   liegenden Dateien gilt für dieses System, wohin damit, und muss die
+   Anwendung dafür geschlossen sein? Auf macOS ist es zudem kein
+   Programm**datei**, sondern ein Bundle.
+4. **„Was ist neu" wird nicht angekündigt.** Dass nach dem Neustart
+   einmalig eine Seite mit den Änderungen erscheint, weiß nur, wer es
+   schon erlebt hat.
+
+**Vorgehen**
+
+1. **Der Knopf startet wirklich neu.** Seit Punkt 16 gibt es
+   `Core/Startup/Neustart.StarteSichSelbst()`: Nachfolger starten (er
+   wartet über `--warte-auf-prozess` auf das Ende des Vorgängers), dann
+   `Shutdown()`. Genau so übernimmt `UpdateInstaller` schon heute nach
+   einem gelungenen Austausch. Aus „Jetzt beenden" wird damit
+   **„Jetzt neu starten"**, und `JetztBeenden` wird zu `JetztNeuStarten`
+   — nach dem Vorbild des gleichnamigen Kommandos in
+   `DatensicherungViewModel`.
+   Der Kommentar an `JetztBeenden` („Bewusst kein Selbst-Neustart …")
+   fällt weg: seine Begründung war, dass der Austausch einen Prozess
+   braucht, der die Programmdatei nicht mehr benutzt — und genau das
+   leistet das Warten auf den Vorgänger.
+   Lässt sich kein Nachfolger starten, wird **nicht** beendet, sondern
+   gemeldet (dieselbe Reihenfolge wie in `DatensicherungViewModel`:
+   erst starten, dann enden — sonst ist die Anwendung weg).
+2. `Core/Errors/UpdateText.Bereitgelegt` umschreiben: der letzte Satz
+   benennt den Knopf wörtlich und sagt, was danach passiert — „Mit
+   „Jetzt neu starten" wird sie sofort übernommen; die Anwendung
+   schließt sich und öffnet sich gleich wieder." Dazu der Hinweis, dass
+   danach einmalig die Seite „Was ist neu" erscheint.
+3. `Core/Errors/UpdateText.NurHinweis` bekommt **nummerierte Schritte**
+   statt eines Satzes, und sie nennen die Datei für das laufende System.
+   Dafür ist eine Angabe nötig, die es in Core schon gibt
+   (`Updates/UpdateAssets` bzw. die Stelle, die das Merkmal für die
+   Plattform wählt) — der Text soll „Ausgabenverwaltung-win-x64.zip"
+   heißen können und nicht „die passende Datei".
+   Auf macOS heißt der Schritt „Bundle ersetzen", nicht
+   „Programmdatei" — die Unterscheidung steckt bereits in
+   `UpdateInstaller.ZielPfad()`.
+4. `Views/MainWindow.axaml`: nur **ein** hervorgehobener Knopf je
+   Zustand. Bereitgelegt → „Jetzt neu starten" (`primary`), „Später"
+   (`ghost`). Nur Hinweis → „Veröffentlichungsseite" (`primary`),
+   „Schließen" (`ghost`). „Veröffentlichungsseite" und „Jetzt neu
+   starten" tauchen nie zusammen auf: sie gehören zu verschiedenen
+   Zuständen, und beide gleichzeitig zu zeigen ist der Grund, warum das
+   Band wie eine Auswahl unter drei gleichwertigen Wegen aussieht.
+
+**Tests**
+- `MeldungsGrundsaetzeTests` erfasst die geänderten Texte weiterhin
+  (`Update/Bereitgelegt`, `Update/Hinweis/*`) — die neuen Fassungen
+  müssen die vier Theories bestehen.
+- Neu in `UpdateEntscheidungTests` oder einer eigenen Datei: der Text zu
+  `UpdateHindernis.KeineDateiFuerDiesesSystem` nennt keinen Dateinamen
+  (es gibt keinen), die beiden übrigen Hindernisse nennen einen.
+- Ein Test, der Band-Text und Knopfbeschriftung gegeneinander hält, ist
+  nicht möglich (die Beschriftung steht in `.axaml`). Stattdessen prüft
+  ein Test, dass `Bereitgelegt` die Wörter „Jetzt neu starten" enthält —
+  wird der Knopf umbenannt, fällt der Text auf.
+
+**Fertig, wenn:** Das Band nennt genau einen empfohlenen Schritt, der
+Knopf tut, was der Text ankündigt, der Neustart bringt die Anwendung von
+selbst zurück, und die Anleitung von Hand nennt Dateinamen und
+Reihenfolge.
+
+---
+
+### [ ] 22. Auf macOS heißt die Anwendung „Avalonia"
+
+**Ziel:** Die Anwendung heißt überall „Ausgabenverwaltung" — auch im
+Menü oben links neben dem Apfel.
+
+**Ausgangslage:** Auf macOS steht dort heute der Name des
+Oberflächen-Baukastens statt der des Programms. Es ist **nicht** der
+Fenstertitel und **nicht** das Bundle: `Views/MainWindow.axaml` trägt
+`Title="Ausgabenverwaltung"`, und `publish.ps1` schreibt eine korrekte
+`Info.plist` mit `CFBundleName`/`CFBundleDisplayName`. Was fehlt, ist
+`Avalonia.Application.Name` — ohne diese Angabe setzt Avalonia den
+macOS-Anwendungsnamen auf seinen eigenen Vorgabewert.
+
+**Vorgehen**
+
+1. `App.axaml`: am `<Application>`-Element `Name="Ausgabenverwaltung"`
+   ergänzen (die Eigenschaft heißt `Application.Name`, gestützt in
+   Avalonia 12.1). Ein Kommentar dazu, wofür sie gilt — sie ist auf
+   Windows und Linux unsichtbar, und ohne Notiz entfernt sie später
+   jemand als scheinbar wirkungslos.
+2. Prüfen, ob dieselbe Vorgabe auch im **Fehlerfenster** greift:
+   `Views/StartupErrorWindow.axaml` läuft, bevor irgendetwas anderes
+   steht, benutzt aber dieselbe `Application`.
+3. Nicht Teil des Punktes: Symbol und Bundle-Angaben. Die stimmen.
+
+**Prüfen:** Auf macOS nicht mit `dotnet build` zu sehen — die Angabe
+wirkt erst im laufenden Fenster. Nachweisbar ist sie deshalb über einen
+Test, der `Application.Current.Name` nach dem Laden von `App.axaml`
+liest, oder schlicht über den nächsten Veröffentlichungslauf. Der Test
+ist vorzuziehen: er hält die Angabe fest, ohne einen Mac zu brauchen.
+
+**Fertig, wenn:** `Application.Name` ist gesetzt, ein Test hält den Wert
+fest, und der Kommentar erklärt, warum die Zeile auf dem
+Entwicklungsrechner nichts zu tun scheint.
+
+---
+
+### [ ] 23. Die Filterleiste bricht nicht um und läuft aus ihrer Karte heraus
+
+**Ziel:** Die Filter bleiben in ihrer Karte, egal wie schmal das Fenster
+ist — und wenn sie nicht mehr nebeneinander passen, stehen sie
+untereinander.
+
+**Was heute nicht stimmt** (`Views/AusgabenlisteView.axaml`,
+`Views/ReportView.axaml`)
+
+Beide Ansichten tragen ihre Filter in einem `Border Classes="filterleiste"`
+— einer Karte mit Rahmen, Hintergrund und abgerundeten Ecken. Darin
+liegen die Filter in **waagerechten `StackPanel`s** (Zeitraum in der
+ersten Reihe, Kategorie/Zahler/Status/Art/Sicht/Suche in der zweiten).
+
+Ein waagerechtes `StackPanel` bricht nicht um und beschneidet nichts: es
+misst seine Kinder mit unbegrenzter Breite und stellt sie in eine Reihe.
+Wird das Fenster schmaler, wandern die hinteren Filter deshalb **über
+den rechten Rand der Karte hinaus** ins Nichts — der Rahmen endet, die
+Bedienelemente laufen weiter. `Border.filterleiste` setzt kein
+`ClipToBounds`, das Überstehende bleibt also sichtbar und sieht aus wie
+ein Anzeigefehler.
+
+Dazu kommt die Ungleichheit zur Tabelle darunter: **die** liegt in einem
+waagerechten Bildlauf (`x:Name="Waagerecht"`), lässt sich also nach
+rechts rollen, bis alles zu sehen war. Für die Filterleiste gibt es
+diesen Weg nicht — was rechts heraushängt, ist nicht erreichbar.
+
+**Vorgehen**
+
+1. **`WrapPanel` statt waagerechtem `StackPanel`** für die Filterreihen.
+   Das ist im Programm die etablierte Antwort auf genau diese Frage: die
+   Schnellwahl-Chips der Erfassungsmaske (Punkt 8) und die
+   Sammelaktionsleiste der Ausgabenliste benutzen sie schon, dort mit
+   derselben Begründung — bei großer Schriftstufe muss umgebrochen
+   werden dürfen (Regel 9). Ein schmales Fenster ist derselbe Fall,
+   nur aus der anderen Richtung.
+2. Die zusammengehörenden Teile dürfen dabei **nicht auseinanderreißen**:
+   „Von"+„Bis" gehören zusammen, die vier Schnellwahl-Knöpfe gehören
+   zusammen. Also bleibt jede Gruppe ein eigener Behälter mit
+   Beschriftung, und umgebrochen wird zwischen den Gruppen, nicht in
+   ihnen. Die Raster „Beschriftung, Rest" der Zeitraumspalten bleiben
+   unverändert — der Kommentar dort erklärt, warum sie kein
+   `StackPanel` sind, und dieser Grund gilt weiter.
+3. **Beide Reihen können zu einer werden.** Wenn ohnehin umgebrochen
+   wird, ist die Trennung in zwei feste Reihen keine Hilfe mehr, sondern
+   verhindert nur, dass der Platz einer halb leeren Reihe genutzt wird.
+   Prüfen, ob ein einziges `WrapPanel` über alle Filtergruppen das
+   ruhigere Ergebnis ist — dann fällt auch die Frage weg, in welcher
+   Reihe ein neuer Filter landet.
+4. **Mindestbreite statt Überlauf.** Auch ein `WrapPanel` hat eine
+   Untergrenze: die breiteste einzelne Gruppe (die Kategorienauswahl mit
+   `{anzeige:Breite 260}`). Darunter muss die Karte selbst in den
+   waagerechten Bildlauf, damit nichts unerreichbar wird — oder die
+   feste Breite dieser Gruppe wird zu einer `MaxWidth`, damit sie
+   mitschrumpfen kann. Der zweite Weg ist der bessere: ein Fenster, das
+   man schmaler zieht, soll nicht plötzlich zwei Bildlaufleisten
+   bekommen.
+5. **Beide Ansichten gleich behandeln.** Die Filterleiste der Auswertung
+   ist bis auf Kleinigkeiten dieselbe wie die der Ausgabenliste; was
+   hier gilt, gilt dort. Wenn dabei auffällt, dass beide dieselbe
+   Bauform mit denselben Bindungsnamen tragen, ist ein gemeinsames
+   Steuerelement in `Anzeige/` der nächste Schritt — aber nur, wenn sich
+   die Unterschiede tatsächlich auf Beschriftungen beschränken. Sonst
+   bleibt es bei zwei Dateien.
+
+**Prüfen:** Mit `dotnet build`/`dotnet test` **nicht** nachweisbar — das
+ist reines Layoutverhalten. Nachzusehen ist es in der laufenden
+Anwendung, und zwar in drei Breiten (breit, mittel, so schmal wie
+möglich) und zusätzlich bei Schriftstufe „Sehr groß": beide Größen
+wirken auf denselben Umbruch, und ein Fehler zeigt sich oft nur in einer
+der beiden Richtungen.
+
+**Fertig, wenn:** In jeder Fensterbreite und jeder Schriftstufe steht
+kein Filter außerhalb seiner Karte, zusammengehörende Filter bleiben
+beieinander, und es gibt keinen Zustand, in dem ein Filter zwar da, aber
+nicht erreichbar ist.
