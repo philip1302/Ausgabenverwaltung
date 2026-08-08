@@ -13,6 +13,23 @@ ganzen Sätzen.
 Ganz oben sammelt „Unveröffentlicht", was noch in keiner Fassung steckt;
 beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
+## Unveröffentlicht
+
+- Wo eine Liste leer ist, steht jetzt der Knopf daneben, der den Zustand
+  auflöst: „Jetzt sichern" bei der Datensicherung, „Neue Vorlage" bei den
+  wiederkehrenden Ausgaben, „Ausgabe erfassen" in Ausgabenliste und
+  Auswertung. Bisher stand dort ein grauer Satz, der die Lösung zwar
+  nannte, aber suchen ließ.
+- Die leere Ausgabenliste und die leere Auswertung unterscheiden jetzt
+  zwei Fälle: Liegt es am Filter, wird „Filter zurücksetzen" angeboten;
+  ist noch gar nichts erfasst, führt der Knopf in die Erfassungsmaske.
+  Vorher hieß es in beiden Fällen „Keine Ausgaben für diesen Filter" —
+  was nach einem Filterproblem klang, obwohl schlicht noch nichts da war.
+- Bei den offenen Posten heißt es jetzt „Nichts offen" statt „Keine
+  offenen Posten": Dass nichts aussteht, ist eine gute Nachricht und
+  keine Fehlanzeige. Einen Knopf gibt es hier bewusst nicht — es ist
+  nichts aufzulösen.
+
 ## 1.4.1 — 08.08.2026
 
 - Das Fenster öffnet wieder dort, wo es zuletzt stand, und in der Größe,

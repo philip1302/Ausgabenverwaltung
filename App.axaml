@@ -296,6 +296,48 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentFarbe}" />
         </Style>
 
+        <!-- ==== Leerzustand ====
+             EINE Bauform fuer "hier steht nichts": Symbol, ein Satz, und
+             der Knopf, der den Zustand aufloest. Vorher gab es drei
+             Formen nebeneinander - grauer Kursiv-Einzeiler in
+             Ausgabenliste, Vorlagen und Datensicherung, Symbol mit Text
+             in Offenen Posten und Auswertung, und in keiner davon einen
+             Knopf. Die Klasse "empty-state" stand schon in einer Ansicht,
+             hatte aber nie einen Stil dazu und wirkte deshalb gar nicht.
+
+             Der Satz sagt, WARUM nichts dasteht; der Knopf ist der
+             kuerzeste Weg heraus. Eine leere Liste, die nur "keine
+             Treffer" sagt, laesst den Anwender mit der Frage allein, was
+             er jetzt tun soll - und die Antwort steht meist genau einen
+             Klick entfernt in einer Leiste, die er gerade nicht ansieht. -->
+        <Style Selector="StackPanel.empty-state">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Spacing" Value="8" />
+            <Setter Property="Margin" Value="0,32" />
+        </Style>
+        <Style Selector="StackPanel.empty-state > TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <!-- Das Symbol ist Zusatz zum Satz, nie sein Ersatz (Regel 10
+             sinngemaess): es traegt keine eigene Aussage, sondern macht
+             die Stelle als Leerzustand erkennbar. -->
+        <Style Selector="StackPanel.empty-state > Path">
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="StrokeThickness" Value="1.5" />
+            <Setter Property="StrokeLineCap" Value="Round" />
+            <Setter Property="StrokeJoin" Value="Round" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Setter Property="Stroke" Value="{DynamicResource TextTertiaerFarbe}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="StackPanel.empty-state > Button">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+        </Style>
+
         <!-- ==== Karte ==== -->
         <Style Selector="Border.karte">
             <Setter Property="Background" Value="{DynamicResource SurfaceFarbe}" />

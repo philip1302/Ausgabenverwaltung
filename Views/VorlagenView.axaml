@@ -179,11 +179,17 @@
                 </Grid>
             </Border>
 
-            <TextBlock Text="Noch keine Vorlagen angelegt. „Neue Vorlage“ legt die erste an."
-                       IsVisible="{Binding KeineVorlagen}"
-                       DockPanel.Dock="Top"
-                       Foreground="{DynamicResource TextTertiaerFarbe}" FontStyle="Italic"
-                       Margin="4,8" />
+            <!-- Der Knopf steht hier selbst, statt im Satz genannt zu
+                 werden: „„Neue Vorlage“ legt die erste an“ verlangte, ihn
+                 in der Leiste darüber erst zu suchen. -->
+            <StackPanel DockPanel.Dock="Top" Classes="empty-state"
+                        IsVisible="{Binding KeineVorlagen}">
+                <Path Data="{DynamicResource IconVorlagen}"
+                      Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}" />
+                <TextBlock Text="Noch keine Vorlage angelegt. Eine Vorlage trägt wiederkehrende Buchungen wie Miete oder Abo von selbst ein." />
+                <Button Classes="primary" Content="Neue Vorlage"
+                        Command="{Binding NeueVorlageCommand}" />
+            </StackPanel>
 
             <!-- ============ Tabelle ============ -->
             <ScrollViewer>

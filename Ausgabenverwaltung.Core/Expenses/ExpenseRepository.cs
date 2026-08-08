@@ -505,6 +505,23 @@ public sealed class ExpenseRepository
     }
 
     /// <summary>
+    /// Gibt es ueberhaupt eine Buchung - unabhaengig von jedem Filter?
+    ///
+    /// Nur dafuer da, eine leere Liste richtig zu erklaeren: "noch nichts
+    /// erfasst" und "nichts passt zu diesem Filter" sehen gleich aus, sind
+    /// aber verschiedene Lagen und brauchen verschiedene Angebote. Ohne
+    /// diese Frage muesste die Anzeige raten, und sie raet falsch, sobald
+    /// jemand einen Zeitraum waehlt, in dem nichts liegt.
+    ///
+    /// <c>EXISTS</c> statt <c>COUNT(*)</c>: die Datenbank hoert beim ersten
+    /// Treffer auf zu suchen, und mehr als "ja oder nein" wird hier nie
+    /// gebraucht.
+    /// </summary>
+    public bool HasAny()
+        => _connection.ExecuteScalar<long>(
+            "SELECT EXISTS (SELECT 1 FROM Expense)") != 0;
+
+    /// <summary>
     /// Anzahl und Summe der Treffer DESSELBEN Filters wie
     /// <see cref="Query"/> - eigene Aggregatabfrage statt einer Summe ueber
     /// die geladenen Zeilen, damit die Fusszeile der Liste unabhaengig von

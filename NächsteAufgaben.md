@@ -1059,11 +1059,51 @@ bekommt ein Fenster, das größer als der Bildschirm ist — unschön, aber
 bedienbar, weil es zentriert öffnet und sich ziehen lässt. Das ist ein
 eigener Punkt, wenn es auffällt.
 
-### [ ] 19. Leerzustände mit Handlungsangebot
+### [x] 19. Leerzustände mit Handlungsangebot
+
+**Erledigt in:** Leere Listen bieten den Weg heraus an
+
 Überall dort, wo heute nur ein grauer Satz steht („Noch keine Sicherung
 vorhanden", „Keine offenen Posten", leere Ausgabenliste): Satz plus der
 Knopf, der den Zustand auflöst. Die Datensicherung macht das an einer
 Stelle schon vor.
+
+**Umsetzung:**
+
+- **Fünf Leerzustände in drei Bauformen** waren es vorher: grauer
+  Kursiv-Einzeiler (Ausgabenliste, Vorlagen, Datensicherung), Symbol mit
+  Text (Offene Posten, Auswertung) — und in keiner davon ein Knopf. Die
+  Klasse `empty-state` stand schon in einer Ansicht, hatte aber **nie
+  einen Stil dazu** und wirkte deshalb gar nicht. Jetzt gibt es den Stil
+  in `App.axaml`, und alle fünf benutzen ihn.
+- **Der eigentliche Gewinn ist eine Unterscheidung, die es vorher nicht
+  gab:** Ausgabenliste und Auswertung sagten beide „Keine Ausgaben für
+  diesen Filter" — auch dann, wenn überhaupt noch nichts erfasst war. Das
+  klingt nach einem Filterproblem und schickt den Anwender im Kreis.
+  Neu `ExpenseRepository.HasAny()` (sichtbares `SELECT EXISTS`, hört beim
+  ersten Treffer auf) und daraus `NochNichtsErfasst` /
+  `KeinTrefferTrotzDaten` in beiden ViewModels. Gefragt wird nur, wenn die
+  Liste leer ist — sonst liefe die Abfrage bei jedem Tastendruck im
+  Suchfeld mit.
+- **Offene Posten bekommt bewusst KEINEN Knopf.** Dort ist leer das Ziel
+  und kein Mangel; ein Angebot, wo nichts fehlt, macht aus einer guten
+  Nachricht eine Aufgabe. Stattdessen sagt der Satz jetzt, dass alles in
+  Ordnung ist („Nichts offen — …"), statt nur das Fehlen zu melden. Das
+  ist die einzige Abweichung von „Satz plus Knopf" und die einzige, die
+  sich rechtfertigen lässt.
+- Für die Sprünge aus Ausgabenliste und Auswertung in die
+  Erfassungsmaske je ein `ErfassenAngefordert`-Ereignis, verdrahtet im
+  `MainViewModel` — dasselbe Muster wie bei den Kacheln der Startseite,
+  die Listen kennen die Navigation nicht selbst.
+- Bei der Datensicherung steht „Jetzt sichern" jetzt **zweimal**: oben in
+  der Zustandskarte und im leeren Kasten. Bewusst, weil der Blick beim
+  leeren Kasten steht und nicht am Kartenrand; beide lösen dasselbe
+  Kommando aus.
+
+**Nicht abgedeckt:** Ob die Bauform in allen Schriftstufen und
+Fensterbreiten sitzt, ist reines Layout und nur in der laufenden
+Anwendung zu sehen. Die Entscheidung, WELCHES Angebot erscheint, ist
+dagegen in `LeerzustandTests` festgehalten.
 
 ### [x] 20. „Was ist neu" nach einem Update
 

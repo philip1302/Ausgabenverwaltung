@@ -152,7 +152,29 @@ public sealed partial class ReportViewModel : ViewModelBase
     private string _trefferText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KeinTrefferTrotzDaten))]
     private bool _keineTreffer;
+
+    /// <summary>
+    /// Leer, WEIL es noch gar keine Buchung gibt - nicht, weil der Filter
+    /// zu eng steht. Dieselbe Unterscheidung wie in der Ausgabenliste: die
+    /// beiden Lagen sehen gleich aus und brauchen verschiedene Angebote.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KeinTrefferTrotzDaten))]
+    private bool _nochNichtsErfasst;
+
+    /// <summary>Leer, obwohl es Buchungen gibt - dann liegt es am Filter.</summary>
+    public bool KeinTrefferTrotzDaten => KeineTreffer && !NochNichtsErfasst;
+
+    /// <summary>
+    /// Bitte um einen Wechsel in die Erfassungsmaske - aus dem
+    /// Leerzustand, solange noch gar nichts erfasst ist.
+    /// </summary>
+    public event EventHandler? ErfassenAngefordert;
+
+    [RelayCommand]
+    private void AusgabeErfassen() => ErfassenAngefordert?.Invoke(this, EventArgs.Empty);
 
     [ObservableProperty]
     private string? _exportHinweis;
@@ -608,6 +630,7 @@ public sealed partial class ReportViewModel : ViewModelBase
         {
             SummenZeile = null;
             KeineTreffer = true;
+            NochNichtsErfasst = !_expenseRepository.HasAny();
             return;
         }
 
@@ -615,6 +638,10 @@ public sealed partial class ReportViewModel : ViewModelBase
 
         SummenZeile = ReportZeile.FuerSumme(_matrix, Spalten);
         KeineTreffer = _matrix.Total.Count == 0;
+
+        // Nur nachfragen, wenn nichts dasteht - sonst liefe die Abfrage bei
+        // jeder Filteraenderung mit, ohne je etwas zu entscheiden.
+        NochNichtsErfasst = KeineTreffer && !_expenseRepository.HasAny();
     }
 
     private void FuegeZeilenEin(IReadOnlyList<ReportMatrixRow> rows)

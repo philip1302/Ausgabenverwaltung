@@ -234,6 +234,21 @@ public sealed partial class MainViewModel : ViewModelBase
                 .First(item => ReferenceEquals(item.ViewModel, _erfassen));
         };
 
+        // Derselbe Sprung aus den Leerzustaenden von Ausgabenliste und
+        // Auswertung: solange noch gar nichts erfasst ist, hilft dort kein
+        // Filter, sondern nur die Erfassungsmaske.
+        ausgabenliste.ErfassenAngefordert += (_, _) =>
+        {
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _erfassen));
+        };
+
+        report.ErfassenAngefordert += (_, _) =>
+        {
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _erfassen));
+        };
+
         startseite.AusgabenlisteAngefordert += (_, _) =>
         {
             SelectedNavigationItem = NavigationItems

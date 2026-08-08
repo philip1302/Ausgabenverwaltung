@@ -66,6 +66,16 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     public event EventHandler<int>? VorlageAusBuchungAngefordert;
 
     /// <summary>
+    /// Bitte um einen Wechsel in die Erfassungsmaske - aus dem
+    /// Leerzustand, solange noch gar nichts erfasst ist. Gleiches Muster
+    /// wie <see cref="StartseiteViewModel.ErfassenAngefordert"/>.
+    /// </summary>
+    public event EventHandler? ErfassenAngefordert;
+
+    [RelayCommand]
+    private void AusgabeErfassen() => ErfassenAngefordert?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
     /// Bitte um den Tastaturfokus im Suchfeld (Strg+F). Welches
     /// Bedienelement das ist, weiss nur die Ansicht - dasselbe Muster wie
     /// <see cref="ErfassenViewModel.FokusBetragAngefordert"/>.
@@ -269,7 +279,23 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     private bool _summeIstEinnahme;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KeinTrefferTrotzDaten))]
     private bool _keineTreffer;
+
+    /// <summary>
+    /// Die Liste ist leer, WEIL es noch gar keine Buchung gibt - nicht,
+    /// weil der Filter zu eng steht. Der Unterschied entscheidet, was der
+    /// Leerzustand anbietet: die Erfassungsmaske oder das Zuruecksetzen
+    /// des Filters. Beides sieht gleich leer aus, ist aber nicht dasselbe,
+    /// und ein Angebot, das an der Lage vorbeigeht, ist schlimmer als
+    /// keines.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KeinTrefferTrotzDaten))]
+    private bool _nochNichtsErfasst;
+
+    /// <summary>Leer, obwohl es Buchungen gibt - dann liegt es am Filter.</summary>
+    public bool KeinTrefferTrotzDaten => KeineTreffer && !NochNichtsErfasst;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HatAuswahl))]
@@ -1360,6 +1386,11 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         AnzahlAusgewaehlt = 0;
         KeineTreffer = summary.Count == 0;
+
+        // Nur nachfragen, wenn die Liste leer ist: bei Treffern steht die
+        // Antwort ohnehin fest, und die Abfrage liefe bei jedem Tastendruck
+        // im Suchfeld mit.
+        NochNichtsErfasst = KeineTreffer && !_expenseRepository.HasAny();
 
         // Der Export-Hinweis gehoert zu der Liste, die beim Speichern
         // dastand. Sobald sich der Filter bewegt, sagt "Gespeichert: …"

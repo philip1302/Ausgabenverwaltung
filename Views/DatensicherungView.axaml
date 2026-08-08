@@ -304,9 +304,18 @@
                                        Foreground="{DynamicResource TextTertiaerFarbe}" VerticalAlignment="Center" />
                         </Grid>
 
-                        <TextBlock Text="Noch keine Sicherung vorhanden. „Jetzt sichern“ erstellt die erste."
-                                   IsVisible="{Binding KeineSicherungen}"
-                                   Foreground="{DynamicResource TextTertiaerFarbe}" FontStyle="Italic" Margin="0,8" />
+                        <!-- Der Knopf steht auch oben in der Zustandskarte;
+                             hier noch einmal, weil der Blick beim leeren
+                             Kasten steht und nicht am Kartenrand. Beide
+                             lösen dasselbe Kommando aus. -->
+                        <StackPanel Classes="empty-state"
+                                    IsVisible="{Binding KeineSicherungen}">
+                            <Path Data="{DynamicResource IconDatensicherung}"
+                                  Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}" />
+                            <TextBlock Text="Noch keine Sicherung vorhanden. Ohne sie gibt es keinen Stand, auf den sich im Schadensfall zurückgehen ließe." />
+                            <Button Classes="primary" Content="Jetzt sichern"
+                                    Command="{Binding SicherungJetztCommand}" />
+                        </StackPanel>
 
                         <!-- Spaltenraster gilt fuer Kopfzeile UND Zeilen:
                              Dateiname, Datum, Groesse, Aktion. Dazwischen

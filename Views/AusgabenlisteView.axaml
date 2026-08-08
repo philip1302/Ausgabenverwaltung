@@ -565,12 +565,28 @@
                 </Grid>
             </Border>
 
-            <TextBlock Text="Keine Ausgaben für diesen Filter."
-                       IsVisible="{Binding KeineTreffer}"
-                       DockPanel.Dock="Top"
-                       Foreground="{DynamicResource TextTertiaerFarbe}"
-                       FontStyle="Italic"
-                       Margin="4,8" />
+            <!-- Leerzustand, zwei Lagen mit verschiedenen Angeboten: liegt
+                 es am Filter, hilft das Zurücksetzen; ist überhaupt noch
+                 nichts erfasst, hilft nur die Erfassungsmaske. Beides
+                 sieht gleich leer aus — deshalb entscheidet das ViewModel
+                 (NochNichtsErfasst) und nicht die Ansicht. -->
+            <StackPanel DockPanel.Dock="Top" Classes="empty-state"
+                        IsVisible="{Binding KeinTrefferTrotzDaten}">
+                <Path Data="{DynamicResource IconAusgabenliste}"
+                      Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}" />
+                <TextBlock Text="Keine Buchung passt zu diesem Filter." />
+                <Button Classes="secondary" Content="Filter zurücksetzen"
+                        Command="{Binding FilterZuruecksetzenCommand}" />
+            </StackPanel>
+
+            <StackPanel DockPanel.Dock="Top" Classes="empty-state"
+                        IsVisible="{Binding NochNichtsErfasst}">
+                <Path Data="{DynamicResource IconAusgabenliste}"
+                      Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}" />
+                <TextBlock Text="Noch keine Buchung erfasst. Sobald die erste eingetragen ist, steht sie hier." />
+                <Button Classes="primary" Content="Ausgabe erfassen"
+                        Command="{Binding AusgabeErfassenCommand}" />
+            </StackPanel>
 
             <!-- ============ Tabelle ============
                  ListBox statt ItemsControl: ihr Standard-ItemsPanel ist

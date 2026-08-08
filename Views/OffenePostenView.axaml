@@ -95,19 +95,18 @@
             </StackPanel>
         </Border>
 
-        <!-- Leerer Zustand: Icon + Text statt des bisherigen grauen,
-             kursiven Einzeilers (UI/UX-Redesign, Abschnitt 2.7). -->
-        <StackPanel DockPanel.Dock="Top" Classes="empty-state" Spacing="8"
-                    IsVisible="{Binding KeineEintraege}" Margin="0,32">
+        <!-- Der EINZIGE Leerzustand der Anwendung ohne Knopf, und das mit
+             Absicht: hier ist leer das Ziel und kein Mangel. Es gibt
+             nichts aufzulösen, und ein Knopf, der etwas anbietet, wo
+             nichts fehlt, macht aus einer guten Nachricht eine Aufgabe.
+             Der Satz sagt deshalb ausdrücklich, dass alles in Ordnung ist,
+             statt nur das Fehlen zu melden. Bauform sonst wie überall
+             (Stil "empty-state" in App.axaml). -->
+        <StackPanel DockPanel.Dock="Top" Classes="empty-state"
+                    IsVisible="{Binding KeineEintraege}">
             <Path Data="{DynamicResource IconOffenePosten}"
-                  Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}"
-                  Stretch="Uniform" StrokeThickness="1.5"
-                  StrokeLineCap="Round" StrokeJoin="Round"
-                  Fill="Transparent" Stroke="{DynamicResource TextTertiaerFarbe}"
-                  HorizontalAlignment="Center" />
-            <TextBlock Text="Keine offenen Posten."
-                       Foreground="{DynamicResource TextSekundaerFarbe}"
-                       HorizontalAlignment="Center" />
+                  Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}" />
+            <TextBlock Text="Nichts offen — es steht gerade nichts zwischen Ihnen und jemand anderem." />
         </StackPanel>
 
         <!-- ============ Kopfzeile und Tabelle ============
