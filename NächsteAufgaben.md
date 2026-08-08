@@ -963,10 +963,42 @@ deshalb demselben, schon bewährten Muster (`Updates/UpdateInstaller`):
   behält die Anleitung von Hand — sie wird gebraucht, wenn die Anwendung
   gar nicht mehr startet.
 
-### [ ] 17. CSV-Export der Ausgabenliste
+### [x] 17. CSV-Export der Ausgabenliste
+
+**Erledigt in:** Die Ausgabenliste laesst sich als CSV speichern
+
 `Core/Reports/ReportCsv.cs` hat das Muster bereits (`de-DE`, Semikolon,
 `EuroText.Plain`). Zweite Methode für die flache Buchungsliste, Knopf in
 der Filterleiste. Exportiert wird, was gefiltert ist — nicht alles.
+
+**Umsetzung:**
+
+- `ReportCsv.BuildExpenseList(IReadOnlyList<ExpenseListItem>)` — dieselbe
+  Datei wie der Export der Kreuztabelle, damit Trennzeichen, Zeilenende und
+  Maskierung nicht auseinanderlaufen. Spalten: Datum, Art, Betrag,
+  Kategorie, Zahler, Beglichen am, Bemerkung, Vorlage.
+- **Das Vorzeichen kommt vom Buchungstyp**, nicht vom gespeicherten Wert:
+  Ausgabe negativ, Einnahme positiv, wie `EuroText.FormatSigned` für eine
+  einzelne Buchung. Damit lässt sich in Excel über die Spalte rechnen.
+  Bewusst in Kauf genommen: die Spaltensumme kann von der Summe unter der
+  Liste abweichen, weil die eine noch **offene** Einnahme mit null zählt
+  (das Geld ist nicht geflossen). Im Export steht stattdessen ihr Betrag —
+  eine Zeile, die ihren eigenen Betrag verschweigt, wäre wertlos; welche
+  offen sind, sagt die Spalte „Beglichen am". Der Grund steht als Kommentar
+  an der Methode.
+- **Der Knopf sitzt in der Werkzeugleiste, nicht in der Filterleiste** —
+  dort, wo „Filter zurücksetzen" schon steht, also bei den Aktionen der
+  ganzen Ansicht. Als `WrapPanel`, damit die Reihe bei großer Schriftstufe
+  umbricht (Regel 9). Der Hinweistext daneben statt als Band: der Export
+  ändert keine Daten, sein Ergebnis muss niemanden aufhalten.
+- **`LadeDaten` merkt sich die geladenen Buchungen** (`_angezeigteBuchungen`)
+  statt für den Export erneut abzufragen — exportiert werden soll genau
+  das, was der Anwender vor sich sieht. Der Hinweistext wird bei jedem
+  Ladevorgang gelöscht: „Gespeichert: …" sagt nach einer Filteränderung
+  nichts mehr über das, was jetzt zu sehen ist.
+- Dateiauswahl, Schreiben und die UTF-8-Signatur bleiben im Code-Behind
+  (Regel 7), wortgleich zum Export der Auswertung — derselbe Vorgang soll
+  sich nicht an zwei Stellen anders verhalten.
 
 ### [ ] 18. Fenstergröße, -position und Sortierung merken
 Nach `AppSettings` (dort steht `CategoryColumnWidth` schon). Beim Start

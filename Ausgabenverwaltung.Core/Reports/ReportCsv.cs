@@ -1,12 +1,20 @@
+using System.Globalization;
 using System.Text;
+using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core.Reports;
 
 /// <summary>
-/// Die angezeigte Kreuztabelle als CSV-Text: Semikolon als Trennzeichen,
-/// Komma als Dezimaltrennzeichen. So oeffnet Excel im deutschen
-/// Gebietsschema die Datei mit einem Doppelklick, ohne Import-Assistent.
+/// Die angezeigten Zahlen als CSV-Text: Semikolon als Trennzeichen, Komma
+/// als Dezimaltrennzeichen. So oeffnet Excel im deutschen Gebietsschema die
+/// Datei mit einem Doppelklick, ohne Import-Assistent.
+///
+/// Zwei Ausgaben, dieselbe Bauform: <see cref="Build"/> fuer die
+/// Kreuztabelle der Auswertung, <see cref="BuildExpenseList"/> fuer die
+/// flache Buchungsliste. Beide teilen Trennzeichen, Zeilenende und
+/// Maskierung - eine zweite Datei daneben hiesse zwei Sorten CSV aus
+/// derselben Anwendung.
 ///
 /// Erzeugt nur den Text; geschrieben wird die Datei in der Oberflaeche
 /// (Regel 7). Dort gehoert auch die UTF-8-Signatur hin - ohne sie zeigt
@@ -16,6 +24,8 @@ public static class ReportCsv
 {
     private const string Separator = ";";
     private const string LineBreak = "\r\n";
+
+    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     /// <param name="visibleRows">
     /// Die Zeilen in genau der Reihenfolge, in der sie gerade auf dem
@@ -67,6 +77,73 @@ public static class ReportCsv
 
         return text.ToString();
     }
+
+    /// <summary>
+    /// Die flache Buchungsliste als CSV - eine Zeile je Buchung, in der
+    /// Reihenfolge, in der sie gerade auf dem Bildschirm stehen. Exportiert
+    /// wird also, was gefiltert ist, und nicht alles: die Filterleiste ist
+    /// die Auswahl, und ein Export, der sie uebergeht, ueberrascht.
+    /// </summary>
+    /// <param name="items">
+    /// Die angezeigten Buchungen. Bewusst die Kernobjekte und nicht die
+    /// Anzeigezeilen: dort stehen fertig formatierte Texte, und ein
+    /// €-Zeichen im CSV machte die Spalte in Excel zu Text.
+    /// </param>
+    public static string BuildExpenseList(IReadOnlyList<ExpenseListItem> items)
+    {
+        var text = new StringBuilder();
+
+        AppendLine(text, [
+            Quote("Datum"),
+            Quote("Art"),
+            Quote("Betrag"),
+            Quote("Kategorie"),
+            Quote("Zahler"),
+            Quote("Beglichen am"),
+            Quote("Bemerkung"),
+            Quote("Vorlage"),
+        ]);
+
+        foreach (var item in items)
+        {
+            AppendLine(text, [
+                Datum(item.ExpenseDate),
+                Quote(item.IsIncome ? "Einnahme" : "Ausgabe"),
+                Betrag(item),
+                Quote(item.CategoryFullPath),
+                Quote(item.PayerName),
+                item.SettledDate is DateOnly beglichen ? Datum(beglichen) : string.Empty,
+                Quote(item.Note ?? string.Empty),
+                Quote(item.RecurringExpenseTitle ?? string.Empty),
+            ]);
+        }
+
+        return text.ToString();
+    }
+
+    // Das Vorzeichen kommt vom Buchungstyp, nicht vom gespeicherten Wert:
+    // Ausgabe negativ, Einnahme positiv. AmountCents ist immer positiv
+    // (Regel 1), Math.Abs faengt zusaetzlich Alt-Datensaetze aus der Zeit
+    // vor dieser Regel ab - dieselbe Rechnung wie in EuroText.FormatSigned.
+    //
+    // Wer die Spalte in Excel summiert, bekommt deshalb nicht zwangslaeufig
+    // die Summe unter der Liste: die zaehlt eine noch OFFENE Einnahme mit
+    // null, weil das Geld noch nicht geflossen ist. Hier steht stattdessen
+    // ihr Betrag - eine Zeile, die ihren eigenen Betrag verschweigt, waere
+    // im Export wertlos. Die Spalte "Beglichen am" sagt, welche es sind.
+    private static string Betrag(ExpenseListItem item)
+    {
+        var vorzeichenbehaftet = item.IsIncome
+            ? Math.Abs(item.AmountCents)
+            : -Math.Abs(item.AmountCents);
+
+        return EuroText.Plain(vorzeichenbehaftet);
+    }
+
+    // Datum als "07.08.2026" und nicht im Speicherformat: die Datei liest
+    // ein Mensch in einem deutschen Excel, nicht die Datenbank.
+    // Unquotiert, damit Excel eine Datumsspalte daraus macht.
+    private static string Datum(DateOnly datum) => datum.ToString("dd.MM.yyyy", DeDe);
 
     private static void AppendLine(StringBuilder text, IReadOnlyList<string> fields)
     {

@@ -15,6 +15,13 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Die Ausgabenliste lässt sich als CSV-Datei speichern — „Als CSV
+  exportieren" über der Tabelle. Exportiert wird genau das, was gerade in
+  der Liste steht: der Filter gilt also mit. Die Datei öffnet sich in Excel
+  mit einem Doppelklick, ohne Import-Assistent; Ausgaben stehen negativ,
+  Einnahmen positiv, sodass sich über die Betragsspalte rechnen lässt.
+  Neben Datum, Betrag, Kategorie und Zahler stehen auch Art, Beglichen-Datum,
+  Bemerkung und die Vorlage, aus der eine Buchung stammt.
 - Eine Sicherung lässt sich jetzt aus der Anwendung heraus wieder
   einspielen, ohne Umweg über den Datei-Explorer. „Wiederherstellen" an
   einer Sicherungszeile prüft zuerst die Datei und sagt dann, was das

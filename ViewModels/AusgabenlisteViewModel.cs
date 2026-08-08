@@ -41,6 +41,12 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     // Auswahllisten) - sonst laeuft die Abfrage pro Eigenschaft erneut.
     private bool _ladenGesperrt;
 
+    // Die zuletzt geladenen Buchungen, so wie sie gerade in der Liste
+    // stehen. Gemerkt fuer den CSV-Export: exportiert werden soll genau das
+    // Angezeigte, und die Anzeigezeilen (AusgabeZeile) tragen nur fertig
+    // formatierte Texte, aus denen sich kein rechenbares CSV bauen laesst.
+    private IReadOnlyList<ExpenseListItem> _angezeigteBuchungen = Array.Empty<ExpenseListItem>();
+
     // Die zuletzt geloeschten Buchungen mit allen ihren Werten - der
     // Vorrat, aus dem "Rueckgaengig" sie wieder anlegt. Gehalten wird er
     // bis zum Bereichswechsel (siehe AktualisiereListe), bewusst ohne
@@ -304,6 +310,34 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     [RelayCommand]
     private void ErfolgSchliessen() => ErfolgText = null;
+
+    // ================= CSV-Export =================
+
+    /// <summary>
+    /// Der Hinweis neben dem Export-Knopf - "Gespeichert: …" oder der
+    /// Grund, warum nicht. Wie in der Auswertung ein Text neben dem Knopf
+    /// und kein Band: der Export aendert keine Daten, sein Ergebnis muss
+    /// niemanden aufhalten.
+    /// </summary>
+    [ObservableProperty]
+    private string? _exportHinweis;
+
+    /// <summary>
+    /// Vorschlag fuer den Dateinamen. Der Tag steht darin, damit sich
+    /// mehrere Exporte nebeneinander unterscheiden lassen.
+    /// </summary>
+    public string CsvDateiname =>
+        "Ausgabenliste_" + DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".csv";
+
+    /// <summary>
+    /// Der CSV-Text zur gerade angezeigten Liste. Gebildet aus den beim
+    /// Laden gemerkten Buchungen und NICHT aus einer zweiten Abfrage:
+    /// exportiert werden soll genau das, was der Anwender vor sich sieht -
+    /// eine erneute Abfrage koennte inzwischen etwas anderes liefern.
+    /// </summary>
+    public string BaueCsv() => ReportCsv.BuildExpenseList(_angezeigteBuchungen);
+
+    public void MeldeExport(string hinweis) => ExportHinweis = hinweis;
 
     public AusgabenlisteViewModel(
         ExpenseRepository expenseRepository,
@@ -1255,7 +1289,9 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         // waehrend eines Ladevorgangs nicht.
         var farben = _categoryRepository.GetResolvedColors();
 
-        foreach (var item in _expenseRepository.Query(filter, SortSpalte, SortAufsteigend))
+        _angezeigteBuchungen = _expenseRepository.Query(filter, SortSpalte, SortAufsteigend);
+
+        foreach (var item in _angezeigteBuchungen)
         {
             var zeile = new AusgabeZeile(item, CategoryColors.Of(farben, item.CategoryId));
             zeile.PropertyChanged += OnZeilePropertyChanged;
@@ -1271,6 +1307,11 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         AnzahlAusgewaehlt = 0;
         KeineTreffer = summary.Count == 0;
+
+        // Der Export-Hinweis gehoert zu der Liste, die beim Speichern
+        // dastand. Sobald sich der Filter bewegt, sagt "Gespeichert: …"
+        // nichts mehr ueber das, was jetzt zu sehen ist.
+        ExportHinweis = null;
     }
 
     private bool TryBaueFilter(out ReportFilter filter)

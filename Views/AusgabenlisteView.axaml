@@ -415,8 +415,27 @@
                             Command="{Binding AusgewaehlteLoeschenCommand}" />
                 </WrapPanel>
 
-                <Button Grid.Column="2" Classes="ghost" Content="Filter zurücksetzen"
-                        Command="{Binding FilterZuruecksetzenCommand}" />
+                <!-- Rechts die Aktionen der ganzen Ansicht. WrapPanel wie
+                     links, damit die Reihe bei grosser Schriftstufe
+                     umbricht statt abzuschneiden (Regel 9). -->
+                <WrapPanel Grid.Column="2" Orientation="Horizontal"
+                           HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding ExportHinweis}"
+                               IsVisible="{Binding ExportHinweis, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               Foreground="{DynamicResource TextTertiaerFarbe}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0" />
+
+                    <Button Classes="secondary" Content="Als CSV exportieren"
+                            Margin="0,0,8,4"
+                            ToolTip.Tip="Speichert genau die Buchungen, die gerade in der Liste stehen — der Filter gilt also mit."
+                            Click="CsvExportieren_Click" />
+
+                    <Button Classes="ghost" Content="Filter zurücksetzen"
+                            Margin="0,0,0,4"
+                            Command="{Binding FilterZuruecksetzenCommand}" />
+                </WrapPanel>
             </Grid>
 
             <!-- ============ Bänder über der Tabelle ============
