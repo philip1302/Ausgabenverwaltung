@@ -13,7 +13,7 @@ ganzen Sätzen.
 Ganz oben sammelt „Unveröffentlicht", was noch in keiner Fassung steckt;
 beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
-## Unveröffentlicht
+## 1.4.1 — 08.08.2026
 
 - Das Fenster öffnet wieder dort, wo es zuletzt stand, und in der Größe,
   die es zuletzt hatte — maximiert bleibt maximiert. Steht die gemerkte

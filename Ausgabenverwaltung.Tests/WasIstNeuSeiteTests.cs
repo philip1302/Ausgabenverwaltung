@@ -1,4 +1,5 @@
 using Ausgabenverwaltung.Core.Settings;
+using Ausgabenverwaltung.Core.Updates;
 using Ausgabenverwaltung.ViewModels;
 
 namespace Ausgabenverwaltung.Tests;
@@ -21,6 +22,22 @@ public class WasIstNeuSeiteTests : IDisposable
     // und ihre Vorgaengerin.
     private const string MitAbschnitt = "1.4.0";
     private const string Davor = "1.3.1";
+
+    /// <summary>
+    /// Die NEUESTE Fassung, zu der die echte Aenderungsliste einen
+    /// Abschnitt hat - berechnet und nicht eingetragen.
+    ///
+    /// Der Unterschied ist wichtig: hier stand einmal die Zahl 1.4.0, weil
+    /// das damals die neueste war. Mit der naechsten Veroeffentlichung war
+    /// sie es nicht mehr, und der Test darunter fiel - nicht weil etwas
+    /// kaputt war, sondern weil zwischen ihr und der Phantasiefassung
+    /// plötzlich ein echter Abschnitt lag. Ein Test, der bei jeder
+    /// Veroeffentlichung rot wird, wird irgendwann angepasst statt gelesen.
+    /// </summary>
+    private static string Neueste => Changelog
+        .Lies(Changelog.Eingebettet())
+        .Max(eintrag => eintrag.Version)!
+        .ToString(3);
 
     private readonly DirectoryInfo _tempDir =
         Directory.CreateTempSubdirectory("ausgabenverwaltung-wasistneu-");
@@ -100,11 +117,15 @@ public class WasIstNeuSeiteTests : IDisposable
 
     // Version angehoben, aber kein Abschnitt geschrieben (CLAUDE.md,
     // Regel 15): still bleiben, nicht mit leerer Seite aufgehen.
+    //
+    // Ausgangspunkt ist die NEUESTE dokumentierte Fassung - nur dann liegt
+    // zwischen ihr und der Phantasiefassung darunter wirklich kein
+    // Abschnitt.
     [Fact]
     public void Eine_Fassung_ohne_Abschnitt_zeigt_keine_leere_Seite()
     {
         var speicher = Speicher;
-        speicher.Save(new AppSettings { LastSeenVersion = MitAbschnitt });
+        speicher.Save(new AppSettings { LastSeenVersion = Neueste });
 
         var seite = new WasIstNeuViewModel(speicher, "99.0.0");
 
