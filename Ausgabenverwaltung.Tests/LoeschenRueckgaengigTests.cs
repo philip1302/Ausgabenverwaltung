@@ -44,10 +44,18 @@ public class LoeschenRueckgaengigTests : IDisposable
         _annaId = _personen.Create("Anna", isSelf: false).Id;
     }
 
-    public void Dispose() => _connection.Dispose();
+    // Eigene Einstellungsdatei: die Liste merkt sich ihre Sortierung, und
+    // das darf nicht in der settings.json des Rechners landen.
+    private readonly TestEinstellungen _einstellungen = new();
+
+    public void Dispose()
+    {
+        _connection.Dispose();
+        _einstellungen.Dispose();
+    }
 
     private AusgabenlisteViewModel NeueListe() =>
-        new(_ausgaben, _kategorien, _personen, new WeakReferenceMessenger());
+        new(_ausgaben, _kategorien, _personen, _einstellungen.Store, new WeakReferenceMessenger());
 
     // Der Vorgabezeitraum der Liste ist das laufende Jahr - die
     // Testbuchungen liegen deshalb auf heute, damit sie in der Liste

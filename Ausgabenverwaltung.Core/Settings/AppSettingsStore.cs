@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
 using Ausgabenverwaltung.Core.Display;
+using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.OpenItems;
 
 namespace Ausgabenverwaltung.Core.Settings;
 
@@ -95,6 +97,20 @@ public sealed class AppSettingsStore
                 // hat den Wert nicht, und dann bleibt die Seite "Was ist
                 // neu" beim naechsten Start still (siehe Updates.WasIstNeu).
                 LastSeenVersion = LeerAlsNull(document.LastSeenVersion),
+
+                // Fehlt einer der vier Werte, gilt die Lage als nicht
+                // gemerkt - eine halbe Lage ist keine.
+                WindowPlacement = LiesFensterlage(document.WindowPlacement),
+
+                // Ein unbekannter oder fehlender Name faellt auf die
+                // Vorgabesortierung zurueck, genau wie beim Thema oben.
+                ExpenseListSortColumn = LiesAufzaehlung(
+                    document.ExpenseListSortColumn, ExpenseSortColumn.Datum),
+                ExpenseListSortAscending = document.ExpenseListSortAscending ?? false,
+
+                OpenItemsSortColumn = LiesAufzaehlung(
+                    document.OpenItemsSortColumn, OpenItemsSortColumn.Datum),
+                OpenItemsSortAscending = document.OpenItemsSortAscending ?? true,
             };
         }
         catch (Exception)
@@ -120,6 +136,22 @@ public sealed class AppSettingsStore
                 : null,
             KeepEntryValues = settings.KeepEntryValues,
             LastSeenVersion = settings.LastSeenVersion,
+
+            WindowPlacement = settings.WindowPlacement is { } lage
+                ? new PlacementDocument
+                {
+                    Left = lage.Left,
+                    Top = lage.Top,
+                    Width = lage.Width,
+                    Height = lage.Height,
+                    IsMaximized = lage.IsMaximized,
+                }
+                : null,
+
+            ExpenseListSortColumn = settings.ExpenseListSortColumn.ToString(),
+            ExpenseListSortAscending = settings.ExpenseListSortAscending,
+            OpenItemsSortColumn = settings.OpenItemsSortColumn.ToString(),
+            OpenItemsSortAscending = settings.OpenItemsSortAscending,
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -133,6 +165,39 @@ public sealed class AppSettingsStore
 
     private static string? LeerAlsNull(string? text)
         => string.IsNullOrWhiteSpace(text) ? null : text;
+
+    // Ein unbekannter Name (Datei aus einer neueren Fassung, von Hand
+    // verschrieben) faellt auf die Vorgabe zurueck, statt die ganze Datei
+    // zu verwerfen - dieselbe Nachsicht wie beim Thema.
+    private static T LiesAufzaehlung<T>(string? text, T vorgabe) where T : struct, Enum
+        => text is not null && Enum.TryParse<T>(text, out var wert) ? wert : vorgabe;
+
+    // Alle vier Zahlen muessen da sein. Fehlt eine, ist die Lage
+    // unbrauchbar: ein Fenster mit Position aber ohne Groesse (oder
+    // umgekehrt) waere schlechter als gar keine gemerkte Lage. Die
+    // Groessen werden hier NICHT beschnitten - das tut
+    // WindowPlacements.Normalize, damit dieselbe Pruefung auch fuer einen
+    // zur Laufzeit gebildeten Wert gilt.
+    private static WindowPlacement? LiesFensterlage(PlacementDocument? document)
+    {
+        if (document is null
+            || document.Left is not int links
+            || document.Top is not int oben
+            || document.Width is not double breite
+            || document.Height is not double hoehe)
+        {
+            return null;
+        }
+
+        return new WindowPlacement
+        {
+            Left = links,
+            Top = oben,
+            Width = breite,
+            Height = hoehe,
+            IsMaximized = document.IsMaximized ?? false,
+        };
+    }
 
     private static DateTime? ParseOrNull(string? text)
     {
@@ -170,5 +235,22 @@ public sealed class AppSettingsStore
         public string? LastUpdateCheckUtc { get; set; }
         public bool? KeepEntryValues { get; set; }
         public string? LastSeenVersion { get; set; }
+        public PlacementDocument? WindowPlacement { get; set; }
+        public string? ExpenseListSortColumn { get; set; }
+        public bool? ExpenseListSortAscending { get; set; }
+        public string? OpenItemsSortColumn { get; set; }
+        public bool? OpenItemsSortAscending { get; set; }
+    }
+
+    // Eigener Abschnitt in der Datei statt vier flacher Felder: die vier
+    // Zahlen gelten nur zusammen, und als eigener Block ist auch beim
+    // Hineinsehen von Hand zu erkennen, dass sie zusammengehoeren.
+    private sealed class PlacementDocument
+    {
+        public int? Left { get; set; }
+        public int? Top { get; set; }
+        public double? Width { get; set; }
+        public double? Height { get; set; }
+        public bool? IsMaximized { get; set; }
     }
 }

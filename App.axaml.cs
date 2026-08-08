@@ -142,6 +142,30 @@ public partial class App : Application
             DataContext = _services.GetRequiredService<MainViewModel>(),
         };
 
+        // Lage und Groesse aus der letzten Sitzung - noch VOR dem Zeigen,
+        // sonst springt das Fenster sichtbar an seinen Platz. Liegt die
+        // gemerkte Lage auf keinem vorhandenen Bildschirm mehr, oeffnet es
+        // zentriert (siehe Core.Display.WindowPlacements).
+        Fensterzustand.Verbinde(
+            hauptfenster,
+            settings.WindowPlacement,
+            lage =>
+            {
+                // Ausdruecklich still: das hier laeuft, waehrend die
+                // Anwendung schliesst. Ein Fehlerdialog in diesem Moment
+                // haelt das Beenden auf, und verloren geht nichts weiter
+                // als die Bequemlichkeit, dass das Fenster beim naechsten
+                // Mal wieder dort steht.
+                try
+                {
+                    settingsStore.Save(settingsStore.Load() with { WindowPlacement = lage });
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Current.Exception("Beim Speichern der Fensterlage", ex);
+                }
+            });
+
         desktop.MainWindow = hauptfenster;
 
         MeldeWiederherstellung();

@@ -1,4 +1,6 @@
 ﻿using Ausgabenverwaltung.Core.Display;
+using Ausgabenverwaltung.Core.Expenses;
+using Ausgabenverwaltung.Core.OpenItems;
 
 namespace Ausgabenverwaltung.Core.Settings;
 
@@ -93,4 +95,34 @@ public sealed record AppSettings
     /// sparen soll.
     /// </summary>
     public bool KeepEntryValues { get; init; }
+
+    /// <summary>
+    /// Lage und Groesse des Hauptfensters beim letzten Schliessen. NULL =
+    /// noch nichts gemerkt, dann oeffnet das Fenster wie beim allerersten
+    /// Start.
+    ///
+    /// Gilt beim naechsten Start nur, wenn die Lage noch auf einem
+    /// vorhandenen Bildschirm liegt - sonst wird zentriert geoeffnet (siehe
+    /// <see cref="WindowPlacements"/>).
+    /// </summary>
+    public WindowPlacement? WindowPlacement { get; init; }
+
+    /// <summary>
+    /// Sortierung der Ausgabenliste. Vorgabe Datum absteigend: die neuesten
+    /// Buchungen sind die, die man nach dem Erfassen nachsieht.
+    /// </summary>
+    public ExpenseSortColumn ExpenseListSortColumn { get; init; } = ExpenseSortColumn.Datum;
+
+    /// <summary>Richtung zu <see cref="ExpenseListSortColumn"/>.</summary>
+    public bool ExpenseListSortAscending { get; init; }
+
+    /// <summary>
+    /// Sortierung der Offene-Posten-Liste. Vorgabe Datum AUFSTEIGEND -
+    /// anders als in der Ausgabenliste, weil ein offener Posten mit dem
+    /// Alter dringender wird und deshalb oben stehen soll.
+    /// </summary>
+    public OpenItemsSortColumn OpenItemsSortColumn { get; init; } = OpenItemsSortColumn.Datum;
+
+    /// <summary>Richtung zu <see cref="OpenItemsSortColumn"/>.</summary>
+    public bool OpenItemsSortAscending { get; init; } = true;
 }

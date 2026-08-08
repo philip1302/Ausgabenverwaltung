@@ -1000,10 +1000,64 @@ der Filterleiste. Exportiert wird, was gefiltert ist — nicht alles.
   (Regel 7), wortgleich zum Export der Auswertung — derselbe Vorgang soll
   sich nicht an zwei Stellen anders verhalten.
 
-### [ ] 18. Fenstergröße, -position und Sortierung merken
+### [x] 18. Fenstergröße, -position und Sortierung merken
+
+**Erledigt in:** Fenster und Sortierung bleiben, wie man sie verlassen hat
+
 Nach `AppSettings` (dort steht `CategoryColumnWidth` schon). Beim Start
 prüfen, ob die Position noch auf einem vorhandenen Bildschirm liegt —
 sonst zentriert öffnen.
+
+**Umsetzung:**
+
+- **Die Entscheidung steckt in Core**, nicht in der Ansicht:
+  `Core/Display/WindowPlacement.cs` (Lage + `ScreenArea`) und
+  `WindowPlacements.cs` (`Normalize`, `IsOnScreen`). Der Fall, um den es
+  geht — Fenster auf den zweiten Bildschirm geschoben, Bildschirm
+  abgezogen — lässt sich in der Oberfläche nicht herstellen, in
+  `FensterlageTests` dagegen in einer Zeile. Eigener `ScreenArea`-Typ,
+  damit Core ohne die Oberflächen-Baugruppe auskommt.
+- **Geprüft wird ein Punkt kurz hinter der linken oberen Ecke**
+  (`GrabInset = 24`), nicht die Überlappung mit einem Bildschirm. Ein
+  Fenster, das nur mit dem rechten unteren Zipfel hereinragt, überlappt
+  zwar — hat aber keine greifbare Titelzeile und ist damit genauso
+  verloren wie eines, das ganz daneben liegt.
+- **Negative Koordinaten sind kein Ausschlussgrund.** Ein Bildschirm links
+  vom Hauptbildschirm hat negative X-Werte; die naheliegende Prüfung
+  „kleiner null ist falsch" hätte diesen Aufbau kaputt gemacht. Dafür gibt
+  es zwei Tests.
+- **Zwei Einheiten, bewusst getrennt:** Lage in physischen Pixeln (nur so
+  ist sie mit den Arbeitsflächen vergleichbar), Größe in
+  geräteunabhängigen Punkten. Wer beides in eine Einheit rechnen wollte,
+  bräuchte die Skalierung des Bildschirms, auf dem das Fenster steht — und
+  die kann beim nächsten Start eine andere sein.
+- **Maximiert wird getrennt gemerkt**, und der Normalzustand wird
+  fortlaufend nachgehalten (`Anzeige/Fensterzustand.cs`). Ein maximiertes
+  Fenster verrät seine normale Lage nicht: dort stehen die Maße des
+  Vollbilds. Wer erst beim Schließen liest, merkt sich ein
+  bildschirmgroßes Fenster, das sich nicht wiederherstellen lässt.
+- Nachgemessen, dass `Bounds` und `Width`/`Height` in Avalonia dieselbe
+  Größe sind — ein Unterschied von der Rahmenbreite hätte bedeutet, dass
+  das Fenster bei jedem Start ein paar Pixel schrumpft.
+- **Sortierung beider Listen**, getrennt gemerkt. Dafür ist
+  `OffenePostenSortSpalte` nach `Core/OpenItems/OpenItemsSortColumn.cs`
+  gewandert: eine Einstellung, deren Typ in der Oberfläche liegt, lässt
+  sich in `AppSettings` nicht ablegen, und die nachsichtige Umwandlung aus
+  der Datei gehört an die eine Stelle, die das für alle Einstellungen tut.
+- **„Filter zurücksetzen" lässt die Sortierung stehen** — sie ist kein
+  Filter, sondern die Leserichtung. Ein *Sprung* in die Liste setzt sie
+  dagegen auf Datum/absteigend zurück (bestehendes Verhalten), und auch
+  das wird gemerkt. Beides ist mit einem Test festgehalten, weil das
+  Merken die Frage erst aufwirft.
+- **Neu für die Tests:** `TestEinstellungen` — ein `AppSettingsStore` auf
+  einer wegwerfbaren Datei. Ohne ihn schrieben die ViewModel-Tests in die
+  echte `settings.json` des Rechners und hingen voneinander ab.
+
+**Nicht Teil der Umsetzung:** die Größe auf den neuen Bildschirm
+beschneiden. Wer von einem 4K-Bildschirm auf ein kleines Notebook wechselt,
+bekommt ein Fenster, das größer als der Bildschirm ist — unschön, aber
+bedienbar, weil es zentriert öffnet und sich ziehen lässt. Das ist ein
+eigener Punkt, wenn es auffällt.
 
 ### [ ] 19. Leerzustände mit Handlungsangebot
 Überall dort, wo heute nur ein grauer Satz steht („Noch keine Sicherung

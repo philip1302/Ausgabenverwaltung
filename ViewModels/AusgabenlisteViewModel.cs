@@ -12,6 +12,7 @@ using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.Reports;
+using Ausgabenverwaltung.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -34,6 +35,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     private readonly ExpenseRepository _expenseRepository;
     private readonly CategoryRepository _categoryRepository;
     private readonly PersonRepository _personRepository;
+    private readonly AppSettingsStore _settingsStore;
     private readonly IMessenger _messenger;
 
     // Unterdrueckt das Neuladen, solange mehrere Filterwerte auf einmal
@@ -208,6 +210,45 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(BemerkungHeaderText))]
     private bool _sortAufsteigend;
 
+    // Erst wenn der Konstruktor durch ist, wird eine Aenderung der
+    // Sortierung gemerkt. Sonst schriebe das Lesen aus den Einstellungen
+    // den gerade gelesenen Wert sofort wieder zurueck.
+    private bool _sortierungGemerkt;
+
+    // Beide Aenderungswege laufen hier zusammen: der Klick auf einen
+    // Spaltenkopf UND die Ruecksetzung auf Datum/absteigend in den
+    // Sprungmethoden und in "Filter zuruecksetzen". Beides ist eine
+    // Anwenderhandlung und soll den Neustart ueberstehen - deshalb an der
+    // Eigenschaft und nicht in den fuenf Aufrufstellen.
+    partial void OnSortSpalteChanged(ExpenseSortColumn value) => MerkeSortierung();
+
+    partial void OnSortAufsteigendChanged(bool value) => MerkeSortierung();
+
+    private void MerkeSortierung()
+    {
+        if (!_sortierungGemerkt)
+        {
+            return;
+        }
+
+        // Ausdruecklich still: ein Klick auf einen Spaltenkopf darf keinen
+        // Fehlerdialog nach sich ziehen. Fuer diese Sitzung gilt die
+        // Sortierung ohnehin; verloren geht hoechstens, dass sie den
+        // Neustart uebersteht.
+        try
+        {
+            _settingsStore.Save(_settingsStore.Load() with
+            {
+                ExpenseListSortColumn = SortSpalte,
+                ExpenseListSortAscending = SortAufsteigend,
+            });
+        }
+        catch (Exception ex)
+        {
+            AppLog.Current.Exception("Beim Speichern der Sortierung", ex);
+        }
+    }
+
     public string DatumHeaderText => KopfText("Datum", ExpenseSortColumn.Datum);
     public string KategorieHeaderText => KopfText("Kategorie", ExpenseSortColumn.Kategorie);
     public string BetragHeaderText => KopfText("Betrag", ExpenseSortColumn.Betrag);
@@ -343,17 +384,29 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         ExpenseRepository expenseRepository,
         CategoryRepository categoryRepository,
         PersonRepository personRepository,
+        AppSettingsStore settingsStore,
         IMessenger messenger)
     {
         _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
         _personRepository = personRepository;
+        _settingsStore = settingsStore;
         _messenger = messenger;
 
         _ladenGesperrt = true;
+
+        // Direkte Feldzuweisung: ueber die Eigenschaften wuerde
+        // MerkeSortierung den gerade gelesenen Wert sofort wieder
+        // zurueckschreiben (dasselbe Muster wie bei WerteBehalten in
+        // ErfassenViewModel).
+        var einstellungen = _settingsStore.Load();
+        _sortSpalte = einstellungen.ExpenseListSortColumn;
+        _sortAufsteigend = einstellungen.ExpenseListSortAscending;
+
         LadeAuswahllisten();
         SetzeVorgabeZeitraum();
         _ladenGesperrt = false;
+        _sortierungGemerkt = true;
 
         LadeDaten();
 

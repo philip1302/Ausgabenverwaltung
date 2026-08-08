@@ -15,6 +15,16 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Das Fenster öffnet wieder dort, wo es zuletzt stand, und in der Größe,
+  die es zuletzt hatte — maximiert bleibt maximiert. Steht die gemerkte
+  Stelle auf keinem angeschlossenen Bildschirm mehr, etwa weil der zweite
+  Monitor abgezogen wurde, öffnet das Fenster mittig auf dem vorhandenen.
+  Sonst wäre es unsichtbar und ließe sich nicht einmal zurückholen.
+- Auch die Sortierung bleibt erhalten: wer die Ausgabenliste nach Betrag
+  sortiert oder die offenen Posten nach der Zahl der Tage, findet sie beim
+  nächsten Start so wieder. Beide Listen merken sich das getrennt.
+  „Filter zurücksetzen" lässt die Sortierung bewusst stehen — sie ist kein
+  Filter, sondern die Leserichtung.
 - Die Knöpfe am Zeilenende stehen jetzt in jeder Zeile an derselben Stelle.
   Vorher richteten sie sich nach der Länge des Textes davor und wanderten
   dadurch von Zeile zu Zeile um einige Pixel: bei den offenen Posten

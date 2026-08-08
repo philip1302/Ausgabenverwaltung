@@ -124,6 +124,17 @@ public static class LogEvents
     public static string DatabaseCorrupt(string finding)
         => $"Integritaetspruefung der Datenbank NICHT bestanden: {finding}";
 
+    /// <summary>
+    /// Die gemerkte Fensterlage lag auf keinem vorhandenen Bildschirm mehr
+    /// und wurde verworfen; das Fenster ging zentriert auf. Bildschirm-
+    /// koordinaten sind keine Haushaltsdaten und duerfen mit (Regel 11) -
+    /// sie sind sogar der einzige Weg, hinterher zu verstehen, warum das
+    /// Fenster nicht dort war, wo es zuletzt stand.
+    /// </summary>
+    public static string WindowPlacementDiscarded(int left, int top)
+        => $"Gemerkte Fensterlage ({left}, {top}) liegt auf keinem vorhandenen "
+           + "Bildschirm und wurde verworfen. Das Fenster wurde zentriert geoeffnet.";
+
     public static string FirstStart()
         => "Erster Start: Grunddaten (eigene Person, Startkategorie) wurden angelegt.";
 

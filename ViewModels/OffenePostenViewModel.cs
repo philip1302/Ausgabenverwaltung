@@ -6,7 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.OpenItems;
+using Ausgabenverwaltung.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -27,6 +29,7 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     private static readonly TimeSpan RueckgaengigDauer = TimeSpan.FromSeconds(6);
 
     private readonly OpenItemsRepository _openItemsRepository;
+    private readonly AppSettingsStore _settingsStore;
     private readonly IMessenger _messenger;
     private CancellationTokenSource? _rueckgaengigCts;
     private IReadOnlyList<int> _rueckgaengigIds = Array.Empty<int>();
@@ -84,7 +87,7 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(BetragHeaderText))]
     [NotifyPropertyChangedFor(nameof(BemerkungHeaderText))]
     [NotifyPropertyChangedFor(nameof(TageOffenHeaderText))]
-    private OffenePostenSortSpalte _sortSpalte = OffenePostenSortSpalte.Datum;
+    private OpenItemsSortColumn _sortSpalte = OpenItemsSortColumn.Datum;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DatumHeaderText))]
@@ -94,16 +97,60 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(TageOffenHeaderText))]
     private bool _sortAufsteigend = true;
 
-    public string DatumHeaderText => KopfText("Datum", OffenePostenSortSpalte.Datum);
-    public string KategorieHeaderText => KopfText("Kategorie", OffenePostenSortSpalte.Kategorie);
-    public string BetragHeaderText => KopfText("Betrag", OffenePostenSortSpalte.Betrag);
-    public string BemerkungHeaderText => KopfText("Bemerkung", OffenePostenSortSpalte.Bemerkung);
-    public string TageOffenHeaderText => KopfText("Tage offen", OffenePostenSortSpalte.TageOffen);
+    // Erst wenn der Konstruktor durch ist, wird eine Aenderung gemerkt -
+    // sonst schriebe das Lesen aus den Einstellungen den gerade gelesenen
+    // Wert sofort wieder zurueck.
+    private bool _sortierungGemerkt;
 
-    public OffenePostenViewModel(OpenItemsRepository openItemsRepository, IMessenger messenger)
+    partial void OnSortSpalteChanged(OpenItemsSortColumn value) => MerkeSortierung();
+
+    partial void OnSortAufsteigendChanged(bool value) => MerkeSortierung();
+
+    private void MerkeSortierung()
+    {
+        if (!_sortierungGemerkt)
+        {
+            return;
+        }
+
+        // Ausdruecklich still, wie bei der Ausgabenliste: ein Klick auf
+        // einen Spaltenkopf darf keinen Fehlerdialog nach sich ziehen.
+        try
+        {
+            _settingsStore.Save(_settingsStore.Load() with
+            {
+                OpenItemsSortColumn = SortSpalte,
+                OpenItemsSortAscending = SortAufsteigend,
+            });
+        }
+        catch (Exception ex)
+        {
+            AppLog.Current.Exception("Beim Speichern der Sortierung", ex);
+        }
+    }
+
+    public string DatumHeaderText => KopfText("Datum", OpenItemsSortColumn.Datum);
+    public string KategorieHeaderText => KopfText("Kategorie", OpenItemsSortColumn.Kategorie);
+    public string BetragHeaderText => KopfText("Betrag", OpenItemsSortColumn.Betrag);
+    public string BemerkungHeaderText => KopfText("Bemerkung", OpenItemsSortColumn.Bemerkung);
+    public string TageOffenHeaderText => KopfText("Tage offen", OpenItemsSortColumn.TageOffen);
+
+    public OffenePostenViewModel(
+        OpenItemsRepository openItemsRepository,
+        AppSettingsStore settingsStore,
+        IMessenger messenger)
     {
         _openItemsRepository = openItemsRepository;
+        _settingsStore = settingsStore;
         _messenger = messenger;
+
+        // Direkte Feldzuweisung, sonst schreibt MerkeSortierung den gerade
+        // gelesenen Wert zurueck.
+        var einstellungen = _settingsStore.Load();
+        _sortSpalte = einstellungen.OpenItemsSortColumn;
+        _sortAufsteigend = einstellungen.OpenItemsSortAscending;
+        _sortierungGemerkt = true;
+
         LadeDaten();
 
         // Buchungsaenderungen aus anderen Bereichen (Anlegen in "Erfassen",
@@ -130,11 +177,11 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     {
         var neueSpalte = spalte switch
         {
-            "Datum" => OffenePostenSortSpalte.Datum,
-            "Kategorie" => OffenePostenSortSpalte.Kategorie,
-            "Betrag" => OffenePostenSortSpalte.Betrag,
-            "Bemerkung" => OffenePostenSortSpalte.Bemerkung,
-            "TageOffen" => OffenePostenSortSpalte.TageOffen,
+            "Datum" => OpenItemsSortColumn.Datum,
+            "Kategorie" => OpenItemsSortColumn.Kategorie,
+            "Betrag" => OpenItemsSortColumn.Betrag,
+            "Bemerkung" => OpenItemsSortColumn.Bemerkung,
+            "TageOffen" => OpenItemsSortColumn.TageOffen,
             _ => SortSpalte,
         };
 
@@ -423,11 +470,11 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     {
         Func<OffenerPostenZeile, IComparable> schluessel = SortSpalte switch
         {
-            OffenePostenSortSpalte.Datum => z => z.ExpenseDate,
-            OffenePostenSortSpalte.Kategorie => z => z.CategoryFullPath,
-            OffenePostenSortSpalte.Betrag => z => z.AmountCents,
-            OffenePostenSortSpalte.Bemerkung => z => z.Note ?? string.Empty,
-            OffenePostenSortSpalte.TageOffen => z => z.TageOffen,
+            OpenItemsSortColumn.Datum => z => z.ExpenseDate,
+            OpenItemsSortColumn.Kategorie => z => z.CategoryFullPath,
+            OpenItemsSortColumn.Betrag => z => z.AmountCents,
+            OpenItemsSortColumn.Bemerkung => z => z.Note ?? string.Empty,
+            OpenItemsSortColumn.TageOffen => z => z.TageOffen,
             _ => z => z.ExpenseDate,
         };
 
@@ -452,6 +499,6 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
         GesamtsummeText = EuroText.Format(summeCents);
     }
 
-    private string KopfText(string bezeichnung, OffenePostenSortSpalte spalte) =>
+    private string KopfText(string bezeichnung, OpenItemsSortColumn spalte) =>
         SortSpalte == spalte ? $"{bezeichnung} {(SortAufsteigend ? "▲" : "▼")}" : bezeichnung;
 }
