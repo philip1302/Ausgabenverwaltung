@@ -3,7 +3,22 @@
              x:Class="Ausgabenverwaltung.App"
              xmlns:local="using:Ausgabenverwaltung"
              xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
+             Name="Ausgabenverwaltung"
              RequestedThemeVariant="Default">
+             <!-- Name: der Anwendungsname, den macOS im Menue oben links
+                  neben dem Apfel zeigt. Ohne diese Angabe steht dort der
+                  Name des Oberflaechen-Baukastens - der Fenstertitel
+                  (MainWindow) und das Bundle (CFBundleName, von
+                  publish.ps1 geschrieben) sind davon unberuehrt und waren
+                  immer richtig, weshalb der Fehler nur auf einem Mac
+                  auffiel.
+
+                  Auf Windows und Linux ist die Zeile ohne sichtbare
+                  Wirkung. Sie sieht deshalb auf dem Entwicklungsrechner
+                  wie ein ueberfluessiger Wert aus - das ist der Grund fuer
+                  diesen Kommentar und fuer den Test in
+                  AnwendungsnameTests, der sie festhaelt. -->
+
              <!-- "Default" ThemeVariant folgt der Systemvorgabe. Zur Laufzeit
                   gewaehlt wird "Light"/"Dark"/"Default" ueber
                   DarstellungViewModel (UI/UX Redesign, Verwaltung / Darstellung,

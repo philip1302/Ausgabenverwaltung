@@ -1414,7 +1414,21 @@ niemand mehr findet.
 
 ---
 
-### [ ] 22. Auf macOS heißt die Anwendung „Avalonia"
+### [x] 22. Auf macOS heißt die Anwendung „Avalonia"
+
+**Erledigt in:** Der Anwendungsname stimmt auf macOS, die Filterleiste bricht um
+
+**Umsetzung:** `Name="Ausgabenverwaltung"` am `<Application>`-Element, mit
+Kommentar. Der vorgeschlagene Test, der `Application.Current.Name` nach
+dem Laden liest, **geht nicht**: dafür müsste App.axaml geladen werden,
+und das verlangt eine Fensterplattform (`Unable to locate
+'Avalonia.Platform.ICursorFactory'`); auch der Umweg über
+`AssetLoader` scheitert daran. Möglich wäre es nur mit
+`Avalonia.Headless` als zusätzlicher Abhängigkeit der Testbaugruppe — für
+eine einzelne Angabe zu viel. `AnwendungsnameTests` prüft deshalb das
+**Attribut am Wurzelelement der XAML-Quelle** (nicht bloß einen Textfund),
+und ein zweiter Test hält daneben fest, dass der Fenstertitel etwas
+anderes ist und nie falsch war.
 
 **Ziel:** Die Anwendung heißt überall „Ausgabenverwaltung" — auch im
 Menü oben links neben dem Apfel.
@@ -1451,7 +1465,35 @@ Entwicklungsrechner nichts zu tun scheint.
 
 ---
 
-### [ ] 23. Die Filterleiste bricht nicht um und läuft aus ihrer Karte heraus
+### [x] 23. Die Filterleiste bricht nicht um und läuft aus ihrer Karte heraus
+
+**Erledigt in:** Der Anwendungsname stimmt auf macOS, die Filterleiste bricht um
+
+**Umsetzung:**
+
+- Beide Reihen in beiden Ansichten sind jetzt `WrapPanel` mit
+  `ItemSpacing`/`LineSpacing` — die gibt es in Avalonia 12.1, nachgesehen
+  statt vermutet, sonst hätte es Ränder an jedem Kind gebraucht.
+- **Zwei Reihen bleiben zwei Reihen.** Der Punkt schlug vor zu prüfen, ob
+  ein einziges `WrapPanel` über alle Gruppen ruhiger wäre — ist es nicht:
+  bei breitem Fenster stünden Zeitraum und Sachfilter in einer langen
+  Reihe durcheinander, und die gewachsene Aufteilung ginge verloren. Der
+  Überlauf entsteht *innerhalb* einer Reihe, also genügt es, wenn jede für
+  sich umbricht.
+- **Die festen Breiten bleiben.** Der Vorschlag, `Width` der
+  Kategorienauswahl zu einer `MaxWidth` zu machen, wäre ein Rückschritt:
+  ohne feste Breite bemisst sich der Knopf am aktuellen Text („Alle
+  Kategorien" gegen „3 Kategorien") und änderte seine Breite bei jeder
+  Auswahl. Nötig ist es auch nicht — die breiteste Gruppe misst 260, und
+  das Fenster ist mindestens 800 breit (Punkt 18).
+- Ein Kommentar, der das Höhenverhalten des waagerechten StackPanels
+  erklärte, ist mitgezogen worden: er beschrieb ein Steuerelement, das
+  dort nicht mehr steht. Das Verhalten selbst bleibt, `WrapPanel` dehnt
+  seine Kinder ebenso auf die Höhe der höchsten je Reihe.
+
+**Nicht nachweisbar mit `dotnet test`:** reines Layoutverhalten. Zu prüfen
+in der laufenden Anwendung, in drei Fensterbreiten und zusätzlich bei
+Schriftstufe „Sehr groß".
 
 **Ziel:** Die Filter bleiben in ihrer Karte, egal wie schmal das Fenster
 ist — und wenn sie nicht mehr nebeneinander passen, stehen sie

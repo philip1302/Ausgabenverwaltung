@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ausgabenverwaltung.ViewModels"
              xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
@@ -101,16 +101,23 @@
                     <!-- Zeitraum
 
                          Jede Spalte ist ein Raster "Beschriftung, Rest"
-                         statt eines StackPanel: in einem waagerechten
-                         StackPanel dehnen sich die Kinder auf die Hoehe des
-                         hoechsten: hier also auf die der Schnellwahl-Zeile.
-                         Die Sternzeile gibt diese Hoehe an das Eingabefeld
-                         weiter, das damit exakt so hoch wird wie die
-                         Schaltflaechen daneben. Ein StackPanel gaebe jedem
-                         Kind nur seine Wunschhoehe, und eine fest
-                         eingetragene Hoehe waere bei grosser Schrift wieder
-                         falsch (Regel 9). -->
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                         und kein StackPanel: die Umbruchreihe dehnt ihre
+                         Kinder auf die Hoehe der hoechsten - hier also auf
+                         die der Schnellwahl-Zeile. Die Sternzeile gibt
+                         diese Hoehe an das Eingabefeld weiter, das damit
+                         exakt so hoch wird wie die Schaltflaechen daneben.
+                         Ein StackPanel gaebe jedem Kind nur seine
+                         Wunschhoehe, und eine fest eingetragene Hoehe waere
+                         bei grosser Schrift wieder falsch (Regel 9).
+
+                         WrapPanel und nicht StackPanel: ein waagerechtes
+                         StackPanel misst seine Kinder mit unbegrenzter
+                         Breite und stellt sie in EINE Reihe. Wird das
+                         Fenster schmaler, laufen die hinteren Filter ueber
+                         den rechten Rand der Karte hinaus - dieselbe
+                         Aenderung wie in der Ausgabenliste, denn es ist
+                         dieselbe Leiste. -->
+                    <WrapPanel ItemSpacing="8" LineSpacing="8">
                         <Grid RowDefinitions="Auto,*">
                             <TextBlock Grid.Row="0" Text="Von" Classes="filterbeschriftung" />
                             <TextBox Grid.Row="1" Text="{Binding VonText}"
@@ -164,10 +171,12 @@
                                    Classes="fehler"
                                    VerticalAlignment="Bottom"
                                    Margin="4,0,0,6" />
-                    </StackPanel>
+                    </WrapPanel>
 
-                    <!-- Kategorie, Gruppierung, Zahler, Status, Sicht, Suche -->
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                    <!-- Kategorie, Gruppierung, Zahler, Status, Sicht, Suche.
+                         Zweite Reihe wie in der Ausgabenliste; jede bricht
+                         fuer sich um. -->
+                    <WrapPanel ItemSpacing="8" LineSpacing="8">
                         <StackPanel>
                             <TextBlock Text="Kategorien" Classes="filterbeschriftung" />
                             <Button x:Name="KategorieAuswahl"
@@ -275,7 +284,7 @@
                                      ToolTip.Tip="Durchsucht Bemerkung, Kategorie und Zahler. Bei der Kategorie zählt der ganze Pfad: „Wohnen“ findet auch „Wohnen › Nebenkosten › Strom“."
                                      PlaceholderText="Bemerkung, Kategorie, Zahler…" />
                         </StackPanel>
-                    </StackPanel>
+                    </WrapPanel>
                 </StackPanel>
             </Border>
 

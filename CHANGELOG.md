@@ -15,6 +15,14 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Die Filterleiste in Ausgabenliste und Auswertung bricht jetzt um, wenn
+  das Fenster schmaler wird. Vorher liefen die hinteren Filter aus ihrer
+  Karte heraus über den rechten Rand hinweg und waren dort auch nicht mehr
+  erreichbar — anders als die Tabelle darunter ließ sich die Leiste nicht
+  seitlich schieben. Zusammengehörende Felder wie „Von" und „Bis" bleiben
+  dabei beieinander.
+- Auf einem Mac steht im Menü oben links jetzt „Ausgabenverwaltung" statt
+  des Namens des verwendeten Baukastens.
 - Der Hinweis auf eine neue Fassung sagt jetzt, was zu tun ist, und der
   Knopf tut es auch: „Jetzt neu starten" schließt die Anwendung und öffnet
   sie sofort wieder. Vorher hieß er „Jetzt beenden" und beendete nur — wer
