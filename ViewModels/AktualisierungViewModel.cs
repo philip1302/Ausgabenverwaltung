@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Ausgabenverwaltung.Core.Errors;
 using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.Settings;
+using Ausgabenverwaltung.Core.Startup;
 using Ausgabenverwaltung.Core.Updates;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -50,10 +52,23 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
     /// fuehrt der Weg auf die Veroeffentlichungsseite.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NurSeiteAufrufbar))]
     private bool _neustartMoeglich;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NurSeiteAufrufbar))]
     private bool _seiteAufrufbar;
+
+    /// <summary>
+    /// Die Veroeffentlichungsseite ist der EINZIGE Weg - es liegt also
+    /// nichts bereit, das ein Neustart uebernehmen koennte.
+    ///
+    /// Das Band zeigt je Lage genau einen hervorgehobenen Knopf. Liegt
+    /// eine Fassung bereit, ist das der Neustart; sonst die Seite. Beide
+    /// nebeneinander sahen aus wie eine Wahl zwischen gleichwertigen
+    /// Wegen, obwohl sie zu verschiedenen Lagen gehoeren.
+    /// </summary>
+    public bool NurSeiteAufrufbar => SeiteAufrufbar && !NeustartMoeglich;
 
     public bool BandSichtbar => BandText is not null;
 
@@ -197,7 +212,14 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
 
     private void ZeigeHinweis(string version, UpdateHindernis hindernis)
     {
-        BandText = UpdateText.NurHinweis(version, hindernis);
+        // Der Dateiname fuer dieses System kommt aus derselben Stelle, die
+        // ihn auch beim Suchen benutzt - so kann die Anleitung nie eine
+        // andere Datei nennen als die, die tatsaechlich gilt.
+        BandText = UpdateText.NurHinweis(
+            version,
+            hindernis,
+            UpdatePlatform.AssetName(),
+            istBundle: RuntimeInformation.IsOSPlatform(OSPlatform.OSX));
         NeustartMoeglich = false;
         SeiteAufrufbar = _seitenAdresse is not null;
     }
@@ -248,14 +270,37 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
     private void Schliessen() => BandText = null;
 
     /// <summary>
-    /// Beendet die Anwendung, damit die bereitgelegte Fassung beim
-    /// naechsten Start uebernommen wird. Bewusst kein Selbst-Neustart:
-    /// der Austausch braucht einen Prozess, der die Programmdatei nicht
-    /// mehr benutzt, und den gibt es erst nach dem Beenden.
+    /// Startet die Anwendung neu, damit die bereitgelegte Fassung
+    /// uebernommen wird.
+    ///
+    /// Hier stand einmal "Jetzt beenden" und die Begruendung, ein
+    /// Selbstneustart sei nicht moeglich: der Austausch brauche einen
+    /// Prozess, der die Programmdatei nicht mehr benutzt. Das stimmt
+    /// weiterhin - nur gibt es diesen Prozess inzwischen. Der Nachfolger
+    /// wartet ueber <see cref="Neustart.WarteAufVorgaenger"/> auf das Ende
+    /// des Vorgaengers und tauscht erst danach; genau so verfaehrt
+    /// <see cref="UpdateInstaller.StarteNeuenProzess"/> nach einem
+    /// gelungenen Austausch schon lange.
+    ///
+    /// Der Unterschied fuer den Anwender ist der Punkt: der Text daneben
+    /// versprach einen Neustart, der Knopf beendete nur - und wer danach
+    /// vor einem geschlossenen Programm sitzt, haelt das fuer einen
+    /// Fehler.
+    ///
+    /// Zuerst den Nachfolger starten, dann selbst enden. Laesst sich
+    /// keiner starten, endet hier NICHTS: sonst waere die Anwendung weg,
+    /// und die Aktualisierung haette sie gekostet.
     /// </summary>
     [RelayCommand]
-    private void JetztBeenden()
+    private void JetztNeuStarten()
     {
+        if (!Neustart.StarteSichSelbst())
+        {
+            BandText = UpdateText.NeustartGescheitert();
+            NeustartMoeglich = false;
+            return;
+        }
+
         if (Avalonia.Application.Current?.ApplicationLifetime
             is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
         {

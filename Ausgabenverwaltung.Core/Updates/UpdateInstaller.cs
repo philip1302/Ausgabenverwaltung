@@ -98,13 +98,21 @@ public static class UpdateInstaller
     }
 
     /// <summary>
-    /// Entfernt die beiseitegelegte alte Fassung. Beim ersten Start nach
-    /// einem Austausch kann sie noch gesperrt sein, weil der Vorgaenger
-    /// gerade erst endet - dann bleibt sie liegen und der naechste Start
-    /// versucht es erneut. Deshalb still und ohne Aufhebens.
+    /// Entfernt die Reste eines vorangegangenen Austauschs: die
+    /// beiseitegelegte alte Fassung und, was ein abgebrochenes Laden
+    /// liegen liess (siehe <see cref="UpdateStaging.RestEndungen"/>).
+    ///
+    /// Beim ersten Start nach einem Austausch ist die alte Fassung noch
+    /// einen Augenblick gesperrt, weil der Vorgaenger gerade erst endete -
+    /// deshalb raeumt <see cref="UpdateStaging.LoescheHartnaeckig"/>
+    /// dahinter mit mehreren Versuchen. Ein einziger traf genau in diese
+    /// Sperre und liess die Datei sichtbar liegen, oft ueber Wochen.
+    ///
+    /// Die vorbereitete Fassung selbst (<c>.neu</c>) fasst diese Methode
+    /// NICHT an - sie ist der Grund, warum ueberhaupt neu gestartet wurde.
     /// </summary>
     public static void RaeumeAlteAuf(string zielPfad)
-        => UpdateStaging.LoescheStill(UpdateStaging.AltPfad(zielPfad));
+        => UpdateStaging.RaeumeReste(zielPfad);
 
     /// <summary>
     /// Uebernimmt eine vorbereitete Fassung, falls eine bereitliegt und
@@ -160,7 +168,7 @@ public static class UpdateInstaller
 
             // Ein Rest vom vorletzten Mal wuerde das Umbenennen scheitern
             // lassen.
-            UpdateStaging.LoescheStill(alt);
+            UpdateStaging.LoescheHartnaeckig(alt);
 
             // Der eigentliche Austausch: zwei Umbenennungen innerhalb
             // desselben Ordners. Zwischen ihnen liegt der einzige
@@ -168,7 +176,26 @@ public static class UpdateInstaller
             // Programmdatei. Deshalb der Umweg ueber ".alt" statt eines
             // Loeschens: die alte Fassung ist bis zuletzt vorhanden und
             // liesse sich von Hand zurueckbenennen.
+            //
+            // Die REIHENFOLGE des Versteckens gehoert zum Austausch dazu.
+            // Sie ist so gewaehlt, dass nie zwei sichtbare Programmdateien
+            // nebeneinander liegen:
+            //
+            //   1. exe      -> exe.alt
+            //   2. exe.alt  verstecken
+            //   3. exe.neu  -> exe          (kommt versteckt aus dem Laden)
+            //   4. exe      sichtbar machen
+            //
+            // Andersherum - erst die neue zeigen, dann die alte
+            // verstecken - staende genau dazwischen zweimal fast derselbe
+            // Name im Ordner, und das ist der Zustand, den der ganze
+            // Aufwand hier abschafft. So entsteht stattdessen ein
+            // Augenblick, in dem GAR KEINE Programmdatei zu sehen ist. Das
+            // ist die bessere der beiden Moeglichkeiten: es dauert zwei
+            // Umbenennungen, liegt im Start vor dem ersten Fenster, und
+            // "kurz nichts" versteht jeder - "drei fast gleiche" niemand.
             Bewege(zielPfad, alt);
+            UpdateStaging.Verstecke(alt);
 
             try
             {
@@ -177,10 +204,15 @@ public static class UpdateInstaller
             catch (Exception)
             {
                 // Der zweite Schritt ging schief - die alte Fassung
-                // zurueckholen, sonst startet gar nichts mehr.
+                // zurueckholen, sonst startet gar nichts mehr. Und sie
+                // wieder sichtbar machen: eine versteckte Programmdatei
+                // waere schlimmer als ein Rest zu viel.
                 Bewege(alt, zielPfad);
+                UpdateStaging.Zeige(zielPfad);
                 throw;
             }
+
+            UpdateStaging.Zeige(zielPfad);
 
             UpdateStaging.LoescheStill(UpdateStaging.ZettelPfad(zielPfad));
 

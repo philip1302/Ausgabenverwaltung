@@ -25,12 +25,28 @@ public static class UpdateText
     public static string Bereitgelegt(string version)
     {
         return $"Die neue Fassung {version} wurde geladen und geprüft. "
-            + "Sie wird beim nächsten Start der Anwendung übernommen — "
-            + "bis dahin läuft alles unverändert weiter. "
             + "Ihre Daten sind davon nicht betroffen: Buchungen, Sicherungen und "
             + "Einstellungen liegen getrennt von der Programmdatei und bleiben, "
-            + "wo sie sind. "
-            + "Wer nicht warten möchte, startet die Anwendung gleich neu.";
+            + "wo sie sind.\n\n"
+            + "„Jetzt neu starten“ übernimmt sie sofort — die Anwendung schließt "
+            + "sich und öffnet sich gleich wieder, danach steht einmalig, was sich "
+            + "geändert hat. Wer gerade mitten in etwas ist, schließt dieses Band "
+            + "einfach: übernommen wird sie dann beim nächsten Start von selbst, "
+            + "und bis dahin läuft alles unverändert weiter.";
+    }
+
+    /// <summary>
+    /// Der Neustart liess sich nicht ausloesen. Wichtig ist hier die
+    /// Entwarnung: die geladene Fassung ist NICHT verloren, sie wartet
+    /// weiter - der Anwender muss nur selbst schliessen und oeffnen.
+    /// </summary>
+    public static string NeustartGescheitert()
+    {
+        return "Die Anwendung ließ sich nicht von selbst neu starten.\n\n"
+            + "Die geladene Fassung liegt weiterhin bereit und wird übernommen, "
+            + "sobald die Anwendung das nächste Mal gestartet wird — bitte dazu "
+            + "einmal schließen und wieder öffnen. Ihre Daten sind unverändert, "
+            + "und es ist nichts verloren gegangen.";
     }
 
     /// <summary>
@@ -38,7 +54,19 @@ public static class UpdateText
     /// uebernehmen - fehlende Datei fuer diese Plattform, fehlende
     /// Pruefsumme oder ein schreibgeschuetzter Programmordner.
     /// </summary>
-    public static string NurHinweis(string version, UpdateHindernis hindernis)
+    /// <param name="dateiname">
+    /// Die Datei, die auf der Veroeffentlichungsseite fuer dieses System
+    /// gilt (siehe <see cref="Updates.UpdatePlatform.AssetName"/>).
+    /// <c>null</c>, wenn es fuer dieses System gar keine gibt - dann
+    /// entfaellt die Anleitung, denn es waere nichts zu holen.
+    /// </param>
+    /// <param name="istBundle">
+    /// Unter macOS wird kein Programm<i>datei</i> ersetzt, sondern ein
+    /// ganzes Bundle. Der Unterschied gehoert in die Anleitung, sonst
+    /// sucht dort jemand nach einer .exe.
+    /// </param>
+    public static string NurHinweis(
+        string version, UpdateHindernis hindernis, string? dateiname = null, bool istBundle = false)
     {
         var kopf = $"Es gibt eine neuere Fassung: {version}.";
 
@@ -60,11 +88,32 @@ public static class UpdateText
             _ => "Sie lässt sich hier nicht selbst einspielen.",
         };
 
-        return kopf + " " + erklaerung + "\n\n"
-            + "Die Anwendung läuft in der bisherigen Fassung ganz normal weiter, "
-            + "es wurde nichts verändert. "
-            + "Wer aktualisieren möchte, lädt die neue Fassung von der "
-            + "Veröffentlichungsseite und ersetzt die Programmdatei von Hand.";
+        var zustand = "Die Anwendung läuft in der bisherigen Fassung ganz normal "
+            + "weiter, es wurde nichts verändert.";
+
+        // Ohne Datei fuer dieses System gibt es nichts anzuleiten - eine
+        // Schrittfolge, an deren Ende nichts steht, ist schlimmer als
+        // keine.
+        if (dateiname is null)
+        {
+            return kopf + " " + erklaerung + "\n\n" + zustand;
+        }
+
+        var was = istBundle ? "das Programm" : "die Programmdatei";
+        var wohin = istBundle
+            ? "in den Programme-Ordner ziehen und das dortige ersetzen"
+            : "in den Ordner der Anwendung kopieren und die dortige ersetzen";
+
+        // Nummerierte Schritte statt eines Satzes, und mit dem KONKRETEN
+        // Dateinamen: "die passende Datei" laesst genau die Frage offen,
+        // die auf einer Seite mit drei Dateien im Weg steht.
+        return kopf + " " + erklaerung + "\n\n" + zustand + "\n\n"
+            + "Von Hand geht es so:\n"
+            + "1. Anwendung schließen.\n"
+            + $"2. Auf der Veröffentlichungsseite „{dateiname}“ herunterladen "
+            + "und entpacken.\n"
+            + $"3. {char.ToUpperInvariant(was[0]) + was[1..]} daraus {wohin}.\n"
+            + "4. Anwendung wieder starten.";
     }
 
     /// <summary>

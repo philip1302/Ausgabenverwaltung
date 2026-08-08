@@ -59,24 +59,40 @@
                 CornerRadius="0"
                 BorderThickness="0,0,0,1"
                 IsVisible="{Binding Aktualisierung.BandSichtbar}">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+            <!-- Genau EIN hervorgehobener Knopf je Lage. Vorher standen
+                 hier drei nebeneinander — „Veröffentlichungsseite",
+                 „Jetzt beenden" (hervorgehoben) und „Schließen" —, und
+                 der auffälligste war der, der die Anwendung beendet, auf
+                 einem Band, das gleichzeitig beteuert, es laufe alles
+                 weiter. Die beiden ersten gehören zu VERSCHIEDENEN Lagen:
+                 liegt eine Fassung bereit, führt der Weg über den
+                 Neustart; lässt sie sich nicht selbst einspielen, über die
+                 Veröffentlichungsseite. Beide zugleich zu zeigen war der
+                 Grund, warum das Band wie eine Wahl unter drei
+                 gleichwertigen Wegen aussah. -->
+            <Grid ColumnDefinitions="*,Auto,Auto">
                 <TextBlock Grid.Column="0"
                            Text="{Binding Aktualisierung.BandText}"
                            TextWrapping="Wrap"
                            VerticalAlignment="Center" />
                 <Button Grid.Column="1"
-                        Classes="secondary"
-                        Content="Veröffentlichungsseite"
-                        IsVisible="{Binding Aktualisierung.SeiteAufrufbar}"
-                        Command="{Binding Aktualisierung.SeiteOeffnenCommand}" />
-                <Button Grid.Column="2"
                         Classes="primary"
-                        Content="Jetzt beenden"
+                        Content="Jetzt neu starten"
                         IsVisible="{Binding Aktualisierung.NeustartMoeglich}"
-                        Command="{Binding Aktualisierung.JetztBeendenCommand}" />
-                <Button Grid.Column="3" Classes="ghost"
-                        Content="Schließen"
-                        Command="{Binding Aktualisierung.SchliessenCommand}" />
+                        ToolTip.Tip="Schließt die Anwendung und öffnet sie sofort wieder — dabei wird die neue Fassung übernommen."
+                        Command="{Binding Aktualisierung.JetztNeuStartenCommand}"
+                        VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Classes="primary"
+                        Content="Veröffentlichungsseite"
+                        IsVisible="{Binding Aktualisierung.NurSeiteAufrufbar}"
+                        Command="{Binding Aktualisierung.SeiteOeffnenCommand}"
+                        VerticalAlignment="Center" />
+                <Button Grid.Column="2" Classes="ghost"
+                        Content="Später"
+                        ToolTip.Tip="Blendet den Hinweis aus. Eine bereitliegende Fassung wird beim nächsten Start trotzdem übernommen."
+                        Command="{Binding Aktualisierung.SchliessenCommand}"
+                        VerticalAlignment="Center" />
             </Grid>
         </Border>
 

@@ -98,10 +98,19 @@ public class MeldungsGrundsaetzeTests
         Nimm("Update/Bereitgelegt", UpdateText.Bereitgelegt("1.2.0"));
         Nimm("Update/Gescheitert", UpdateText.AustauschGescheitert("1.2.0"));
         Nimm("Update/WasIstNeu", UpdateText.WasIstNeuEinleitung("1.2.0"));
+        Nimm("Update/NeustartGescheitert", UpdateText.NeustartGescheitert());
 
         foreach (var hindernis in Enum.GetValues<UpdateHindernis>())
         {
+            // Alle drei Auspraegungen: ohne Anleitung (fuer dieses System
+            // gibt es keine Datei), mit Programmdatei und mit Bundle. Die
+            // Anleitung ist der laengste Teil des Textes - sie ungeprueft
+            // zu lassen hiesse, gerade das Neue nicht zu pruefen.
             Nimm($"Update/Hinweis/{hindernis}", UpdateText.NurHinweis("1.2.0", hindernis));
+            Nimm($"Update/HinweisDatei/{hindernis}", UpdateText.NurHinweis(
+                "1.2.0", hindernis, "Ausgabenverwaltung-win-x64.zip"));
+            Nimm($"Update/HinweisBundle/{hindernis}", UpdateText.NurHinweis(
+                "1.2.0", hindernis, "Ausgabenverwaltung-osx-arm64.tar.gz", istBundle: true));
         }
 
         return daten;

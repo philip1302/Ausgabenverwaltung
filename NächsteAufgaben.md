@@ -1151,7 +1151,36 @@ Stattdessen:
 
 ## Batch 5 — Was beim Benutzen aufgefallen ist (Punkte 21–23)
 
-### [ ] 21. Der Aktualisierungsvorgang ist verwirrend — Band und Dateireste
+### [x] 21. Der Aktualisierungsvorgang ist verwirrend — Band und Dateireste
+
+**Erledigt in:** Die Aktualisierung sagt was zu tun ist und raeumt hinter sich auf
+
+**Abweichungen und Funde bei der Umsetzung:**
+
+- **Ein Fehler wäre fast entstanden:** „beim Start alle Endungen räumen"
+  hätte eine **gültige wartende** Vorbereitung (`.neu` + `.neu.json`)
+  gelöscht, bevor sie eingespielt werden kann — die Aktualisierung hätte
+  dann nie stattgefunden, egal wie oft der Anwender neu startet. Deshalb
+  jetzt zwei Listen: `AlleEndungen` (die Zusicherung für die Tests) und
+  `RestEndungen` (was beim Start weg darf: `.alt`, `.teil`,
+  `.auspacken`). Um `.neu` kümmert sich der Austausch selbst. Ein Test
+  hält das fest.
+- `.teil` und `.auspacken` hießen vorher nur lokal in `UpdateDownload` so;
+  sie stehen jetzt als Endungen in `UpdateStaging` und werden dadurch
+  überhaupt erst beim Start geräumt.
+- **Das Verstecken ist nicht nachweisbar in dieser Umgebung.** Die beiden
+  Tests dazu (`Waehrend_des_Austauschs_ist_hoechstens_eine_Datei_sichtbar`,
+  `Die_neue_Programmdatei_ist_nach_dem_Austausch_sichtbar`) tragen
+  `[WindowsOnlyFact]` und werden hier übersprungen — sie laufen im
+  Release-Workflow, der auf `windows-latest` baut. Ob
+  `SetFileAttributes` auf der **laufenden** Programmdatei durchgeht, ist
+  damit weiterhin offen; scheitert es, bleibt die Datei sichtbar, der
+  Austausch läuft aber unverändert durch (`Verstecke` wirft nie). Der
+  Ausweichweg über einen versteckten Unterordner steht weiter unten als
+  Notiz.
+- Der Test prüft „**höchstens** eine sichtbare Datei", nicht „genau eine":
+  dass es zwischendurch keine gibt, ist der bewusst in Kauf genommene
+  Zustand und darf nicht versehentlich verboten werden.
 
 **Ziel:** Wer das Band liest, weiß danach genau, was er drücken soll und
 was dann passiert — und im Programmordner liegt hinterher genau eine

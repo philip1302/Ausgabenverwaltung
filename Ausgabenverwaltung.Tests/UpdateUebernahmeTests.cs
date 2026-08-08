@@ -261,4 +261,135 @@ public class UpdateUebernahmeTests : IDisposable
 
         Assert.Null(UpdateStaging.LiesZettel(ZielPfad));
     }
+
+    // ---------------- Was danach im Ordner liegt ----------------
+
+    /// <summary>
+    /// Der Ordner ist nach Austausch UND Aufraeumen leer bis auf die
+    /// Programmdatei. Das ist die eigentliche Zusicherung an den Anwender:
+    /// er soll nach einer Aktualisierung nicht vor drei Eintraegen mit
+    /// demselben Namensanfang stehen und raten, welcher das Programm ist.
+    ///
+    /// Die Endungen kommen aus <see cref="UpdateStaging.AlleEndungen"/>
+    /// und werden hier NICHT aufgezaehlt - sonst prueft dieser Test beim
+    /// Hinzufuegen einer sechsten nichts mehr.
+    /// </summary>
+    [Fact]
+    public void Nach_Austausch_und_Aufraeumen_liegt_nur_noch_die_Programmdatei_da()
+    {
+        LegeLaufendeFassungAn();
+        LegeVorbereitungAn();
+
+        // Reste, wie sie ein abgebrochenes Laden hinterlaesst.
+        File.WriteAllText(UpdateStaging.TeilPfad(ZielPfad), "halb geladen");
+        Directory.CreateDirectory(UpdateStaging.AuspackPfad(ZielPfad));
+
+        UpdateInstaller.TryUebernehmen(ZielPfad);
+        UpdateInstaller.RaeumeAlteAuf(ZielPfad);
+
+        foreach (var endung in UpdateStaging.AlleEndungen)
+        {
+            var pfad = ZielPfad + endung;
+
+            Assert.False(File.Exists(pfad), $"„{endung}“ liegt noch da.");
+            Assert.False(Directory.Exists(pfad), $"„{endung}“ liegt noch da.");
+        }
+
+        Assert.Equal("neue Fassung", File.ReadAllText(ZielPfad));
+    }
+
+    /// <summary>
+    /// Der Fehler, der beim Bauen dieser Aufraeumung fast entstanden waere:
+    /// wer beim Start ALLE Endungen wegraeumt, loescht die geladene
+    /// Fassung, bevor sie eingespielt werden kann - und die Aktualisierung
+    /// findet nie statt, egal wie oft der Anwender neu startet.
+    /// </summary>
+    [Fact]
+    public void Das_Aufraeumen_laesst_eine_wartende_Vorbereitung_stehen()
+    {
+        LegeLaufendeFassungAn();
+        LegeVorbereitungAn();
+
+        UpdateInstaller.RaeumeAlteAuf(ZielPfad);
+
+        Assert.True(File.Exists(UpdateStaging.NeuPfad(ZielPfad)));
+        Assert.NotNull(UpdateStaging.LiesZettel(ZielPfad));
+
+        // Und sie laesst sich danach noch uebernehmen.
+        Assert.Equal(
+            UpdateInstaller.Ergebnis.Uebernommen,
+            UpdateInstaller.TryUebernehmen(ZielPfad));
+    }
+
+    /// <summary>
+    /// Reste eines abgebrochenen Ladens hatten vorher gar keine
+    /// Aufraeumung beim Start: sie kannte nur der Lauf, der sie angelegt
+    /// hat, und blieben nach einem Absturz fuer immer liegen.
+    /// </summary>
+    [Fact]
+    public void Reste_eines_abgebrochenen_Ladens_werden_beim_Start_geraeumt()
+    {
+        LegeLaufendeFassungAn();
+        File.WriteAllText(UpdateStaging.TeilPfad(ZielPfad), "halb geladen");
+        Directory.CreateDirectory(UpdateStaging.AuspackPfad(ZielPfad));
+        File.WriteAllText(UpdateStaging.AltPfad(ZielPfad), "vorletzte Fassung");
+
+        UpdateInstaller.RaeumeAlteAuf(ZielPfad);
+
+        Assert.False(File.Exists(UpdateStaging.TeilPfad(ZielPfad)));
+        Assert.False(Directory.Exists(UpdateStaging.AuspackPfad(ZielPfad)));
+        Assert.False(File.Exists(UpdateStaging.AltPfad(ZielPfad)));
+        Assert.True(File.Exists(ZielPfad));
+    }
+
+    /// <summary>
+    /// Zu keinem Zeitpunkt des Austauschs duerfen ZWEI sichtbare Dateien
+    /// mit demselben Namensanfang nebeneinander liegen - das ist der
+    /// Zustand, der den Anwender ratlos macht. Dass es zwischendurch
+    /// KEINE sichtbare gibt, ist dagegen erlaubt und ausdruecklich in Kauf
+    /// genommen; deshalb prueft der Test auf "hoechstens eine" und nicht
+    /// auf "genau eine".
+    ///
+    /// Nur unter Windows: anderswo kennt das Dateisystem dieses Merkmal
+    /// nicht in dieser Form, dort sorgt allein das Raeumen fuer Ordnung.
+    /// </summary>
+    [WindowsOnlyFact]
+    public void Waehrend_des_Austauschs_ist_hoechstens_eine_Datei_sichtbar()
+    {
+        LegeLaufendeFassungAn();
+        LegeVorbereitungAn();
+
+        // So, wie das Laden sie hinterlaesst.
+        UpdateStaging.Verstecke(UpdateStaging.NeuPfad(ZielPfad));
+        UpdateStaging.Verstecke(UpdateStaging.ZettelPfad(ZielPfad));
+
+        Assert.Equal(1, SichtbareEintraege());
+
+        UpdateInstaller.TryUebernehmen(ZielPfad);
+
+        Assert.Equal(1, SichtbareEintraege());
+        Assert.Equal("neue Fassung", File.ReadAllText(ZielPfad));
+    }
+
+    /// <summary>
+    /// Nach dem Austausch ist die neue Programmdatei wieder sichtbar -
+    /// sie kam versteckt aus dem Laden, und eine unsichtbare Programmdatei
+    /// waere schlimmer als jeder Rest.
+    /// </summary>
+    [WindowsOnlyFact]
+    public void Die_neue_Programmdatei_ist_nach_dem_Austausch_sichtbar()
+    {
+        LegeLaufendeFassungAn();
+        LegeVorbereitungAn();
+        UpdateStaging.Verstecke(UpdateStaging.NeuPfad(ZielPfad));
+
+        UpdateInstaller.TryUebernehmen(ZielPfad);
+
+        Assert.False(File.GetAttributes(ZielPfad).HasFlag(FileAttributes.Hidden));
+    }
+
+    private int SichtbareEintraege()
+        => Directory
+            .EnumerateFileSystemEntries(_tempDir.FullName, "Ausgabenverwaltung.exe*")
+            .Count(pfad => !File.GetAttributes(pfad).HasFlag(FileAttributes.Hidden));
 }

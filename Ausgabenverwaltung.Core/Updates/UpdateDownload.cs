@@ -87,7 +87,10 @@ public static class UpdateDownload
         // Zuerst unter einem anderen Namen laden: waehrend des Ladens
         // darf nichts dastehen, das wie eine fertige Vorbereitung
         // aussieht. Erst nach bestandener Pruefung wird umbenannt.
-        var teil = neu + ".teil";
+        // Die Endung kommt aus UpdateStaging, damit sie beim Aufraeumen
+        // mitgezaehlt wird - vorher stand sie nur hier und wurde beim
+        // Start nie geraeumt.
+        var teil = UpdateStaging.TeilPfad(zielPfad);
 
         try
         {
@@ -144,6 +147,13 @@ public static class UpdateDownload
             // wuerde.
             UpdateStaging.SchreibeZettel(zielPfad, entpacktZettel);
 
+            // Beide aus dem Blick nehmen. Sie liegen jetzt womoeglich
+            // stunden- oder tagelang neben der Programmdatei - so lange,
+            // bis der Anwender neu startet -, und in dieser Zeit hat
+            // niemand einen Grund, sie zu sehen.
+            UpdateStaging.Verstecke(neu);
+            UpdateStaging.Verstecke(UpdateStaging.ZettelPfad(zielPfad));
+
             AppLog.Current.Info(
                 LogEvents.UpdateBereitgelegt(release.TagName, asset.SizeBytes));
 
@@ -190,6 +200,8 @@ public static class UpdateDownload
 
     private static void EntpackeTarGz(string archiv, string zielOrdner)
     {
+        // Der Zielordner ist der ".neu"-Pfad; die Auspack-Endung haengt
+        // deshalb daran und ist in UpdateStaging.AlleEndungen enthalten.
         var auspackOrdner = zielOrdner + ".auspacken";
         UpdateStaging.LoescheStill(auspackOrdner);
         Directory.CreateDirectory(auspackOrdner);

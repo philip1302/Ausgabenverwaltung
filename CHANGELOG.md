@@ -15,6 +15,23 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+- Der Hinweis auf eine neue Fassung sagt jetzt, was zu tun ist, und der
+  Knopf tut es auch: „Jetzt neu starten" schließt die Anwendung und öffnet
+  sie sofort wieder. Vorher hieß er „Jetzt beenden" und beendete nur — wer
+  danach vor einem geschlossenen Programm saß, hielt das für einen Fehler.
+  Im Hinweis steht außerdem nur noch ein hervorgehobener Knopf statt drei
+  gleich wichtig aussehender.
+- Lässt sich eine neue Fassung nicht selbst einspielen, nennt der Hinweis
+  jetzt die Datei beim Namen und führt in vier Schritten durch das
+  Austauschen von Hand — statt nur „ersetzt die Programmdatei von Hand" zu
+  sagen und die Frage offen zu lassen, welche der Dateien auf der Seite
+  denn gemeint ist.
+- Im Programmordner bleibt nach einer Aktualisierung nichts mehr liegen.
+  Vorher standen dort plötzlich mehrere Dateien mit fast demselben Namen,
+  und keine erklärte sich. Während der Aktualisierung sind die
+  Zwischendateien jetzt unsichtbar, und aufgeräumt wird verlässlich statt
+  auf einen einzigen Versuch hin. Auch ein abgebrochener Download
+  hinterlässt nichts mehr.
 - Wo eine Liste leer ist, steht jetzt der Knopf daneben, der den Zustand
   auflöst: „Jetzt sichern" bei der Datensicherung, „Neue Vorlage" bei den
   wiederkehrenden Ausgaben, „Ausgabe erfassen" in Ausgabenliste und
