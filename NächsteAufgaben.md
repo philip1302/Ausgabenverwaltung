@@ -1111,10 +1111,11 @@ Stattdessen:
 
 ## Batch 5 — Was beim Benutzen aufgefallen ist (Punkte 21–23)
 
-### [ ] 21. Das Aktualisierungsband sagt nicht, was zu tun ist
+### [ ] 21. Der Aktualisierungsvorgang ist verwirrend — Band und Dateireste
 
 **Ziel:** Wer das Band liest, weiß danach genau, was er drücken soll und
-was dann passiert. Heute muss er es raten.
+was dann passiert — und im Programmordner liegt hinterher genau eine
+Datei, nicht drei. Heute muss er beides raten.
 
 **Was heute nicht stimmt** (`Views/MainWindow.axaml`,
 `ViewModels/AktualisierungViewModel.cs`, `Core/Errors/UpdateText.cs`)
@@ -1139,6 +1140,40 @@ was dann passiert. Heute muss er es raten.
 4. **„Was ist neu" wird nicht angekündigt.** Dass nach dem Neustart
    einmalig eine Seite mit den Änderungen erscheint, weiß nur, wer es
    schon erlebt hat.
+5. **Der Programmordner füllt sich mit Resten, die der Anwender sieht.**
+   Nach einer Aktualisierung liegen dort plötzlich mehrere Dateien mit
+   fast demselben Namen, und keine davon erklärt sich. Von Paul am
+   08.08.2026 gemeldet: „das ist alles verwirrend."
+
+   Diese Dateien können entstehen (`Core/Updates/UpdateStaging.cs`,
+   `UpdateDownload.cs`) — alle **neben** der Programmdatei, weil der
+   Austausch ein Umbenennen auf demselben Datenträger sein muss:
+
+   | Datei | wann | wird geräumt |
+   |---|---|---|
+   | `Ausgabenverwaltung.exe.teil` | während des Ladens | nach Prüfsumme bzw. im Fehlerzweig — **nie beim Start** |
+   | `Ausgabenverwaltung.exe.auspacken` (Ordner) | beim Entpacken | direkt danach — **nie beim Start** |
+   | `Ausgabenverwaltung.exe.neu` | geladen, geprüft, wartet | beim Austausch (umbenannt) |
+   | `Ausgabenverwaltung.exe.neu.json` | Begleitzettel dazu | nach dem Austausch |
+   | `Ausgabenverwaltung.exe.alt` | die bisherige Fassung | **erst beim NÄCHSTEN Start** |
+
+   Der Hauptübeltäter ist `.alt`. Es überlebt die ganze Sitzung, in der
+   ausgetauscht wurde: geräumt wird es allein von
+   `UpdateInstaller.RaeumeAlteAuf`, und das ruft nur `Program.Main` beim
+   *nächsten* Start (`Program.cs`, in
+   `UebernehmeAktualisierungFalls`). Der Anwender arbeitet also die ganze
+   Sitzung neben einer zweiten, gleich aussehenden Programmdatei —
+   und wenn er die „falsche" doppelklickt, startet er die alte Fassung.
+
+   Erschwerend: `RaeumeAlteAuf` macht **einen** stillen Versuch. Der
+   Nachfolger räumt unmittelbar nachdem der Vorgänger endete, und Windows
+   hält das Abbild einer gerade beendeten Programmdatei noch einen
+   Augenblick — der Versuch scheitert dann, `LoescheStill` schluckt es,
+   und die Datei bleibt liegen. Genau das erklärt, warum die Reste nicht
+   einfach nach dem nächsten Start weg sind.
+
+   `.teil` und `.auspacken` haben **gar keine** Aufräumung beim Start: ein
+   während des Ladens abgebrochenes Programm hinterlässt sie für immer.
 
 **Vorgehen**
 
@@ -1179,10 +1214,63 @@ was dann passiert. Heute muss er es raten.
    Zuständen, und beide gleichzeitig zu zeigen ist der Grund, warum das
    Band wie eine Auswahl unter drei gleichwertigen Wegen aussieht.
 
+5. **Die Reste verschwinden, bevor der Anwender sie sieht.** Vier Teile,
+   die zusammengehören:
+
+   a) **Vorher unsichtbar machen.** Jede der fünf Dateien bekommt beim
+      Anlegen das Merkmal „versteckt" (`File.SetAttributes` mit
+      `FileAttributes.Hidden`). Das wirkt sofort und deckt auch den Fall
+      ab, in dem das Räumen scheitert — ein Rest, den niemand sieht, ist
+      kein Ärgernis mehr. Unter macOS greift das Merkmal nicht; dort ist
+      das Ziel ein Bundle-Ordner, und ein führender Punkt im Namen ginge
+      nur um den Preis, dass `UpdateStaging.PruefDatei` ihn nicht mehr
+      findet. Also: Windows versteckt, macOS über das schnelle Räumen
+      unten.
+
+   b) **Räumen mit Wiederholung statt einem stillen Versuch.**
+      `RaeumeAlteAuf` versucht es mehrmals mit kurzer Pause (etwa fünf
+      Versuche über eine Sekunde). Die Sperre nach einem Prozessende ist
+      flüchtig; ein einziger Versuch trifft genau in sie hinein. Danach
+      immer noch still — aber dann liegt der Rest wirklich nur im
+      Ausnahmefall da, und wegen (a) sieht ihn niemand.
+
+   c) **Alles räumen, nicht nur `.alt`.** Beim Start einmal über alle fünf
+      Endungen gehen, damit auch ein abgebrochenes Laden (`.teil`,
+      `.auspacken`) nicht für immer liegen bleibt. Eine Methode
+      `UpdateStaging.RaeumeAlleReste(zielPfad)` statt der heutigen
+      Einzelfall-Aufrufe — dann fällt beim Hinzufügen einer sechsten
+      Endung auf, dass sie dort hineingehört.
+
+   d) **Der Knopf im Band übernimmt das Räumen — soweit er kann.** Wichtig
+      und nicht offensichtlich: **beim Druck auf „Jetzt neu starten" gibt
+      es `.alt` noch gar nicht.** Es entsteht erst im Nachfolger, beim
+      Austausch selbst. Wer die Aufräumung dort sucht, sucht an der
+      falschen Stelle. Zu tun ist:
+      - im **Nachfolger**, direkt nach dem Austausch und **vor** dem
+        Öffnen des Fensters, räumen (b) + (c);
+      - der Nachfolger wartet über `--warte-auf-prozess` ohnehin auf das
+        Ende des Vorgängers (`Core/Startup/Neustart`), das Räumen liegt
+        also nach dem einzigen Zeitpunkt, an dem es überhaupt gehen kann.
+
+      Der Selbstneustart aus Schritt 1 **verschärft das**: Vorgänger und
+      Nachfolger folgen jetzt in Millisekunden aufeinander statt in der
+      Zeit, die ein Anwender zum Neustarten braucht. Die flüchtige Sperre
+      wird damit wahrscheinlicher, nicht seltener — beide Änderungen
+      gehören deshalb in denselben Punkt.
+
 **Tests**
 - `MeldungsGrundsaetzeTests` erfasst die geänderten Texte weiterhin
   (`Update/Bereitgelegt`, `Update/Hinweis/*`) — die neuen Fassungen
   müssen die vier Theories bestehen.
+- `UpdateUebernahmeTests` erweitern: nach einem gelungenen Austausch
+  liegt **keine** der fünf Endungen mehr im Ordner. Der Test soll die
+  Endungen aus einer Liste in `UpdateStaging` beziehen und nicht selbst
+  aufzählen, sonst prüft er beim Hinzufügen einer sechsten nichts mehr.
+- Ein Test für die Wiederholung: eine Datei, die beim ersten Versuch
+  gesperrt ist (unter Windows über einen offenen `FileStream` ohne
+  `FileShare.Delete` herstellbar) und danach freigegeben wird, ist
+  hinterher weg. `WindowsOnlyFactAttribute` gibt es dafür schon.
+- Das Merkmal „versteckt" ebenfalls nur unter Windows prüfen.
 - Neu in `UpdateEntscheidungTests` oder einer eigenen Datei: der Text zu
   `UpdateHindernis.KeineDateiFuerDiesesSystem` nennt keinen Dateinamen
   (es gibt keinen), die beiden übrigen Hindernisse nennen einen.
@@ -1194,7 +1282,11 @@ was dann passiert. Heute muss er es raten.
 **Fertig, wenn:** Das Band nennt genau einen empfohlenen Schritt, der
 Knopf tut, was der Text ankündigt, der Neustart bringt die Anwendung von
 selbst zurück, und die Anleitung von Hand nennt Dateinamen und
-Reihenfolge.
+Reihenfolge. **Und:** nach einer Aktualisierung liegt im Programmordner
+genau eine Programmdatei — kein `.alt`, kein `.neu`, kein `.neu.json`,
+kein `.teil`, kein `.auspacken`. Nachzusehen ist das im Ordner selbst,
+mit eingeschalteter Anzeige versteckter Dateien: „nicht zu sehen" genügt
+nicht, es soll wirklich weg sein.
 
 ---
 
