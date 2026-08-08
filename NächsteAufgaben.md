@@ -1162,8 +1162,14 @@ Datei, nicht drei. Heute muss er beides raten.
    `UpdateInstaller.RaeumeAlteAuf`, und das ruft nur `Program.Main` beim
    *nächsten* Start (`Program.cs`, in
    `UebernehmeAktualisierungFalls`). Der Anwender arbeitet also die ganze
-   Sitzung neben einer zweiten, gleich aussehenden Programmdatei —
-   und wenn er die „falsche" doppelklickt, startet er die alte Fassung.
+   Sitzung neben einer zweiten, fast gleich heißenden Datei.
+
+   Zur Genauigkeit: die Endung liegt **hinter** `.exe`
+   (`Ausgabenverwaltung.exe.alt`), die Datei lässt sich also nicht
+   versehentlich per Doppelklick starten — Windows kennt `.alt` nicht. Der
+   Schaden ist keine falsch gestartete Fassung, sondern Ratlosigkeit: drei
+   Einträge mit demselben Namensanfang, und keiner sagt, welcher das
+   Programm ist und ob man die anderen löschen darf.
 
    Erschwerend: `RaeumeAlteAuf` macht **einen** stillen Versuch. Der
    Nachfolger räumt unmittelbar nachdem der Vorgänger endete, und Windows
@@ -1217,15 +1223,54 @@ Datei, nicht drei. Heute muss er beides raten.
 5. **Die Reste verschwinden, bevor der Anwender sie sieht.** Vier Teile,
    die zusammengehören:
 
-   a) **Vorher unsichtbar machen.** Jede der fünf Dateien bekommt beim
-      Anlegen das Merkmal „versteckt" (`File.SetAttributes` mit
-      `FileAttributes.Hidden`). Das wirkt sofort und deckt auch den Fall
-      ab, in dem das Räumen scheitert — ein Rest, den niemand sieht, ist
-      kein Ärgernis mehr. Unter macOS greift das Merkmal nicht; dort ist
-      das Ziel ein Bundle-Ordner, und ein führender Punkt im Namen ginge
-      nur um den Preis, dass `UpdateStaging.PruefDatei` ihn nicht mehr
-      findet. Also: Windows versteckt, macOS über das schnelle Räumen
-      unten.
+   a) **Unsichtbar machen, und zwar in dieser Reihenfolge.** Jede der fünf
+      Dateien bekommt beim Anlegen das Merkmal „versteckt"
+      (`File.SetAttributes` mit `FileAttributes.Hidden`) — es gibt im
+      Programm bisher keine einzige Stelle, die das tut, das ist also neu.
+
+      Entscheidend ist nicht das Verstecken allein, sondern **wann** beim
+      Austausch umgeschaltet wird. `UpdateInstaller.TryUebernehmen`
+      bekommt deshalb diese Abfolge (von Paul am 08.08.2026 so
+      vorgegeben):
+
+      ```
+      1. exe  →  exe.alt          (umbenennen)
+      2. exe.alt  versteckt       (Merkmal setzen)
+      3. exe.neu  →  exe          (umbenennen; noch versteckt)
+      4. exe      sichtbar        (Merkmal entfernen)
+      ```
+
+      Die Reihenfolge ist der ganze Punkt. Wer erst die neue Datei
+      sichtbar macht und dann die alte versteckt, zeigt genau dazwischen
+      **zwei** fast gleich heißende Programmdateien — der Zustand, den es
+      abzuschaffen gilt. Andersherum entsteht ein kurzer Moment, in dem
+      **gar keine** Programmdatei zu sehen ist. Das ist die bessere von
+      beiden Möglichkeiten und ausdrücklich in Kauf genommen: der Moment
+      dauert zwei Umbenennungen lang, liegt im Programmstart vor dem
+      ersten Fenster, und niemand sieht dabei in den Ordner. „Kurz nichts"
+      ist verständlich, „drei fast gleiche" nicht.
+
+      **Zu prüfen, bevor darauf gebaut wird:** Schritt 2 setzt das Merkmal
+      auf der Datei, aus der der eigene Prozess GERADE LÄUFT — das Abbild
+      ist noch abgebildet. Windows lässt eine laufende Programmdatei
+      umbenennen (darauf beruht der ganze Austausch), ob es auch
+      `SetFileAttributes` darauf zulässt, ist eine andere Frage und hier
+      nicht nachprüfbar. Schlägt es fehl, darf es den Austausch **nicht**
+      abbrechen: still übergehen und auf (b)/(c) verlassen.
+
+      **Ausweichweg, falls Schritt 2 nicht geht:** alles Vorbereitete in
+      einen versteckten Unterordner neben der Programmdatei legen (etwa
+      `.aktualisierung\`). Umbenennen über Ordnergrenzen hinweg bleibt auf
+      demselben Datenträger unteilbar, der Vorteil aus dem Kommentar in
+      `UpdateStaging` geht also nicht verloren — und ein versteckter
+      Ordner löst das Problem an der Wurzel, weil dann gar nichts mehr
+      neben der Programmdatei liegt. Dafür wandern die Pfade in
+      `UpdateStaging` und `UpdateDownload` mit.
+
+      **macOS:** dort greift das Merkmal nicht, das Ziel ist ein
+      Bundle-Ordner, und ein führender Punkt im Namen ginge nur um den
+      Preis, dass `UpdateStaging.PruefDatei` ihn nicht mehr findet. Also:
+      Windows über das Merkmal, macOS über das schnelle Räumen unten.
 
    b) **Räumen mit Wiederholung statt einem stillen Versuch.**
       `RaeumeAlteAuf` versucht es mehrmals mit kurzer Pause (etwa fünf
@@ -1270,7 +1315,14 @@ Datei, nicht drei. Heute muss er beides raten.
   gesperrt ist (unter Windows über einen offenen `FileStream` ohne
   `FileShare.Delete` herstellbar) und danach freigegeben wird, ist
   hinterher weg. `WindowsOnlyFactAttribute` gibt es dafür schon.
-- Das Merkmal „versteckt" ebenfalls nur unter Windows prüfen.
+- Das Merkmal „versteckt" ebenfalls nur unter Windows prüfen — und dabei
+  ausdrücklich die **Reihenfolge**: zu keinem Zeitpunkt des Austauschs
+  dürfen zwei sichtbare Programmdateien nebeneinander liegen. Prüfbar,
+  indem `TryUebernehmen` in Schritten aufgerufen bzw. nach jedem Schritt
+  gezählt wird, wie viele nicht versteckte Einträge mit dem Namensanfang
+  im Ordner stehen: nie mehr als eins. Dass es zwischendurch **null**
+  sein darf, gehört mit in die Zusicherung — sonst nagelt der Test
+  versehentlich das Gegenteil fest.
 - Neu in `UpdateEntscheidungTests` oder einer eigenen Datei: der Text zu
   `UpdateHindernis.KeineDateiFuerDiesesSystem` nennt keinen Dateinamen
   (es gibt keinen), die beiden übrigen Hindernisse nennen einen.
@@ -1286,7 +1338,10 @@ Reihenfolge. **Und:** nach einer Aktualisierung liegt im Programmordner
 genau eine Programmdatei — kein `.alt`, kein `.neu`, kein `.neu.json`,
 kein `.teil`, kein `.auspacken`. Nachzusehen ist das im Ordner selbst,
 mit eingeschalteter Anzeige versteckter Dateien: „nicht zu sehen" genügt
-nicht, es soll wirklich weg sein.
+nicht, es soll wirklich weg sein. Das Verstecken ist das Netz für den
+Ausnahmefall, nicht die Lösung — wer es zur Lösung macht, sammelt
+unsichtbare Reste an, und die sind schlimmer als sichtbare, weil sie
+niemand mehr findet.
 
 ---
 
