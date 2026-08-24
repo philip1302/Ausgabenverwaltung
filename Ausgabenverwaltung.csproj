@@ -14,7 +14,7 @@
          zu einem gemeldeten Fehler nicht sagen, welcher Stand ihn
          erzeugt hat - deshalb gehoert sie hier gepflegt, bevor
          veroeffentlicht wird. -->
-    <Version>1.4.1</Version>
+    <Version>1.5.0</Version>
     <Product>Ausgabenverwaltung</Product>
     <!-- Core und Tests liegen als eigene Projekte unterhalb dieses
          Ordners; ohne diesen Ausschluss wuerde die implizite Datei-

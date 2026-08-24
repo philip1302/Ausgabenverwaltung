@@ -13,7 +13,7 @@ ganzen Sätzen.
 Ganz oben sammelt „Unveröffentlicht", was noch in keiner Fassung steckt;
 beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
-## Unveröffentlicht
+## 1.5.0 — 24.08.2026
 
 - Die Filterleiste in Ausgabenliste und Auswertung lässt sich jetzt
   einklappen und tut das bei schmalem Fenster von selbst. Übrig bleibt
