@@ -13,7 +13,11 @@ namespace Ausgabenverwaltung.ViewModels;
 public sealed class ReportZelle
 {
     public ReportZelle(
-        ReportAmount betrag, int? kategorieId, string? periodenKey, string beschreibung)
+        ReportAmount betrag,
+        int? kategorieId,
+        string? periodenKey,
+        string beschreibung,
+        int stufe = 0)
     {
         HatWerte = betrag.HasValues;
 
@@ -29,6 +33,12 @@ public sealed class ReportZelle
         KategorieId = kategorieId;
         PeriodenKey = periodenKey;
         Beschreibung = beschreibung;
+
+        Stufe = stufe;
+        IstStufe1 = stufe == 1;
+        IstStufe2 = stufe == 2;
+        IstStufe3 = stufe == 3;
+        IstStufe4 = stufe == 4;
     }
 
     public string Text { get; }
@@ -43,6 +53,33 @@ public sealed class ReportZelle
     /// das Vorzeichen, kein einzelner Zahler oder Beglichen-Status mehr.
     /// </summary>
     public bool IstEinnahme { get; }
+
+    /// <summary>
+    /// Wie schwer die Zelle im Vergleich zu den uebrigen wiegt: 1 bis 4,
+    /// oder 0 fuer "nicht eingefaerbt". Die Stufe kommt aus
+    /// <see cref="Ausgabenverwaltung.Core.Charts.Intensity"/> und ist nach
+    /// RANG vergeben, nicht linear nach Betrag.
+    ///
+    /// Stufe 0 haben: leere Zellen, Zellen mit Einnahmenueberhang (sie
+    /// tragen bereits die gruene Auszeichnung, zwei Farbsysteme in einer
+    /// Zelle machen beide unlesbar), die Summenzeile und die Summenspalte
+    /// (Rechnungen ueber die Zellen, sie laegen zwangslaeufig ganz oben) -
+    /// und alle Zellen, solange der Anwender die Einfaerbung abgeschaltet
+    /// hat.
+    ///
+    /// Die Farbe waehlt die Ansicht ueber die vier Merkmale darunter; das
+    /// ViewModel kennt keine Farbwerte, sonst waeren sie nicht mehr
+    /// themenabhaengig (Muster von DiagrammBalken).
+    /// </summary>
+    public int Stufe { get; }
+
+    public bool IstStufe1 { get; }
+
+    public bool IstStufe2 { get; }
+
+    public bool IstStufe3 { get; }
+
+    public bool IstStufe4 { get; }
 
     /// <summary>NULL = alle Kategorien (Summenzeile).</summary>
     public int? KategorieId { get; }

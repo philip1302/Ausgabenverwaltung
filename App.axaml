@@ -101,6 +101,30 @@
                          Indigo/Periwinkle-Tons haelt die beiden Blaus klar
                          auseinander. 5,36:1 auf Weiss (SurfaceFarbe). -->
                     <SolidColorBrush x:Key="BeglichenFarbe">#0E7490</SolidColorBrush>
+
+                    <!-- ==== Einfaerbung der Auswertung nach Betragshoehe ====
+                         Vier Stufen EINER Farbfamilie, hell nach kraeftig. Keine
+                         Ampel und kein Regenbogen: ob eine Zelle im Plus oder im
+                         Minus steht, sagt bereits ihr Vorzeichen - die Stufe sagt
+                         nur, wie schwer sie wiegt, und dafuer gibt es nur eine
+                         Richtung.
+
+                         Ein Ockerton und bewusst kein Blau: Blau ist in dieser
+                         Anwendung die Farbe des Anklickbaren (AccentFarbe) und die
+                         des Ueberfahrens (AccentDezentFlaeche #EAF0FE) - eine blau
+                         hinterlegte Zelle saehe aus wie eine angefasste. Gruen und
+                         Rot sind an Einnahme und Offen vergeben, Blaugruen an
+                         Beglichen.
+
+                         Auf jeder Stufe bleibt TextPrimaerFarbe (#1D2433) deutlich
+                         lesbar; die dunkelste, #DFC06B, traegt noch 8,8:1. Das ist
+                         die Bedingung, unter der die Einfaerbung ueberhaupt erlaubt
+                         ist: die Zahl bleibt stehen, die Farbe kommt hinzu
+                         (Regel 10). -->
+                    <SolidColorBrush x:Key="HeatStufe1Flaeche">#FBF5E8</SolidColorBrush>
+                    <SolidColorBrush x:Key="HeatStufe2Flaeche">#F4E7C6</SolidColorBrush>
+                    <SolidColorBrush x:Key="HeatStufe3Flaeche">#EBD79E</SolidColorBrush>
+                    <SolidColorBrush x:Key="HeatStufe4Flaeche">#DFC06B</SolidColorBrush>
                 </ResourceDictionary>
 
                 <!-- ==== Dunkel (docs/design/UIUIXDESIGN.md, 2.2) ==== -->
@@ -156,6 +180,21 @@
                     <!-- Beglichen, dunkel: heller als die helle Fassung, damit sie auf
                          dunklem Grund traegt - 8,68:1 auf SurfaceFarbe (#1B1D22). -->
                     <SolidColorBrush x:Key="BeglichenFarbe">#5EC8E0</SolidColorBrush>
+
+                    <!-- Einfaerbung, dunkel: EIGENS gewaehlt und nicht aus den
+                         hellen Stufen umgerechnet. Auf dunklem Grund muss die
+                         Reihe von der Flaeche AUS heller werden statt dunkler,
+                         sonst verschwaende die unterste Stufe im Hintergrund.
+                         Stufe 1 liegt knapp ueber SurfaceFarbe (#1B1D22) - gerade
+                         so viel, dass man sie als "belegt" erkennt.
+
+                         TextPrimaerFarbe (#EAECEF) traegt auf der kraeftigsten
+                         Stufe 6,6:1. Kein Blau, aus demselben Grund wie oben:
+                         AccentDezentFlaeche ist hier #1E2A47. -->
+                    <SolidColorBrush x:Key="HeatStufe1Flaeche">#24221B</SolidColorBrush>
+                    <SolidColorBrush x:Key="HeatStufe2Flaeche">#332D20</SolidColorBrush>
+                    <SolidColorBrush x:Key="HeatStufe3Flaeche">#473C28</SolidColorBrush>
+                    <SolidColorBrush x:Key="HeatStufe4Flaeche">#5F5030</SolidColorBrush>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 

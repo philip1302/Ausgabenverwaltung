@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using Ausgabenverwaltung.Core;
 using Ausgabenverwaltung.Core.Categories;
+using Ausgabenverwaltung.Core.Charts;
 using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.People;
@@ -54,6 +55,15 @@ public sealed partial class ReportViewModel : ViewModelBase
     // ueberdauern das Auf- und Zuklappen, weil dabei nur die Zeilen neu
     // gebaut werden und der Kategoriebaum nicht erneut geladen wird.
     private IReadOnlyDictionary<int, string> _farben = new Dictionary<int, string>();
+
+    // Die Einfaerbungsstufen der Zellen, nachgeschlagen ueber Kategorie
+    // und Zeitabschnitt. Wie die Farben ueberdauern sie das Auf- und
+    // Zuklappen: sie haengen an der Auswertung, nicht an der Anzeige.
+    private IReadOnlyDictionary<(int KategorieId, string PeriodenKey), int> _stufen =
+        LeereStufen;
+
+    private static readonly Dictionary<(int KategorieId, string PeriodenKey), int>
+        LeereStufen = new();
 
     // Der Filter, aus dem die angezeigte Tabelle entstanden ist. Der
     // Sprung in die Einzelbuchungen setzt genau darauf auf - nur so kann
@@ -511,6 +521,20 @@ public sealed partial class ReportViewModel : ViewModelBase
     [ObservableProperty]
     private bool _kategorienOhneAusgabenAnzeigen;
 
+    /// <summary>
+    /// Ob die Zellen nach der Hoehe ihres Betrags eingefaerbt werden.
+    ///
+    /// Die Zahl bleibt dabei immer stehen und lesbar - die Farbe sagt
+    /// nichts, was nicht auch dastuende, sie macht nur auffindbar, wo in
+    /// der Tabelle viel liegt (Regel 10).
+    ///
+    /// Der Anfangswert kommt aus den Einstellungen; jede Aenderung
+    /// schreibt ihn zurueck (siehe
+    /// <see cref="OnWerteEinfaerbenChanged"/>).
+    /// </summary>
+    [ObservableProperty]
+    private bool _werteEinfaerben = true;
+
     // ---------------- Ergebnis ----------------
 
     [ObservableProperty]
@@ -582,6 +606,12 @@ public sealed partial class ReportViewModel : ViewModelBase
         _settingsStore = settingsStore;
 
         _ausgewaehlteGruppierung = GruppierungOptionen[2];
+
+        // Vor dem ersten Auswerten setzen, sonst rechnete BerechneStufen
+        // einmal mit der Vorgabe statt mit dem gemerkten Stand. Direkt ins
+        // Feld, damit OnWerteEinfaerbenChanged nicht anspringt und den
+        // gerade gelesenen Wert gleich wieder zurueckschreibt.
+        _werteEinfaerben = settingsStore.Load().ReportHeatmap;
 
         _ladenGesperrt = true;
         LadeKategorieAuswahl();
@@ -699,6 +729,67 @@ public sealed partial class ReportViewModel : ViewModelBase
 
     // Der Schalter blendet nur aus, was schon ausgewertet ist.
     partial void OnKategorienOhneAusgabenAnzeigenChanged(bool value) => BaueZeilen();
+
+    /// <summary>
+    /// Der Schalter faerbt nur um, was schon ausgewertet ist - die Stufen
+    /// muessen dafuer aber neu bestimmt werden, weil sie bei
+    /// ausgeschalteter Einfaerbung gar nicht erst gerechnet werden.
+    /// </summary>
+    partial void OnWerteEinfaerbenChanged(bool value)
+    {
+        BerechneStufen();
+        BaueZeilen();
+
+        var einstellungen = _settingsStore.Load();
+        _settingsStore.Save(einstellungen with { ReportHeatmap = value });
+    }
+
+    /// <summary>
+    /// Bestimmt, wie schwer jede Zelle im Vergleich zu den uebrigen wiegt.
+    ///
+    /// Gerechnet wird ueber den GANZEN Kategoriebaum, nicht nur ueber die
+    /// gerade sichtbaren Zeilen: sonst wechselten beim Auf- und Zuklappen
+    /// die Farben von Zellen, an denen sich nichts geaendert hat, und der
+    /// Anwender suchte nach einer Bedeutung darin.
+    ///
+    /// Eingefaerbt werden nur Zellen mit AUSGABENUEBERHANG. Eine Zelle, in
+    /// der die Einnahmen ueberwiegen, traegt bereits ihre gruene
+    /// Auszeichnung; beides uebereinanderzulegen macht beides unlesbar.
+    /// Eine Zelle, die sich auf genau null summiert, ist weder das eine
+    /// noch das andere und bleibt ebenfalls frei.
+    /// </summary>
+    private void BerechneStufen()
+    {
+        if (_matrix is null || !WerteEinfaerben)
+        {
+            _stufen = LeereStufen;
+            return;
+        }
+
+        var werte = new Dictionary<(int, string), long>();
+        SammleAusgabenzellen(_matrix.Rows, werte);
+
+        _stufen = Intensity.Steps(werte);
+    }
+
+    private static void SammleAusgabenzellen(
+        IReadOnlyList<ReportMatrixRow> rows, Dictionary<(int, string), long> ziel)
+    {
+        foreach (var row in rows)
+        {
+            // Cells enthaelt nur die BELEGTEN Zeitabschnitte - leere Zellen
+            // kommen dadurch gar nicht erst in die Bewertung.
+            foreach (var (periodenKey, betrag) in row.Cells)
+            {
+                if (betrag.SumCents < 0)
+                {
+                    ziel[(row.CategoryId, periodenKey)] = betrag.SumCents;
+                }
+            }
+
+            SammleAusgabenzellen(row.Children, ziel);
+        }
+    }
 
     [RelayCommand]
     private void Schnellwahl(string? bereich)
@@ -978,6 +1069,11 @@ public sealed partial class ReportViewModel : ViewModelBase
 
         _matrix = ReportMatrixBuilder.Build(wurzeln, pfade, zellen, filter.Grouping);
 
+        // Die Stufen haengen an der Auswertung, nicht an der Anzeige -
+        // deshalb hier und nicht in BaueZeilen, das bei jedem Aufklappen
+        // laeuft.
+        BerechneStufen();
+
         Spalten.Clear();
         foreach (var key in _matrix.PeriodKeys)
         {
@@ -1035,7 +1131,8 @@ public sealed partial class ReportViewModel : ViewModelBase
             var aufgeklappt = hatKinder && _aufgeklappteKategorien.Contains(row.CategoryId);
 
             Zeilen.Add(ReportZeile.FuerKategorie(
-                row, Spalten, hatKinder, aufgeklappt, CategoryColors.Of(_farben, row.CategoryId)));
+                row, Spalten, hatKinder, aufgeklappt,
+                CategoryColors.Of(_farben, row.CategoryId), _stufen));
 
             if (aufgeklappt)
             {

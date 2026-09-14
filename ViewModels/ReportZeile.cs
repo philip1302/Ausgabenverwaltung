@@ -113,19 +113,26 @@ public sealed class ReportZeile
 
     public bool DurchschnittIstEinnahme { get; }
 
+    /// <param name="stufen">
+    /// Die Einfaerbungsstufen aller Zellen der Auswertung, nachgeschlagen
+    /// ueber Kategorie und Zeitabschnitt. Ein fehlender Eintrag heisst
+    /// "nicht einfaerben" - siehe <see cref="ReportZelle.Stufe"/>.
+    /// </param>
     public static ReportZeile FuerKategorie(
         ReportMatrixRow row,
         IReadOnlyList<ReportSpalte> spalten,
         bool hatKinder,
         bool istAufgeklappt,
-        string farbe)
+        string farbe,
+        IReadOnlyDictionary<(int KategorieId, string PeriodenKey), int> stufen)
     {
         var zellen = spalten
             .Select(spalte => new ReportZelle(
                 row.Cell(spalte.Key),
                 row.CategoryId,
                 spalte.Key,
-                $"{row.FullPath} · {spalte.Beschriftung}"))
+                $"{row.FullPath} · {spalte.Beschriftung}",
+                stufen.GetValueOrDefault((row.CategoryId, spalte.Key))))
             .ToList();
 
         var summe = new ReportZelle(

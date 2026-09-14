@@ -15,6 +15,23 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+### Auswertung
+
+- Die Auswertung hinterlegt ihre Werte jetzt nach Höhe: je größer der Betrag,
+  desto kräftiger die Fläche hinter der Zahl. Damit lässt sich eine volle
+  Kreuztabelle überfliegen, statt sie Zeile für Zeile lesen zu müssen — wo viel
+  liegt, sieht man, bevor man eine einzige Zahl gelesen hat. Die Beträge stehen
+  unverändert da; die Farbe sagt nichts, was nicht auch dastünde.
+- Eingefärbt wird nach der Reihenfolge der Beträge und nicht nach ihrem
+  Abstand. Sonst bekäme in einem Haushalt mit einer Jahresmiete diese eine Zelle
+  den kräftigsten Ton und alle übrigen denselben blassen — die Einfärbung sähe
+  aus wie ein Fehler und sagte nichts mehr.
+- Zellen, in denen die Einnahmen überwiegen, bleiben wie bisher grün und ohne
+  Hinterlegung, ebenso die Summenzeile und die Summenspalte: sie sind
+  Rechnungen über die übrigen Zellen und stünden sonst immer ganz oben.
+- Wem das zu unruhig ist, schaltet es über „Werte einfärben“ über der Tabelle
+  ab. Die Anwendung merkt sich das.
+
 ### Jahresrückblick
 
 - Unter „Auswertung“ gibt es jetzt den Jahresrückblick. Er stellt zwei Jahre

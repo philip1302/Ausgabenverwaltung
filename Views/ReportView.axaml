@@ -38,6 +38,32 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Right" />
         </Style>
+        <!-- Die Einfaerbung nach Betragshoehe. Vier Stufen, eine
+             Farbfamilie, hell nach kraeftig - keine Ampel: ob eine Zelle
+             im Plus oder im Minus steht, sagt bereits ihr Vorzeichen, die
+             Stufe sagt nur, wie schwer sie wiegt.
+
+             Der Hintergrund muss am ContentPresenter sitzen und nicht am
+             Button, sonst ueberdeckt ihn die Vorlage des Knopfes - dasselbe
+             wie bei Button.balken in App.axaml.
+
+             REIHENFOLGE: diese vier Styles stehen VOR :pointerover. Bei
+             gleicher Gewichtung gewinnt in Avalonia der spaetere, und ein
+             Ueberfahren, das keine Wirkung zeigt, laesst die Tabelle
+             kaputt aussehen. -->
+        <Style Selector="Button.zelle.stufe1 /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HeatStufe1Flaeche}" />
+        </Style>
+        <Style Selector="Button.zelle.stufe2 /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HeatStufe2Flaeche}" />
+        </Style>
+        <Style Selector="Button.zelle.stufe3 /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HeatStufe3Flaeche}" />
+        </Style>
+        <Style Selector="Button.zelle.stufe4 /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HeatStufe4Flaeche}" />
+        </Style>
+
         <Style Selector="Button.zelle:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource AccentDezentFlaeche}" />
         </Style>
@@ -426,6 +452,9 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
                     <CheckBox Content="Kategorien ohne Ausgaben anzeigen"
                               IsChecked="{Binding KategorienOhneAusgabenAnzeigen}" />
+                    <CheckBox Content="Werte einfärben"
+                              ToolTip.Tip="Hinterlegt jede Zelle nach der Höhe ihres Betrags, damit sich auf einen Blick sehen lässt, wo viel liegt. Die Zahlen bleiben unverändert stehen."
+                              IsChecked="{Binding WerteEinfaerben}" />
                     <Button Classes="ghost" Content="Filter zurücksetzen"
                             Command="{Binding FilterZuruecksetzenCommand}" />
                 </StackPanel>
@@ -572,6 +601,10 @@
                                                         <DataTemplate x:DataType="vm:ReportZelle">
                                                             <Button Classes="zelle" Width="{anzeige:Breite 125}"
                                                                     Classes.einnahme="{Binding IstEinnahme}"
+                                                                    Classes.stufe1="{Binding IstStufe1}"
+                                                                    Classes.stufe2="{Binding IstStufe2}"
+                                                                    Classes.stufe3="{Binding IstStufe3}"
+                                                                    Classes.stufe4="{Binding IstStufe4}"
                                                                     Content="{Binding Text}"
                                                                     IsEnabled="{Binding HatWerte}"
                                                                     ToolTip.Tip="{Binding Beschreibung}"

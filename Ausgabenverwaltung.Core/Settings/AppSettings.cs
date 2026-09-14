@@ -128,6 +128,16 @@ public sealed record AppSettings
     public bool OpenItemsSortAscending { get; init; } = true;
 
     /// <summary>
+    /// Ob die Auswertung ihre Werte nach Hoehe einfaerbt.
+    ///
+    /// Vorgabe an: die Einfaerbung ist der Grund, warum sich eine
+    /// Kreuztabelle ueberfliegen laesst. Wer sie als unruhig empfindet,
+    /// soll sie aber auch nicht bei jedem Start neu abschalten muessen -
+    /// deshalb steht sie hier und nicht nur im Fenster.
+    /// </summary>
+    public bool ReportHeatmap { get; init; } = true;
+
+    /// <summary>
     /// Die benannten Filtereinstellungen der Filterleiste, geteilt von
     /// Ausgabenliste und Auswertung (siehe <see cref="SavedFilters"/>).
     ///

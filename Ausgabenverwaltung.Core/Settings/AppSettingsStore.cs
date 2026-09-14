@@ -113,6 +113,11 @@ public sealed class AppSettingsStore
                     document.OpenItemsSortColumn, OpenItemsSortColumn.Datum),
                 OpenItemsSortAscending = document.OpenItemsSortAscending ?? true,
 
+                // Fehlt der Wert (Datei aus einer aelteren Fassung), gilt
+                // die Vorgabe "eingefaerbt" - wer sie abgeschaltet hat, hat
+                // das ausdruecklich getan, und dann steht es in der Datei.
+                ReportHeatmap = document.ReportHeatmap ?? true,
+
                 SavedFilters = LiesFilter(document.SavedFilters),
             };
         }
@@ -155,6 +160,7 @@ public sealed class AppSettingsStore
             ExpenseListSortAscending = settings.ExpenseListSortAscending,
             OpenItemsSortColumn = settings.OpenItemsSortColumn.ToString(),
             OpenItemsSortAscending = settings.OpenItemsSortAscending,
+            ReportHeatmap = settings.ReportHeatmap,
 
             SavedFilters = settings.SavedFilters.Select(filter => new SavedFilterDocument
             {
@@ -335,6 +341,7 @@ public sealed class AppSettingsStore
         public bool? ExpenseListSortAscending { get; set; }
         public string? OpenItemsSortColumn { get; set; }
         public bool? OpenItemsSortAscending { get; set; }
+        public bool? ReportHeatmap { get; set; }
         public List<SavedFilterDocument>? SavedFilters { get; set; }
     }
 
