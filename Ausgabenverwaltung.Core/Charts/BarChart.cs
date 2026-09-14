@@ -1,3 +1,9 @@
+// Die Umrechnungen Betrag -> Bildpunkt liegen in ChartGeometry, weil
+// inzwischen mehrere Diagrammarten dieselben brauchen. Als "using static"
+// eingebunden, damit die Aufrufe hier so kurz bleiben wie zu der Zeit, als
+// die Methoden noch in dieser Datei standen.
+using static Ausgabenverwaltung.Core.Charts.ChartGeometry;
+
 namespace Ausgabenverwaltung.Core.Charts;
 
 /// <summary>
@@ -87,8 +93,8 @@ public sealed record ChartLayout(
 /// Rechtecke an die genannten Stellen.
 ///
 /// Der Ursprung liegt wie bei Bildschirmkoordinaten ueblich OBEN links;
-/// groesseres Y heisst weiter unten. Deshalb dreht <see cref="ToY"/> die
-/// Werteachse um.
+/// groesseres Y heisst weiter unten. Deshalb dreht
+/// <see cref="ChartGeometry.ToY"/> die Werteachse um.
 /// </summary>
 public static class BarChart
 {
@@ -236,73 +242,6 @@ public static class BarChart
 
         return new ChartLayout(bars, lines, TicksOf(scale, height), scale);
     }
-
-    /// <summary>
-    /// Der Bildpunkt zu einem Betrag. Oben ist klein, unten ist gross -
-    /// deshalb wird der Anteil von der Hoehe abgezogen.
-    /// </summary>
-    public static double ToY(long cents, AxisScale scale, double height)
-    {
-        var share = (cents - scale.MinCents) / (double)scale.SpanCents;
-        return height - share * height;
-    }
-
-    /// <summary>Die Laenge, die ein Betrag in Bildpunkten einnimmt.</summary>
-    private static double LengthOf(long cents, AxisScale scale, double height)
-        => Math.Abs(cents) / (double)scale.SpanCents * height;
-
-    private static List<ChartLine> GridLines(AxisScale scale, double height)
-    {
-        var lines = new List<ChartLine>();
-
-        foreach (var tick in scale.Ticks)
-        {
-            // Die Null bekommt eine eigene Art: sie ist die Bezugslinie,
-            // von der aus jeder Balken gelesen wird, und muss sich vom
-            // uebrigen Gitternetz abheben.
-            lines.Add(new ChartLine(
-                ToY(tick, scale, height),
-                tick,
-                tick == 0 ? ChartLineKind.Zero : ChartLineKind.Grid));
-        }
-
-        return lines;
-    }
-
-    private static void AddAverage(
-        List<ChartLine> lines,
-        IReadOnlyList<long> values,
-        AxisScale scale,
-        double height,
-        ChartLineKind kind)
-    {
-        if (values.Count == 0)
-        {
-            return;
-        }
-
-        // Ganzzahlig gemittelt, weil Geld ganzzahlig ist (Regel 1). Der
-        // halbe Cent, der dabei verloren geht, ist auf einer Achse von
-        // mehreren hundert Euro nicht darstellbar.
-        var average = (long)(values.Sum() / (double)values.Count);
-
-        // Ein Durchschnitt von null saehe wie die Nulllinie aus und
-        // verwirrte mehr, als er hilft.
-        if (average == 0)
-        {
-            return;
-        }
-
-        // Die Linie liegt wie jeder Balken oberhalb der Nulllinie
-        // (Betrag, nicht Vorzeichen) - angezeigt wird trotzdem der
-        // vorzeichenbehaftete Durchschnitt.
-        lines.Add(new ChartLine(ToY(Math.Abs(average), scale, height), average, kind));
-    }
-
-    private static List<AxisTick> TicksOf(AxisScale scale, double height)
-        => scale.Ticks
-            .Select(value => new AxisTick(ToY(value, scale, height), value))
-            .ToList();
 
     private static ChartLayout Empty()
         => new([], [], [], NiceScale.Compute([]));
