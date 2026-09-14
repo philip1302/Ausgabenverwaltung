@@ -178,6 +178,10 @@
             <StreamGeometry x:Key="IconOffenePosten">M9,4 H15 V6 H9 Z M6,4 H18 V21 H6 Z M9,13 L11,15.2 L16,9.5</StreamGeometry>
             <StreamGeometry x:Key="IconReport">M4,20 H20 M7,20 V13 M12,20 V8 M17,20 V15</StreamGeometry>
             <StreamGeometry x:Key="IconAusgabenliste">M8,6 H20 M8,12 H20 M8,18 H20 M4,6 L4.01,6 M4,12 L4.01,12 M4,18 L4.01,18</StreamGeometry>
+            <!-- Zwei Balken nebeneinander, der rechte hoeher: zwei Jahre im
+                 Vergleich. Bewusst dem IconReport aehnlich und doch
+                 unterscheidbar - es steht in derselben Gruppe darunter. -->
+            <StreamGeometry x:Key="IconJahresrueckblick">M4,20 H20 M7,20 V14 H10 V20 Z M14,20 V8 H17 V20 Z M14,5 L15.5,3 L17,5</StreamGeometry>
             <StreamGeometry x:Key="IconVerwaltung">M12,12 m-3,0 a3,3 0 1 0 6,0 a3,3 0 1 0 -6,0 M12,2 V5 M12,19 V22 M2,12 H5 M19,12 H22 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M4.9,19.1 L7,17 M17,7 L19.1,4.9</StreamGeometry>
             <StreamGeometry x:Key="IconKategorien">M20,4 L13,4 L4,13 L11,20 L20,11 Z M15.5,8.5 m-1,0 a1,1 0 1 0 2,0 a1,1 0 1 0 -2,0</StreamGeometry>
             <StreamGeometry x:Key="IconPersonen">M8,8 m-3,0 a3,3 0 1 0 6,0 a3,3 0 1 0 -6,0 M2,20 C2,15.3 4.7,13 8,13 C11.3,13 14,15.3 14,20 M17,8 m-2.3,0 a2.3,2.3 0 1 0 4.6,0 a2.3,2.3 0 1 0 -4.6,0 M12.3,20 C12.7,16.6 14.7,15 17,15 C19.5,15 21.6,16.6 22,20</StreamGeometry>
@@ -783,6 +787,21 @@
         </Style>
         <Style Selector=":is(TextBlock).tabellenzelle.mitte">
             <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <!-- Aufklapp-Pfeil vor einem Kategorienamen. Stand frueher in
+             ReportView; seit der Jahresrueckblick denselben Baum
+             aufklappt, gehoert er hierher - zwei Pfeile verschiedener
+             Groesse in zwei Ansichten waeren schlimmer als jeder der
+             beiden fuer sich. -->
+        <Style Selector="Button.aufklapp">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="{anzeige:Breite 20}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
         </Style>
 
         <!-- Zeilen-Hover in Tabellen (UIUIXDESIGN.md, 2.7 "Tabellenzeile") -->

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Threading.Tasks;
 using Avalonia;
@@ -17,6 +17,7 @@ using Ausgabenverwaltung.Core.RecurringExpenses;
 using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core.Reports;
 using Ausgabenverwaltung.Core.Settings;
+using Ausgabenverwaltung.Core.YearInReview;
 using Ausgabenverwaltung.Core.Startup;
 using Ausgabenverwaltung.ViewModels;
 using Ausgabenverwaltung.Views;
@@ -351,6 +352,17 @@ public partial class App : Application
         services.AddSingleton<ErfassenViewModel>();
         services.AddSingleton<OffenePostenViewModel>();
         services.AddSingleton<ReportViewModel>();
+
+        // Der Rueckblick bekommt den heutigen Tag hereingereicht statt ihn
+        // selbst zu lesen - deshalb hier von Hand erzeugt und nicht ueber
+        // die Typregistrierung: nur so laesst sich die Jahresauswahl in
+        // Tests pruefen, ohne die Systemuhr zu stellen.
+        services.AddSingleton<YearInReviewService>();
+        services.AddSingleton(provider => new JahresrueckblickViewModel(
+            provider.GetRequiredService<YearInReviewService>(),
+            provider.GetRequiredService<CategoryRepository>(),
+            provider.GetRequiredService<IMessenger>()));
+
         services.AddSingleton<AusgabenlisteViewModel>();
         services.AddSingleton<KategorienViewModel>();
         services.AddSingleton<PersonenViewModel>();

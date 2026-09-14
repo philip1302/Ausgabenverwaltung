@@ -50,6 +50,7 @@ public sealed partial class MainViewModel : ViewModelBase
     private readonly ErfassenViewModel _erfassen;
     private readonly OffenePostenViewModel _offenePosten;
     private readonly ReportViewModel _report;
+    private readonly JahresrueckblickViewModel _jahresrueckblick;
     private readonly AusgabenlisteViewModel _ausgabenliste;
     private readonly VerwaltungViewModel _verwaltung;
     private readonly RecurringExpenseScheduler _scheduler;
@@ -118,6 +119,7 @@ public sealed partial class MainViewModel : ViewModelBase
         ErfassenViewModel erfassen,
         OffenePostenViewModel offenePosten,
         ReportViewModel report,
+        JahresrueckblickViewModel jahresrueckblick,
         AusgabenlisteViewModel ausgabenliste,
         VerwaltungViewModel verwaltung,
         RecurringExpenseScheduler scheduler)
@@ -128,6 +130,7 @@ public sealed partial class MainViewModel : ViewModelBase
         _erfassen = erfassen;
         _offenePosten = offenePosten;
         _report = report;
+        _jahresrueckblick = jahresrueckblick;
         _ausgabenliste = ausgabenliste;
         _verwaltung = verwaltung;
         _scheduler = scheduler;
@@ -146,6 +149,7 @@ public sealed partial class MainViewModel : ViewModelBase
             new("Wiederkehrende Ausgaben", verwaltung.Vorlagen, "IconVorlagen", NavigationGruppe.ErfassenUndVerwalten),
 
             new("Report", report, "IconReport", NavigationGruppe.Auswertung),
+            new("Jahresrückblick", jahresrueckblick, "IconJahresrueckblick", NavigationGruppe.Auswertung),
             new("Ausgabenliste", ausgabenliste, "IconAusgabenliste", NavigationGruppe.Auswertung),
 
             new("Kategorien", verwaltung, "IconKategorien", NavigationGruppe.Einstellungen, istUnterpunkt: true, verwaltungsTabIndex: 0),
@@ -247,6 +251,24 @@ public sealed partial class MainViewModel : ViewModelBase
         {
             SelectedNavigationItem = NavigationItems
                 .First(item => ReferenceEquals(item.ViewModel, _erfassen));
+        };
+
+        jahresrueckblick.ErfassenAngefordert += (_, _) =>
+        {
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _erfassen));
+        };
+
+        // Klick auf eine Karte oder eine Zeile des Rueckblicks: zeigt genau
+        // die Buchungen dahinter. Erst filtern, dann wechseln - sonst
+        // stuende die Liste kurz mit ihrem alten Inhalt da.
+        jahresrueckblick.AusgabenlisteAngefordert += (_, sprung) =>
+        {
+            _ausgabenliste.ZeigeKategorieZeitraum(
+                sprung.KategorieId, sprung.Von, sprung.BisEinschliesslich);
+
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
         };
 
         startseite.AusgabenlisteAngefordert += (_, _) =>
@@ -486,6 +508,11 @@ public sealed partial class MainViewModel : ViewModelBase
         if (ReferenceEquals(value.ViewModel, _report))
         {
             _report.AktualisiereAuswertung();
+        }
+
+        if (ReferenceEquals(value.ViewModel, _jahresrueckblick))
+        {
+            _jahresrueckblick.Aktualisiere();
         }
 
         if (ReferenceEquals(value.ViewModel, _ausgabenliste))

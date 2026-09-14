@@ -154,6 +154,8 @@ public sealed partial class ReportViewModel : ViewModelBase
             Zahler = ZahlerOptionen.Any(option => option.IstGewaehlt) ? ZahlerFilterText : null,
             StatusOffen = StatusOffen,
             StatusBeglichen = StatusBeglichen,
+            NurEinnahmen = NurEinnahmen,
+            NurAusgaben = NurAusgaben,
             MeineKosten = MeineKosten,
             Suche = Suchtext,
         });
@@ -219,6 +221,11 @@ public sealed partial class ReportViewModel : ViewModelBase
                 StatusBeglichen = false;
                 break;
 
+            case FilterArt.Buchungsart:
+                NurEinnahmen = false;
+                NurAusgaben = false;
+                break;
+
             case FilterArt.MeineKosten:
                 MeineKosten = false;
                 break;
@@ -253,6 +260,20 @@ public sealed partial class ReportViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _statusBeglichen;
+
+    /// <summary>
+    /// Einschraenkung auf einen Buchungstyp - wortgleich zur
+    /// Ausgabenliste: zwei unabhaengige Haekchen nach dem Muster von
+    /// <see cref="StatusOffen"/>/<see cref="StatusBeglichen"/>. Beide aus
+    /// (und ebenso beide an) heisst "alles", weil eine Buchung nicht
+    /// zugleich Einnahme und Ausgabe sein kann. Vorbelegt ist deshalb
+    /// beides zusammen, also kein Haekchen.
+    /// </summary>
+    [ObservableProperty]
+    private bool _nurEinnahmen;
+
+    [ObservableProperty]
+    private bool _nurAusgaben;
 
     /// <summary>
     /// "Meine Kosten": eigene Buchungen plus alles, was von anderen noch
@@ -409,6 +430,8 @@ public sealed partial class ReportViewModel : ViewModelBase
     partial void OnStatusOffenChanged(bool value) => LadeDaten();
     partial void OnStatusBeglichenChanged(bool value) => LadeDaten();
     partial void OnMeineKostenChanged(bool value) => LadeDaten();
+    partial void OnNurEinnahmenChanged(bool value) => LadeDaten();
+    partial void OnNurAusgabenChanged(bool value) => LadeDaten();
     partial void OnSuchtextChanged(string value) => LadeDaten();
 
     /// <summary>
@@ -561,6 +584,8 @@ public sealed partial class ReportViewModel : ViewModelBase
         StatusOffen = false;
         StatusBeglichen = false;
         MeineKosten = false;
+        NurEinnahmen = false;
+        NurAusgaben = false;
 
         OnPropertyChanged(nameof(KategorieFilterText));
         OnPropertyChanged(nameof(ZahlerFilterText));
@@ -861,6 +886,11 @@ public sealed partial class ReportViewModel : ViewModelBase
 
             Status = (StatusOffen ? SettlementStatus.Offene : SettlementStatus.Alle)
                    | (StatusBeglichen ? SettlementStatus.Beglichene : SettlementStatus.Alle),
+
+            // Gleiche Haekchen, gleiche Regel wie in der Ausgabenliste:
+            // gleich gesetzt (beide an ODER beide aus) heisst "beides" und
+            // schraenkt nicht ein.
+            IsIncome = NurEinnahmen == NurAusgaben ? null : NurEinnahmen,
 
             SearchText = string.IsNullOrWhiteSpace(Suchtext) ? null : Suchtext.Trim(),
         };

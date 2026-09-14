@@ -240,6 +240,19 @@ public static class LogEvents
             ? $"Posten als beglichen markiert (Id {id})."
             : $"Begleichung eines Postens zurueckgenommen (Id {id}).";
 
+    // ---------------- Jahresrueckblick ----------------
+
+    /// <summary>
+    /// Ein neu berechneter Jahresrueckblick. Jahr, Spannweite und die
+    /// ANZAHL der Befunde - welche Kategorien auffielen und mit welchen
+    /// Betraegen, bleibt draussen (Regel 11).
+    /// </summary>
+    public static string YearInReviewBuilt(int year, bool wholeYears, int findingCount)
+        => $"Jahresrueckblick berechnet: Jahr {year}, ganze Kalenderjahre: "
+           + (wholeYears ? "ja" : "nein")
+           + $", {findingCount} "
+           + (findingCount == 1 ? "Befund." : "Befunde.");
+
     // ---------------- Personen ----------------
     public static string PersonCreated(int id)
         => $"Person angelegt (Id {id}).";

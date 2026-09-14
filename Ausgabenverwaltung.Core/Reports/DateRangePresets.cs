@@ -31,6 +31,17 @@ public static class DateRangePresets
     }
 
     /// <summary>
+    /// Ein bestimmtes Kalenderjahr, vom 1. Januar bis zum 1. Januar des
+    /// Folgejahres. Anders als <see cref="ThisYear"/> und
+    /// <see cref="LastYear"/> nimmt das Preset die Jahreszahl unmittelbar
+    /// entgegen statt sie aus dem heutigen Datum abzuleiten - der
+    /// Jahresrueckblick vergleicht ein frei gewaehltes Jahr mit seinem
+    /// Vorgaenger, beide muessen nicht in der Naehe von heute liegen.
+    /// </summary>
+    public static DateRange Year(int year) =>
+        new(new DateOnly(year, 1, 1), new DateOnly(year + 1, 1, 1));
+
+    /// <summary>
     /// Die letzten drei KALENDERjahre einschliesslich des laufenden.
     /// Bewusst nicht rollierend wie <see cref="LastTwelveMonths"/>: in der
     /// nach Jahren gruppierten Auswertung sollen die Jahresspalten

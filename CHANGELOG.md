@@ -13,6 +13,63 @@ ganzen Sätzen.
 Ganz oben sammelt „Unveröffentlicht", was noch in keiner Fassung steckt;
 beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
+## Unveröffentlicht
+
+### Jahresrückblick
+
+- Unter „Auswertung“ gibt es jetzt den Jahresrückblick. Er stellt zwei Jahre
+  nebeneinander und rechnet selbst aus, was sich am stärksten verändert hat.
+  Ganz oben stehen Ausgaben, Einnahmen und was unterm Strich übrig blieb,
+  jeweils mit dem Vorjahreswert und dem Unterschied daneben.
+- Darunter benennt der Rückblick die auffälligsten Punkte auf je einer
+  Karte: wofür deutlich mehr oder weniger ausgegeben wurde, was neu
+  hinzugekommen oder ganz weggefallen ist, welcher Posten der größte war, wo
+  sich viele kleine Beträge summieren und welcher Monat der teuerste und
+  welcher der ruhigste war.
+- Auf der Karte stehen nur Überschrift, Name und Betrag — dafür sind alle
+  Karten gleich groß und lassen sich nebeneinander überfliegen. Das kleine
+  Fragezeichen an der Karte öffnet den Rest: den ganzen Satz dazu, die Zahlen
+  im Einzelnen (beide Jahre, der Unterschied in Euro und Prozent, der Anteil
+  am Jahr, die Zahl der Buchungen und der Schnitt je Buchung) und zum Schluss
+  einen Satz dazu, wonach für diese Karte überhaupt gesucht wurde. Ohne den
+  liest sich ein Rückblick wie ein Orakel: richtig gerechnet, aber nicht
+  nachvollziehbar.
+- Kleine Ausschläge auf kleiner Grundlage bleiben dabei außen vor. Eine
+  Ausgabe, die von 2 € auf 20 € steigt, sieht prozentual gewaltig aus, ist
+  aber kein Jahresereignis — solche Zahlen würden sonst jede Liste anführen
+  und das Wesentliche verdecken.
+- Steckt derselbe Anstieg zugleich in einer Ober- und einer Unterkategorie,
+  nennt der Rückblick nur die genauere von beiden. Sonst stünde dieselbe
+  Veränderung zwei- oder dreimal untereinander.
+- Läuft das Jahr noch, vergleicht der Rückblick von sich aus nur den gleichen
+  Zeitraum des Vorjahres — im September also Januar bis September gegen
+  Januar bis September. Wie weit gerechnet wurde, steht über den Zahlen; auf
+  ganze Kalenderjahre lässt sich umschalten, und dann steht dabei, dass das
+  laufende Jahr noch nicht zu Ende ist.
+- Ganz unten steht die vollständige Gegenüberstellung nach Kategorie zum
+  Aufklappen, der größte Posten oben, mit einer eigenen Spalte für den
+  Unterschied und eine für den Anteil am Jahr. Ein Klick auf eine Karte oder
+  eine Zeile führt in die Ausgabenliste mit genau den Buchungen dahinter,
+  und die Tabelle lässt sich als CSV-Datei speichern.
+- Gibt es für das Vorjahr noch gar keine Buchung, sagt die Seite das und
+  lässt oben ein anderes Jahr wählen, statt eine leere Gegenüberstellung zu
+  zeigen. Hat sich zwischen zwei Jahren wirklich nichts Nennenswertes
+  verschoben, steht auch das da — als Ergebnis und nicht als Fehlanzeige.
+
+### Auswertung
+
+- Die Filterleiste der Auswertung hat jetzt wie die Ausgabenliste die
+  Häkchen „Ausgaben“ und „Einnahmen“. Ohne Häkchen zählen wie bisher beide
+  zusammen; ein einzelnes Häkchen rechnet die Auswertung nur noch über
+  Ausgaben oder nur noch über Einnahmen. Der gesetzte Filter steht auch bei
+  eingeklappter Leiste als Merkmal darunter und lässt sich dort wegklicken.
+
+### Sonstiges
+
+- Weil in der Seitenleiste ein Bereich dazugekommen ist, führen Strg + 1 bis
+  Strg + 9 jetzt jeweils eine Stelle weiter nach unten. Die Datensicherung
+  bleibt über die Seitenleiste erreichbar, hat aber kein Zifferkürzel mehr.
+
 ## 1.5.0 — 24.08.2026
 
 - Die Filterleiste in Ausgabenliste und Auswertung lässt sich jetzt

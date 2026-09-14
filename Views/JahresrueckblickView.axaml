@@ -1,0 +1,414 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ausgabenverwaltung.ViewModels"
+             xmlns:anzeige="using:Ausgabenverwaltung.Anzeige"
+             xmlns:yir="using:Ausgabenverwaltung.Core.YearInReview"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="750"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="Ausgabenverwaltung.Views.JahresrueckblickView"
+             x:Name="Wurzel"
+             x:DataType="vm:JahresrueckblickViewModel">
+
+    <!-- Die Gegenueberstellung hat VIER feste Wertspalten, anders als die
+         Kreuztabelle der Auswertung, deren Spaltenzahl erst zur Laufzeit
+         feststeht. Deshalb hier ein Raster statt fester Einzelbreiten:
+         Kopfzeile und Datenzeilen tragen dasselbe Spaltenmuster und stehen
+         auf jeder Schriftgroessenstufe buendig uebereinander (Regel 9). -->
+    <UserControl.Resources>
+        <!-- Eine Vorlage fuer alle drei Kacheln: sie unterscheiden sich nur
+             in ihren Texten, und drei gleichlautende Bloecke hier waeren
+             drei Stellen, an denen eine Aenderung vergessen werden kann. -->
+        <DataTemplate x:Key="KennzahlVorlage" x:DataType="vm:RueckblickKennzahl">
+            <Border Classes="kpi">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="kpi-label" Text="{Binding Beschriftung}"
+                               TextWrapping="Wrap" />
+                    <TextBlock Classes="kpi-wert" Text="{Binding WertText}" />
+                    <TextBlock Classes="kpi-hinweis" Text="{Binding VorjahrText}"
+                               TextWrapping="Wrap" />
+                    <!-- Die Richtung steht im Text; die Farbe ist der Zusatz
+                         und nie ihr Ersatz (Regel 10). "Unverändert" bekommt
+                         bewusst gar keine Hervorhebung. -->
+                    <TextBlock Text="{Binding VeraenderungText}" TextWrapping="Wrap"
+                               Classes.einnahme="{Binding IstVerbesserung}"
+                               Classes.offen="{Binding IstVerschlechterung}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <!-- Eine Zeile der Tabelle ist als Ganzes anklickbar und fuehrt in
+             die Ausgabenliste. Sie zeichnet selbst nichts; nur Zeiger und
+             eine dezente Flaeche beim Ueberfahren zeigen das an. -->
+        <!-- Das Fragezeichen an der Karte. Klein, rund und zurueckhaltend:
+             es ist ein Angebot und darf der Karte nicht die Aufmerksamkeit
+             nehmen, die ihrer Zahl gehoert. -->
+        <Style Selector="Button.fragezeichen">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderStarkFarbe}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="99" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.fragezeichen:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentFarbe}" />
+        </Style>
+
+        <Style Selector="Button.rueckblickzeile">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0,5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <!-- BEIDES noetig, und zwar aus zwei verschiedenen Gruenden:
+                 HorizontalAlignment macht den Knopf so breit wie die
+                 Zeile, HorizontalContentAlignment das Spaltenraster darin
+                 so breit wie den Knopf. Fehlt das erste, bleibt der Knopf
+                 auf der Wunschbreite seines Inhalts stehen - die
+                 Sternspalte schrumpft dann auf den Kategorienamen, und die
+                 Wertspalten rutschen nach links unter den Ueberschriften
+                 weg. Dieselbe Stelle wie bei Button.kopf in App.axaml. -->
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.rueckblickzeile /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+        <Style Selector="Button.rueckblickzeile:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+        <Style Selector="Button.rueckblickzeile:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedFarbe}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="32,24" Spacing="16">
+
+            <TextBlock Classes="seitentitel" Text="Jahresrückblick" />
+
+            <!-- ============ Kopfzeile: Jahr, Spannweite, Export ============ -->
+            <Grid ColumnDefinitions="Auto,12,Auto,*,Auto,12,Auto">
+                <ComboBox Grid.Column="0"
+                          MinWidth="{anzeige:Breite 110}"
+                          ItemsSource="{Binding JahrOptionen}"
+                          SelectedItem="{Binding AusgewaehltesJahr}"
+                          IsVisible="{Binding ZeigtInhalt}"
+                          ToolTip.Tip="Das Jahr, auf das zurückgeblickt wird" />
+
+                <!-- Nur beim laufenden Jahr gibt es etwas umzuschalten. -->
+                <CheckBox Grid.Column="2"
+                          Content="Ganze Kalenderjahre vergleichen"
+                          IsChecked="{Binding GanzeKalenderjahre}"
+                          IsVisible="{Binding ZeitraumUmschaltbar}" />
+
+                <TextBlock Grid.Column="4"
+                           Text="{Binding ExportHinweis}"
+                           IsVisible="{Binding ExportHinweis, Converter={x:Static ObjectConverters.IsNotNull}}"
+                           Foreground="{DynamicResource TextTertiaerFarbe}"
+                           VerticalAlignment="Center" />
+
+                <Button Grid.Column="6" Classes="secondary"
+                        Content="Als CSV exportieren"
+                        IsVisible="{Binding ZeigtInhalt}"
+                        ToolTip.Tip="Die angezeigte Gegenüberstellung mit der aufgeklappten Struktur"
+                        Click="CsvExportieren_Click" />
+            </Grid>
+
+            <!-- Worauf sich der Vergleich stuetzt. Steht ueber den Zahlen
+                 und nicht darunter: wer das angebrochene Jahr fuer ein
+                 volles haelt, liest jede Zahl falsch. -->
+            <StackPanel Spacing="4" IsVisible="{Binding ZeigtInhalt}">
+                <TextBlock Text="{Binding ZeitraumHinweis}"
+                           Foreground="{DynamicResource TextTertiaerFarbe}"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding GanzjahresWarnung}"
+                           IsVisible="{Binding HatGanzjahresWarnung}"
+                           Foreground="{DynamicResource TextSekundaerFarbe}"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- ============ Die drei Kennzahlen ============ -->
+            <UniformGrid Columns="3" IsVisible="{Binding ZeigtInhalt}">
+                <ContentControl Content="{Binding AusgabenKennzahl}" Margin="0,0,8,0"
+                                ContentTemplate="{StaticResource KennzahlVorlage}" />
+                <ContentControl Content="{Binding EinnahmenKennzahl}" Margin="4,0,4,0"
+                                ContentTemplate="{StaticResource KennzahlVorlage}" />
+                <ContentControl Content="{Binding NettoKennzahl}" Margin="8,0,0,0"
+                                ContentTemplate="{StaticResource KennzahlVorlage}" />
+            </UniformGrid>
+
+            <!-- ============ Die Befunde ============ -->
+            <StackPanel Spacing="8">
+                <TextBlock Classes="ueberschrift" Text="Das fällt auf"
+                           IsVisible="{Binding ZeigtInhalt}" />
+
+                <!-- Leerzustand mit Handlungsangebot: der EINZIGE Fall hier,
+                     in dem es etwas aufzuloesen gibt. -->
+                <StackPanel Classes="empty-state" IsVisible="{Binding NochNichtsErfasst}">
+                    <Path Data="{DynamicResource IconJahresrueckblick}"
+                          Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}"
+                          Stretch="Uniform" StrokeThickness="1.75"
+                          StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" />
+                    <TextBlock Text="{Binding LageHinweis}" />
+                    <Button Classes="primary" Content="Ausgabe erfassen"
+                            Command="{Binding AusgabeErfassenCommand}" />
+                </StackPanel>
+
+                <!-- Kein Vorjahr und keine Auffaelligkeiten sind ERGEBNISSE
+                     und keine Leerzustaende: es gibt nichts aufzuloesen,
+                     deshalb steht daneben auch kein Knopf. Das Jahr laesst
+                     sich oben wechseln. -->
+                <TextBlock Text="{Binding LageHinweis}"
+                           IsVisible="{Binding VorjahrOhneBuchung}"
+                           Foreground="{DynamicResource TextSekundaerFarbe}"
+                           TextWrapping="Wrap" Margin="0,4,0,8" />
+                <TextBlock Text="{Binding LageHinweis}"
+                           IsVisible="{Binding KeineAuffaelligkeiten}"
+                           Foreground="{DynamicResource TextSekundaerFarbe}"
+                           TextWrapping="Wrap" Margin="0,4,0,8" />
+
+                <ItemsControl ItemsSource="{Binding Karten}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RueckblickKarte">
+                            <!-- Der ganze Satz steht bewusst NICHT mehr auf
+                                 der Karte, sondern hinter dem Fragezeichen:
+                                 er ist je nach Befund ein bis vier Zeilen
+                                 lang und machte damit jede Karte anders hoch.
+                                 Uebrig bleiben drei EINZEILIGE Angaben -
+                                 dadurch sind alle Karten gleich gross, auf
+                                 jeder Schriftstufe und ohne feste Hoehe, die
+                                 irgendwann etwas abschneiden wuerde.
+                                 AutomationProperties.Name traegt den Satz
+                                 weiter: fuer die Sprachausgabe bleibt die
+                                 Karte damit derselbe ganze Satz wie zuvor. -->
+                            <Button Classes="kachel"
+                                    Width="{anzeige:Breite 300}"
+                                    Margin="0,0,12,12"
+                                    ToolTip.Tip="Zeigt die Buchungen dahinter in der Ausgabenliste"
+                                    AutomationProperties.Name="{Binding Satz}"
+                                    Command="{Binding #Wurzel.((vm:JahresrueckblickViewModel)DataContext).KarteOeffnenCommand}"
+                                    CommandParameter="{Binding}">
+                                <Border Classes="kpi">
+                                    <StackPanel Spacing="6">
+                                        <Grid ColumnDefinitions="Auto,6,*,6,Auto">
+                                            <Border Grid.Column="0" Classes="farbpunkt"
+                                                    Background="{Binding Farbe}"
+                                                    IsVisible="{Binding ZeigtFarbe}"
+                                                    VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Classes="kpi-label"
+                                                       Text="{Binding Ueberschrift}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+
+                                            <!-- Eigener Knopf im Knopf, wie der
+                                                 Aufklapp-Pfeil in der Tabelle:
+                                                 das Fragezeichen erklaert, es
+                                                 fuehrt nicht in die Liste. -->
+                                            <Button Grid.Column="4" Classes="fragezeichen"
+                                                    Content="?"
+                                                    Width="{anzeige:Breite 20}"
+                                                    Height="{anzeige:Breite 20}"
+                                                    VerticalAlignment="Center"
+                                                    ToolTip.Tip="Was bedeutet diese Karte?">
+                                                <Button.Flyout>
+                                                    <Flyout Placement="Bottom">
+                                                        <StackPanel Width="{anzeige:Breite 340}"
+                                                                    Spacing="8">
+                                                            <TextBlock Classes="kpi-label"
+                                                                       Text="{Binding Erklaerung.Ueberschrift}"
+                                                                       TextWrapping="Wrap" />
+                                                            <TextBlock FontWeight="Bold"
+                                                                       Text="{Binding Erklaerung.Gegenstand}"
+                                                                       TextWrapping="Wrap" />
+
+                                                            <!-- Erst der Satz mit
+                                                                 den Zahlen, dann
+                                                                 die Zahlen einzeln,
+                                                                 zuletzt die Regel
+                                                                 dahinter. -->
+                                                            <TextBlock Text="{Binding Erklaerung.Satz}"
+                                                                       TextWrapping="Wrap" />
+
+                                                            <Border BorderThickness="0,1,0,0"
+                                                                    BorderBrush="{DynamicResource BorderDezentFarbe}" />
+
+                                                            <ItemsControl ItemsSource="{Binding Erklaerung.Werte}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="yir:ReviewValue">
+                                                                        <Grid ColumnDefinitions="*,12,Auto"
+                                                                              Margin="0,2">
+                                                                            <TextBlock Grid.Column="0"
+                                                                                       Text="{Binding Beschriftung}"
+                                                                                       Foreground="{DynamicResource TextSekundaerFarbe}"
+                                                                                       TextWrapping="Wrap" />
+                                                                            <TextBlock Grid.Column="2"
+                                                                                       Text="{Binding Wert}"
+                                                                                       FontWeight="SemiBold"
+                                                                                       TextAlignment="Right"
+                                                                                       TextWrapping="Wrap" />
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+
+                                                            <Border BorderThickness="0,1,0,0"
+                                                                    BorderBrush="{DynamicResource BorderDezentFarbe}" />
+
+                                                            <TextBlock Classes="kpi-hinweis"
+                                                                       Text="{Binding Erklaerung.Bedeutung}"
+                                                                       TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                        </Grid>
+
+                                        <!-- Textzelle statt TextBlock: ein
+                                             Kategoriepfad wird VORNE gekuerzt,
+                                             damit der Name der Kategorie selbst
+                                             stehen bleibt - und sie verlangt
+                                             nie mehr Platz, als die Karte hat. -->
+                                        <anzeige:Textzelle FontSize="{DynamicResource SchriftUeberschrift}"
+                                                           FontWeight="Bold"
+                                                           Kuerzung="Vorne"
+                                                           Inhalt="{Binding Gegenstand}" />
+
+                                        <TextBlock Classes="kpi-wert" Text="{Binding BetragText}" />
+                                    </StackPanel>
+                                </Border>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <!-- ============ Die Gegenueberstellung ============ -->
+            <StackPanel Spacing="8" IsVisible="{Binding ZeigtInhalt}">
+                <TextBlock Classes="ueberschrift" Text="Alle Kategorien" />
+
+                <Border BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="0,0,0,1"
+                        Padding="0,0,0,6">
+                    <Grid anzeige:Raster.Spalten="*,16,140,16,140,16,170,16,80">
+                        <TextBlock Grid.Column="0" Text="Kategorie" Classes="tabellenkopf" />
+                        <TextBlock Grid.Column="2" Text="{Binding VorjahrKopf}"
+                                   Classes="tabellenkopf zahl" />
+                        <TextBlock Grid.Column="4" Text="{Binding JahrKopf}"
+                                   Classes="tabellenkopf zahl" />
+                        <TextBlock Grid.Column="6" Text="Unterschied" Classes="tabellenkopf zahl" />
+                        <TextBlock Grid.Column="8" Text="Anteil" Classes="tabellenkopf zahl"
+                                   ToolTip.Tip="Anteil an den Ausgaben des Jahres" />
+                    </Grid>
+                </Border>
+
+                <!-- ItemsControl statt ListBox: die Zeilenzahl entspricht der
+                     Zahl der Kategorien und nicht der Buchungen - da lohnt
+                     keine Virtualisierung. -->
+                <ItemsControl ItemsSource="{Binding Zeilen}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RueckblickZeile">
+                            <Border BorderBrush="{DynamicResource BorderDezentFarbe}"
+                                    BorderThickness="0,0,0,1">
+                                <Button Classes="rueckblickzeile"
+                                        ToolTip.Tip="Zeigt diese Kategorie in der Ausgabenliste"
+                                        Command="{Binding #Wurzel.((vm:JahresrueckblickViewModel)DataContext).ZeileOeffnenCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Grid anzeige:Raster.Spalten="*,16,140,16,140,16,170,16,80">
+                                        <DockPanel Grid.Column="0">
+                                            <Border DockPanel.Dock="Left"
+                                                    Width="{Binding EinzugBreite}" />
+
+                                            <!-- Eigener Knopf im Knopf: das
+                                                 Aufklappen darf nicht in die
+                                                 Ausgabenliste fuehren. -->
+                                            <Button DockPanel.Dock="Left"
+                                                    Classes="aufklapp"
+                                                    Content="{Binding AufklappZeichen}"
+                                                    IsVisible="{Binding HatKinder}"
+                                                    Command="{Binding #Wurzel.((vm:JahresrueckblickViewModel)DataContext).ZeileUmschaltenCommand}"
+                                                    CommandParameter="{Binding}" />
+                                            <Border DockPanel.Dock="Left" Width="{anzeige:Breite 20}"
+                                                    IsVisible="{Binding !HatKinder}" />
+
+                                            <!-- Farbe vor dem Namen, nie an
+                                                 seiner Stelle (Regel 10). -->
+                                            <Border DockPanel.Dock="Left" Classes="farbpunkt"
+                                                    Background="{Binding Farbe}"
+                                                    IsVisible="{Binding ZeigtFarbe}"
+                                                    Margin="0,0,6,0" />
+
+                                            <anzeige:Textzelle Inhalt="{Binding Name}"
+                                                               VerticalAlignment="Center"
+                                                               Classes.archiviert="{Binding IstArchiviert}" />
+                                        </DockPanel>
+
+                                        <TextBlock Grid.Column="2" Classes="tabellenzelle zahl"
+                                                   Text="{Binding VorjahrText}" />
+                                        <TextBlock Grid.Column="4" Classes="tabellenzelle zahl"
+                                                   Text="{Binding JahrText}" />
+
+                                        <!-- Der Unterschied steht in Worten
+                                             ("412,00 € mehr") und nicht als
+                                             vorzeichenbehaftete Zahl - nur im
+                                             CSV-Export wird daraus wieder ein
+                                             Vorzeichen, weil Excel damit
+                                             rechnen koennen muss. -->
+                                        <TextBlock Grid.Column="6" Classes="tabellenzelle zahl"
+                                                   Text="{Binding DifferenzText}"
+                                                   Classes.offen="{Binding DifferenzIstMehr}"
+                                                   Classes.einnahme="{Binding DifferenzIstWeniger}" />
+
+                                        <TextBlock Grid.Column="8" Classes="tabellenzelle zahl"
+                                                   Text="{Binding AnteilText}" />
+                                    </Grid>
+                                </Button>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Summenzeile. Als ContentControl, damit sie ohne
+                     Gegenueberstellung schlicht wegbleibt (Content = NULL). -->
+                <ContentControl Content="{Binding SummenZeile}">
+                    <ContentControl.ContentTemplate>
+                        <DataTemplate x:DataType="vm:RueckblickZeile">
+                            <Border BorderBrush="{DynamicResource BorderStarkFarbe}"
+                                    BorderThickness="0,1,0,0" Padding="0,6,0,0" Margin="0,2,0,0">
+                                <Grid anzeige:Raster.Spalten="*,16,140,16,140,16,170,16,80">
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Classes="tabellenzelle zahl"
+                                               FontWeight="SemiBold" Text="{Binding VorjahrText}" />
+                                    <TextBlock Grid.Column="4" Classes="tabellenzelle zahl"
+                                               FontWeight="SemiBold" Text="{Binding JahrText}" />
+                                    <TextBlock Grid.Column="6" Classes="tabellenzelle zahl"
+                                               FontWeight="SemiBold" Text="{Binding DifferenzText}"
+                                               Classes.offen="{Binding DifferenzIstMehr}"
+                                               Classes.einnahme="{Binding DifferenzIstWeniger}" />
+                                    <TextBlock Grid.Column="8" Classes="tabellenzelle zahl"
+                                               FontWeight="SemiBold" Text="{Binding AnteilText}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ContentControl.ContentTemplate>
+                </ContentControl>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

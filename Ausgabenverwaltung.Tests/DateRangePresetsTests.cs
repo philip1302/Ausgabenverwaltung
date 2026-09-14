@@ -40,6 +40,17 @@ public class DateRangePresetsTests
         Assert.Equal(new DateOnly(2026, 1, 1), range.ToExclusive);
     }
 
+    // Nimmt die Jahreszahl unmittelbar entgegen statt sie aus heute
+    // abzuleiten - der Jahresrueckblick vergleicht frei gewaehlte Jahre.
+    [Fact]
+    public void Year_umfasst_genau_das_angegebene_Kalenderjahr()
+    {
+        var range = DateRangePresets.Year(2023);
+
+        Assert.Equal(new DateOnly(2023, 1, 1), range.From);
+        Assert.Equal(new DateOnly(2024, 1, 1), range.ToExclusive);
+    }
+
     // Bewusst Kalenderjahre und nicht rollierend: die Jahresspalten der
     // Auswertung sollen vollstaendig sein.
     [Fact]

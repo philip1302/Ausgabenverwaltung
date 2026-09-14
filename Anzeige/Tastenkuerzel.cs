@@ -88,7 +88,7 @@ public sealed record Tastenkuerzel(
             TastenkuerzelAktion.BereichWechseln,
             GruppeUeberall,
             "Strg + 1 … 9",
-            "Wechselt in den Bereich an dieser Stelle der Seitenleiste, "
+            "Wechselt in einen der ersten neun Bereiche der Seitenleiste, "
             + "von oben nach unten gezählt.",
             Enumerable.Range(1, BereicheMitZiffer)
                       .Select(ziffer => $"Ctrl+D{ziffer}")

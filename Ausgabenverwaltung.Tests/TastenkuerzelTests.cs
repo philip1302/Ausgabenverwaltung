@@ -66,6 +66,21 @@ public class TastenkuerzelTests
         Assert.Equal("Ctrl+D9", bereiche.Gesten[^1]);
     }
 
+    /// <summary>
+    /// Die Seitenleiste hat mehr Eintraege, als es Ziffern gibt - seit der
+    /// Jahresrueckblick dazugekommen ist, faellt der letzte Eintrag aus
+    /// Strg+1…9 heraus. Der Beschreibungstext darf deshalb nicht laenger
+    /// behaupten, jeder Eintrag sei ueber seine Stelle erreichbar; die
+    /// Uebersicht waere sonst nachweislich falsch.
+    /// </summary>
+    [Fact]
+    public void Der_Bereichswechsel_verspricht_nicht_mehr_Bereiche_als_es_Ziffern_gibt()
+    {
+        var bereiche = Tastenkuerzel.Fuer(TastenkuerzelAktion.BereichWechseln);
+
+        Assert.Contains("ersten neun", bereiche.Beschreibung, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Geste_liefert_nur_bei_eindeutigen_Kuerzeln_einen_Wert()
     {

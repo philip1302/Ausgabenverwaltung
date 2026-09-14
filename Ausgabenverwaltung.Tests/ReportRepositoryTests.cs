@@ -1,6 +1,7 @@
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Expenses;
+using Ausgabenverwaltung.Core.OpenItems;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.Reports;
 
@@ -350,5 +351,77 @@ public class ReportRepositoryTests : IDisposable
         Assert.Equal(kategorie.Id, cell.CategoryId);
         Assert.Equal(-50000, cell.SumCents);
         Assert.Equal(2, cell.Count);
+    }
+
+    // ---------------- Art der Buchung ----------------
+    //
+    // Die Filterleiste der Auswertung hat dieselben zwei Haekchen wie die
+    // Ausgabenliste. Gleich gesetzt - beide an oder beide aus - heisst
+    // "beides" und kommt hier als NULL an; nur ein einzelnes Haekchen
+    // schraenkt ein.
+
+    [Fact]
+    public void Ohne_Einschraenkung_auf_die_Art_zaehlen_Ausgaben_und_Einnahmen()
+    {
+        LegeAusgabeUndEinnahmeAn();
+
+        var gruppe = Assert.Single(_repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Grouping = ReportGrouping.Year,
+            IsIncome = null,
+        }));
+
+        Assert.Equal(2, gruppe.Count);
+        Assert.Equal(-30000, gruppe.SumCents);
+    }
+
+    [Fact]
+    public void Nur_Ausgaben_laesst_die_Einnahme_heraus()
+    {
+        LegeAusgabeUndEinnahmeAn();
+
+        var gruppe = Assert.Single(_repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Grouping = ReportGrouping.Year,
+            IsIncome = false,
+        }));
+
+        Assert.Equal(1, gruppe.Count);
+        Assert.Equal(-50000, gruppe.SumCents);
+    }
+
+    [Fact]
+    public void Nur_Einnahmen_laesst_die_Ausgabe_heraus()
+    {
+        LegeAusgabeUndEinnahmeAn();
+
+        var gruppe = Assert.Single(_repository.Evaluate(new ReportFilter
+        {
+            From = new DateOnly(2026, 1, 1),
+            To = new DateOnly(2027, 1, 1),
+            Grouping = ReportGrouping.Year,
+            IsIncome = true,
+        }));
+
+        Assert.Equal(1, gruppe.Count);
+        Assert.Equal(20000, gruppe.SumCents);
+    }
+
+    // Eine Ausgabe und eine beglichene Fremdeinnahme im selben Jahr. Die
+    // Einnahme ist bewusst beglichen: eine noch offene zaehlte mit 0 und
+    // liesse sich in der Summe nicht von "herausgefiltert" unterscheiden.
+    private void LegeAusgabeUndEinnahmeAn()
+    {
+        var kategorie = _categories.Create("Sonstiges", null);
+
+        _expenses.Create(kategorie.Id, 50000, new DateOnly(2026, 3, 1), _selfId, isIncome: false);
+
+        var einnahme = _expenses.Create(
+            kategorie.Id, 20000, new DateOnly(2026, 3, 2), _otherId, isIncome: true);
+        new OpenItemsRepository(_connection).SetSettledDate(einnahme.Id, new DateOnly(2026, 3, 20));
     }
 }

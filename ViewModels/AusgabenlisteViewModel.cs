@@ -918,6 +918,72 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Zeigt die Buchungen einer Kategorie in einem Zeitraum. Wird aus dem
+    /// Jahresrueckblick heraus aufgerufen: hinter jeder Karte und jeder
+    /// Tabellenzeile dort stehen genau diese Buchungen.
+    ///
+    /// Der Rueckblick schraenkt weder nach Zahler noch nach
+    /// Begleichungsstand ein - deshalb werden hier auch nur Zeitraum und
+    /// Kategorie gesetzt, und die Liste zeigt anschliessend dieselbe Menge,
+    /// aus der die Karte gerechnet wurde.
+    ///
+    /// <paramref name="kategorieId"/> NULL bedeutet "alle Kategorien";
+    /// dahinter stehen die Monatskarten, die zu keiner Kategorie gehoeren.
+    /// Ein angehakter Knoten meint immer seinen ganzen Ast - genau wie die
+    /// Zeile im Rueckblick, die ihre Unterkategorien mitzaehlt.
+    /// </summary>
+    public void ZeigeKategorieZeitraum(
+        int? kategorieId, DateOnly von, DateOnly bisEinschliesslich)
+    {
+        _ladenGesperrt = true;
+        AktiverZeitraumSchluessel = null;
+        FilterAuswahlLeeren();
+        Suchtext = string.Empty;
+
+        _vorlageFilterId = null;
+        VorlageFilterText = null;
+        EinzelfilterLeeren();
+
+        VonText = GermanDateInput.ToText(von);
+        BisText = GermanDateInput.ToText(bisEinschliesslich);
+
+        if (kategorieId is int id)
+        {
+            HakeKategorieAn(KategorieWurzeln, id);
+        }
+
+        SortSpalte = ExpenseSortColumn.Datum;
+        SortAufsteigend = false;
+        _ladenGesperrt = false;
+
+        OnPropertyChanged(nameof(KategorieFilterText));
+        LadeDaten();
+    }
+
+    private static bool HakeKategorieAn(
+        IEnumerable<KategorieFilterKnoten> knoten, int kategorieId)
+    {
+        foreach (var k in knoten)
+        {
+            if (k.Id == kategorieId)
+            {
+                // Still, weil der Aufrufer anschliessend selbst laedt - ein
+                // Haekchen, das den ganzen Ast mitzieht, loeste sonst je
+                // Unterkategorie eine Neuladung aus.
+                k.SetzeStill(true);
+                return true;
+            }
+
+            if (HakeKategorieAn(k.Children, kategorieId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Hebt die Einschraenkung auf eine Vorlage auf, ohne die uebrigen
     /// Filter anzufassen.
     /// </summary>

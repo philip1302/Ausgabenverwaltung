@@ -47,16 +47,10 @@
             <Setter Property="Foreground" Value="{DynamicResource TextTertiaerFarbe}" />
         </Style>
 
-        <!-- Aufklapp-Pfeil vor dem Kategorienamen. -->
-        <Style Selector="Button.aufklapp">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Width" Value="{anzeige:Breite 20}" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
-        </Style>
+        <!-- Der Aufklapp-Pfeil (Button.aufklapp) stand frueher hier. Seit
+             der Jahresrueckblick denselben Baum aufklappt, steht er in
+             App.axaml: zwei Pfeile, die verschieden gross sind, waeren
+             schlimmer als jeder der beiden fuer sich. -->
 
         <!-- Die Kategoriespalte bleibt beim waagerechten Schieben stehen.
              Sie liegt weiter in derselben Zeile wie die Werte und wird
@@ -315,6 +309,23 @@
                                 <CheckBox Content="beglichen"
                                           IsChecked="{Binding StatusBeglichen, Mode=TwoWay}"
                                           ToolTip.Tip="Beide Häkchen zusammen lassen eigene Ausgaben heraus — die haben keinen Status. Ohne Häkchen sind alle Buchungen dabei." />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <!-- Zwei unabhaengige Haekchen wie beim Status -
+                                 siehe AusgabenlisteView. Beide aus heisst
+                                 "beides"; beide an ebenfalls, weil eine
+                                 Buchung nie zugleich Einnahme und Ausgabe
+                                 ist. -->
+                            <TextBlock Text="Art" Classes="filterbeschriftung" />
+                            <StackPanel Orientation="Horizontal" Spacing="10"
+                                        VerticalAlignment="Center">
+                                <CheckBox Content="Ausgaben"
+                                          IsChecked="{Binding NurAusgaben, Mode=TwoWay}" />
+                                <CheckBox Content="Einnahmen"
+                                          IsChecked="{Binding NurEinnahmen, Mode=TwoWay}"
+                                          ToolTip.Tip="Ohne Häkchen — und ebenso mit beiden — sind Ausgaben und Einnahmen dabei." />
                             </StackPanel>
                         </StackPanel>
 

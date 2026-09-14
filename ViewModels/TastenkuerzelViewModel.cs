@@ -60,7 +60,8 @@ public sealed partial class TastenkuerzelViewModel : ViewModelBase
     /// </summary>
     public string Fussnote =>
         $"Die Ziffern 1 bis {Tastenkuerzel.BereicheMitZiffer} zählen die Einträge der "
-        + "Seitenleiste von oben nach unten, die Startseite ist die 1.";
+        + "Seitenleiste von oben nach unten, die Startseite ist die 1. Weiter unten "
+        + "stehende Bereiche haben kein Zifferkürzel.";
 
     [RelayCommand]
     private void Schliessen() => Geschlossen?.Invoke(this, EventArgs.Empty);

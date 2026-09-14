@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
+using Ausgabenverwaltung.Core.YearInReview;
 
 namespace Ausgabenverwaltung.Core.Reports;
 
@@ -10,11 +11,13 @@ namespace Ausgabenverwaltung.Core.Reports;
 /// als Dezimaltrennzeichen. So oeffnet Excel im deutschen Gebietsschema die
 /// Datei mit einem Doppelklick, ohne Import-Assistent.
 ///
-/// Zwei Ausgaben, dieselbe Bauform: <see cref="Build"/> fuer die
+/// Drei Ausgaben, dieselbe Bauform: <see cref="Build"/> fuer die
 /// Kreuztabelle der Auswertung, <see cref="BuildExpenseList"/> fuer die
-/// flache Buchungsliste. Beide teilen Trennzeichen, Zeilenende und
+/// flache Buchungsliste und <see cref="BuildYearComparison"/> fuer den
+/// Jahresrueckblick. Alle drei teilen Trennzeichen, Zeilenende und
 /// Maskierung - eine zweite Datei daneben hiesse zwei Sorten CSV aus
-/// derselben Anwendung.
+/// derselben Anwendung. Deshalb steht die dritte hier, obwohl sie einen
+/// Typ aus dem Jahresrueckblick entgegennimmt.
 ///
 /// Erzeugt nur den Text; geschrieben wird die Datei in der Oberflaeche
 /// (Regel 7). Dort gehoert auch die UTF-8-Signatur hin - ohne sie zeigt
@@ -74,6 +77,58 @@ public static class ReportCsv
         summen.Add(Amount(matrix.Total));
         summen.Add(AverageAmount(matrix.Total, matrix.PeriodKeys.Count));
         AppendLine(text, summen);
+
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// Die Gegenueberstellung zweier Jahre aus dem Jahresrueckblick.
+    ///
+    /// Die Spalte "Unterschied" traegt hier - anders als die Saetze auf der
+    /// Seite - ein VORZEICHEN: positiv heisst mehr ausgegeben. In der
+    /// Anzeige steht die Richtung im Wort, weil sie gelesen wird; in einer
+    /// Tabellendatei wird sie gerechnet, und dafuer braucht Excel eine
+    /// Zahl.
+    /// </summary>
+    /// <param name="visibleRows">
+    /// Die Zeilen in der Reihenfolge, in der sie auf dem Bildschirm
+    /// stehen - eingeklappte Unterkategorien fehlen, wie bei
+    /// <see cref="Build"/>.
+    /// </param>
+    public static string BuildYearComparison(
+        ReviewComparison comparison, IReadOnlyList<ReviewCategoryChange> visibleRows)
+    {
+        var text = new StringBuilder();
+
+        AppendLine(text, new List<string>
+        {
+            Quote("Kategorie"),
+            Quote(comparison.Periods.PreviousLabel),
+            Quote(comparison.Periods.CurrentLabel),
+            Quote("Unterschied"),
+            Quote("Anteil in %"),
+        });
+
+        foreach (var row in visibleRows)
+        {
+            AppendLine(text, new List<string>
+            {
+                Quote(new string(' ', row.Depth * 4) + row.Name),
+                Jahreswert(row.PreviousCents, row.PreviousCount),
+                Jahreswert(row.CurrentCents, row.CurrentCount),
+                EuroText.Plain(row.DeltaCents),
+                Anteil(row.CurrentCents, comparison.CurrentTotalCents),
+            });
+        }
+
+        AppendLine(text, new List<string>
+        {
+            Quote("Summe"),
+            Jahreswert(comparison.PreviousTotalCents, comparison.PreviousTotalCount),
+            Jahreswert(comparison.CurrentTotalCents, comparison.CurrentTotalCount),
+            EuroText.Plain(comparison.DeltaCents),
+            Anteil(comparison.CurrentTotalCents, comparison.CurrentTotalCents),
+        });
 
         return text.ToString();
     }
@@ -170,6 +225,20 @@ public static class ReportCsv
         total.HasValues
             ? EuroText.Plain(total.AveragePerPeriod(periodCount))
             : string.Empty;
+
+    // Dieselbe Leer-statt-Bindestrich-Regel wie bei Amount(): ein Jahr
+    // ohne eine einzige Buchung bleibt leer. Die ANZAHL entscheidet und
+    // nicht die Summe - eine Kategorie, in der sich Ausgabe und Erstattung
+    // aufheben, hat null Euro und war trotzdem in Gebrauch.
+    private static string Jahreswert(long cents, int count) =>
+        count > 0 ? EuroText.Plain(cents) : string.Empty;
+
+    // Als blanke Zahl ohne Prozentzeichen, damit Excel eine Zahlenspalte
+    // daraus macht; worum es sich handelt, steht in der Kopfzeile.
+    private static string Anteil(long partCents, long totalCents) =>
+        totalCents == 0
+            ? string.Empty
+            : (partCents * 100m / totalCents).ToString("0.00", DeDe);
 
     // Textfelder stehen immer in Anfuehrungszeichen - sonst wirft Excel
     // die fuehrenden Leerzeichen der Einrueckung weg, und ein Semikolon

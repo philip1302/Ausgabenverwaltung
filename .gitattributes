@@ -18,3 +18,4 @@
 
 # PowerShell-Skripte laufen unter Windows und werden dort auch bearbeitet.
 *.ps1 text eol=crlf
+graphify-out/graph.json merge=graphify
