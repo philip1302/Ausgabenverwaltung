@@ -494,12 +494,9 @@ $RECYCLE.BIN/
 .claude/settings.local.json
 .claude/worktrees/
 
-# graphify: versioniert wird der Graph selbst (graph.json traegt in
-# .gitattributes einen eigenen Merge-Treiber) samt Bericht und Manifest.
-# Alles Uebrige entsteht bei jedem "graphify update" neu und ist
-# maschinenlokal - der Zwischenspeicher, die HTML-Ansicht, die
-# Tagessicherungen und die Kostenzaehlung.
-graphify-out/cache/
-graphify-out/graph.html
-graphify-out/cost.json
-graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+# graphify: der Wissensgraph bleibt vollstaendig maschinenlokal. Er
+# entsteht aus dem Quelltext und laesst sich jederzeit mit
+# "graphify update ." neu bauen - versioniert waere er nur Ballast:
+# graph.json allein sind rund 7 MB, und schon ein Rebuild ohne jede
+# Codeaenderung schreibt die Datei komplett neu.
+graphify-out/
