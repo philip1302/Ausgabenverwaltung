@@ -24,6 +24,17 @@ public partial class JahresrueckblickView : UserControl
         InitializeComponent();
     }
 
+    // Wie gross die Zeichenflaeche des Monatsverlaufs ist, weiss erst die
+    // Oberflaeche - gerechnet wird damit aber in Core (Regel 7). Deshalb
+    // wird die Groesse nur weitergereicht, genau wie in StartseiteView.
+    private void Zeichenflaeche_Groesse(object? sender, SizeChangedEventArgs e)
+    {
+        if (DataContext is JahresrueckblickViewModel viewModel)
+        {
+            viewModel.ZeichenflaecheGeaendert(e.NewSize.Width, e.NewSize.Height);
+        }
+    }
+
     // Dateiauswahl und Schreiben sind Aufgabe der Oberflaeche; der
     // CSV-Text entsteht in Core (Reports.ReportCsv), der Text einer
     // Fehlermeldung ebenfalls (Errors.FileErrorText) - Regel 7.

@@ -12,7 +12,8 @@ public sealed record YearInReviewResult(
     ReviewHeadline Headline,
     ReviewComparison Comparison,
     IReadOnlyList<ReviewFinding> Findings,
-    ReviewDataState State);
+    ReviewDataState State,
+    IReadOnlyList<ReviewMonthPair> Months);
 
 /// <summary>
 /// Stellt den Jahresrueckblick zusammen. Fuehrt nur vorhandene Bausteine
@@ -103,13 +104,57 @@ public sealed class YearInReviewService
             vorjahrEinnahmenCents: Einnahmen(zeitraeume.Previous),
             jahrEinnahmenCents: Einnahmen(zeitraeume.Current));
 
-        var befunde = ReviewFindings.Build(vergleich, Monate(zeitraeume.Current));
+        var jahrMonate = Monate(zeitraeume.Current);
+
+        var befunde = ReviewFindings.Build(vergleich, jahrMonate);
         var lage = ReviewFindings.Bewerte(vergleich, befunde, _expenses.HasAny());
+
+        var monate = Paare(Monate(zeitraeume.Previous), jahrMonate);
 
         AppLog.Current.Info(LogEvents.YearInReviewBuilt(
             year, wholeYears: !zeitraeume.IsPartial, findingCount: befunde.Count));
 
-        return new YearInReviewResult(zeitraeume, kennzahlen, vergleich, befunde, lage);
+        return new YearInReviewResult(
+            zeitraeume, kennzahlen, vergleich, befunde, lage, monate);
+    }
+
+    /// <summary>
+    /// Legt die beiden Monatsreihen nebeneinander.
+    ///
+    /// Gepaart wird ueber die POSITION im Zeitraum und nicht ueber den
+    /// Schluessel - die Schluessel tragen verschiedene Jahre und koennten
+    /// sich gar nicht treffen.
+    ///
+    /// Beide Reihen sind stets gleich lang: <see cref="ReviewPeriods.Build"/>
+    /// laesst beide Zeitraeume am 1. Januar beginnen und am selben Tag des
+    /// Monats enden, im angebrochenen Jahr wie im ganzen. Sollte sich das
+    /// dort je aendern, gewinnt hier die kuerzere Reihe, statt dass eine
+    /// Ausnahme fliegt - ein Rueckblick, der wegen eines Randfalls gar
+    /// nicht mehr aufgeht, waere schlimmer als einer, dem ein Monat fehlt.
+    /// Ein Test haelt die Gleichheit fest.
+    /// </summary>
+    private static IReadOnlyList<ReviewMonthPair> Paare(
+        IReadOnlyList<ReviewMonth> vorjahr, IReadOnlyList<ReviewMonth> jahr)
+    {
+        var anzahl = Math.Min(vorjahr.Count, jahr.Count);
+        var paare = new List<ReviewMonthPair>(anzahl);
+
+        for (var i = 0; i < anzahl; i++)
+        {
+            var beginn = ReportPeriods.Start(jahr[i].Key, ReportGrouping.Month);
+
+            paare.Add(new ReviewMonthPair(
+                Key: jahr[i].Key,
+                // Nur das Monatskuerzel: die Jahreszahlen stehen in der
+                // Legende, und an jeder Beschriftung wiederholt kosteten
+                // sie nur Platz.
+                Label: ReportPeriods.MonthAbbreviation(beginn.Month),
+                PreviousCents: vorjahr[i].ExpenseCents,
+                CurrentCents: jahr[i].ExpenseCents,
+                CurrentCount: jahr[i].Count));
+        }
+
+        return paare;
     }
 
     // Kein Zahler- und kein Statusfilter: der Rueckblick sieht bewusst

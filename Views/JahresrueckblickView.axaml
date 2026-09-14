@@ -149,6 +149,125 @@
                                 ContentTemplate="{StaticResource KennzahlVorlage}" />
             </UniformGrid>
 
+            <!-- ============ Monatsverlauf beider Jahre ============
+                 Das Vorjahr steht als breiter Balken im Hintergrund, das
+                 laufende Jahr schmaler davor. Nebeneinander waeren es
+                 vierundzwanzig duenne Streifen, an denen sich weder der
+                 Jahresverlauf noch der Vergleich ablesen liesse.
+
+                 Aufgebaut wie das Diagramm der Startseite: EINE Flaeche,
+                 darauf gestapelte ItemsControl mit Canvas als ItemsPanel.
+                 Ohne die ausdrueckliche Angabe des Canvas legt Avalonia die
+                 Eintraege in einem StackPanel ab und die absoluten
+                 Koordinaten wirken nicht. -->
+            <Border Classes="karte" IsVisible="{Binding DiagrammVorhanden}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="ueberschrift"
+                               Text="Ausgaben Monat für Monat" Margin="0,0,0,4" />
+
+                    <!-- Legende. Farbe ist immer nur Zusatz (Regel 10) -
+                         welches Jahr welcher Balken ist, steht hier als
+                         Text daneben. -->
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                                Spacing="16" Margin="0,8,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Classes="legende rueckblick-vorjahr" />
+                            <TextBlock Classes="klein" Text="{Binding VorjahrKopf}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Classes="legende rueckblick-jahr" />
+                            <TextBlock Classes="klein" Text="{Binding JahrKopf}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Grid Height="{anzeige:Breite 200}" SizeChanged="Zeichenflaeche_Groesse">
+                        <!-- Gitternetz und Nulllinie, ganz hinten -->
+                        <ItemsControl ItemsSource="{Binding DiagrammLinien}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DiagrammLinie">
+                                    <Line StartPoint="{Binding Von}" EndPoint="{Binding Bis}"
+                                          Classes.gitter="{Binding IstGitter}"
+                                          Classes.nulllinie="{Binding IstNulllinie}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Balken. Als Button, damit der Klick in die
+                             Buchungen des Monats springt - und damit die
+                             Flaeche mit der Tastatur erreichbar bleibt. -->
+                        <ItemsControl ItemsSource="{Binding DiagrammBalken}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerTheme>
+                                <!-- Ungepruefte Bindungen: die Setter binden an
+                                     den Listeneintrag, der Bindungspruefer nimmt
+                                     hier aber den Typ der Ansicht an. -->
+                                <ControlTheme TargetType="ContentPresenter" x:CompileBindings="False">
+                                    <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                    <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                </ControlTheme>
+                            </ItemsControl.ItemContainerTheme>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RueckblickBalken">
+                                    <Button Classes="balken"
+                                            Width="{Binding Breite}" Height="{Binding Hoehe}"
+                                            ToolTip.Tip="{Binding Hinweis}"
+                                            Command="{Binding $parent[ItemsControl].((vm:JahresrueckblickViewModel)DataContext).MonatOeffnenCommand}"
+                                            CommandParameter="{Binding Schluessel}"
+                                            Classes.rueckblick-vorjahr="{Binding IstVorjahr}"
+                                            Classes.rueckblick-jahr="{Binding IstJahr}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Wertachse links -->
+                        <ItemsControl ItemsSource="{Binding DiagrammWertachse}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerTheme>
+                                <ControlTheme TargetType="ContentPresenter" x:CompileBindings="False">
+                                    <Setter Property="Canvas.Left" Value="0" />
+                                    <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                </ControlTheme>
+                            </ItemsControl.ItemContainerTheme>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DiagrammWertBeschriftung">
+                                    <TextBlock Text="{Binding Text}" Classes="klein"
+                                               Width="{Binding Breite}" TextAlignment="Right"
+                                               Foreground="{DynamicResource TextTertiaerFarbe}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Zeitachse unten -->
+                        <ItemsControl ItemsSource="{Binding DiagrammZeitachse}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerTheme>
+                                <ControlTheme TargetType="ContentPresenter" x:CompileBindings="False">
+                                    <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                    <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                </ControlTheme>
+                            </ItemsControl.ItemContainerTheme>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DiagrammZeitBeschriftung">
+                                    <TextBlock Text="{Binding Text}" Classes="klein"
+                                               Width="{Binding Breite}" TextAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource TextTertiaerFarbe}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </DockPanel>
+            </Border>
+
             <!-- ============ Die Befunde ============ -->
             <StackPanel Spacing="8">
                 <TextBlock Classes="ueberschrift" Text="Das fällt auf"

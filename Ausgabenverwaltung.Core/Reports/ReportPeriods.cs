@@ -112,6 +112,13 @@ public static class ReportPeriods
         };
     }
 
+    /// <summary>
+    /// Das Monatskuerzel allein, z. B. "Mär" - fuer Achsen, an denen die
+    /// Jahreszahl anderswo steht und je Beschriftung wiederholt nur Platz
+    /// kostete.
+    /// </summary>
+    public static string MonthAbbreviation(int month) => MonthAbbreviations[month - 1];
+
     private static int Quarter(int month) => (month - 1) / 3 + 1;
 
     // Der Anfang des naechsten Zeitabschnitts. Am aeussersten Rand des

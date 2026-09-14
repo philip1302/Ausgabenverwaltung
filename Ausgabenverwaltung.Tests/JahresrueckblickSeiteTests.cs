@@ -328,4 +328,180 @@ public class JahresrueckblickSeiteTests : IDisposable
 
         Assert.Contains("Strom", seite.BaueCsv(), StringComparison.Ordinal);
     }
+
+    // ---------------- Monatsverlauf beider Jahre ----------------
+
+    // Die Monatsreihe selbst ist Fachlogik und kommt aus Core; gefragt
+    // wird deshalb der Dienst und nicht der Umweg ueber die Seite.
+    private IReadOnlyList<ReviewMonthPair> Monate(
+        ReviewSpan spanne = ReviewSpan.GleicherZeitraum, int jahr = 2026) =>
+        _service.Build(jahr, spanne, Heute).Months;
+
+    /// <summary>
+    /// Der Vergleich steht und faellt damit, dass beide Reihen gleich
+    /// lang sind - gepaart wird ueber die Position, nicht ueber den
+    /// Schluessel. Sollte ReviewPeriods je verschieden lange Zeitraeume
+    /// liefern, faellt es hier auf und nicht erst im Bild.
+    /// </summary>
+    [Fact]
+    public void Der_Monatsverlauf_zaehlt_im_angebrochenen_Jahr_bis_zum_heutigen_Monat()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 3, 5));
+        Buche(_wohnenId, 40000, new DateOnly(2025, 3, 5));
+
+        // Heute ist der 13. September 2026 - Januar bis September.
+        Assert.Equal(9, Monate().Count);
+    }
+
+    [Fact]
+    public void Ueber_ganze_Kalenderjahre_hat_der_Verlauf_zwoelf_Monate()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 3, 5));
+        Buche(_wohnenId, 40000, new DateOnly(2025, 3, 5));
+
+        Assert.Equal(12, Monate(ReviewSpan.GanzeKalenderjahre).Count);
+    }
+
+    /// <summary>
+    /// Ein Monat ohne jede Buchung steht mit 0 mit drin und faellt nicht
+    /// heraus - sonst ruecken die uebrigen zusammen und der Jahresverlauf
+    /// stimmt nicht mehr.
+    /// </summary>
+    [Fact]
+    public void Ein_Monat_ohne_Buchung_behaelt_seinen_Platz()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 1, 5));
+        Buche(_wohnenId, 30000, new DateOnly(2026, 3, 5));
+
+        var februar = Monate()[1];
+
+        Assert.Equal("Feb", februar.Label);
+        Assert.Equal(0, februar.CurrentCents);
+        Assert.Equal(0, februar.CurrentCount);
+    }
+
+    /// <summary>
+    /// Jeder Monat traegt beide Jahre. Ausgaben stehen positiv, wie
+    /// ueberall im Rueckblick.
+    /// </summary>
+    [Fact]
+    public void Jeder_Monat_traegt_beide_Jahre()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 3, 5));
+        Buche(_wohnenId, 40000, new DateOnly(2025, 3, 5));
+
+        var maerz = Monate().Single(m => m.Label == "Mär");
+
+        Assert.Equal(40000, maerz.PreviousCents);
+        Assert.Equal(50000, maerz.CurrentCents);
+        Assert.Equal(10000, maerz.DeltaCents);
+    }
+
+    /// <summary>
+    /// Der Schluessel gehoert zum LAUFENDEN Jahr - er traegt den Sprung in
+    /// die Buchungen, und der zeigt auf das Jahr, das betrachtet wird.
+    /// </summary>
+    [Fact]
+    public void Der_Monatsschluessel_gehoert_zum_betrachteten_Jahr()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 3, 5));
+
+        Assert.Equal("2026-03", Monate().Single(m => m.Label == "Mär").Key);
+    }
+
+    /// <summary>
+    /// Dasselbe wie bei den Verlaufslinien der Startseite: die Karte
+    /// haengt an diesem Merkmal, und die Flaeche darin meldet ihre Groesse
+    /// ueber SizeChanged. Eine unsichtbare Karte wird nicht vermessen -
+    /// haengt das Merkmal am Ergebnis der Groessenrechnung, erscheint das
+    /// Diagramm nie.
+    /// </summary>
+    [Fact]
+    public void Das_Diagramm_gilt_schon_vor_der_Groessenmeldung_als_vorhanden()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 3, 5));
+        Buche(_wohnenId, 40000, new DateOnly(2025, 3, 5));
+
+        var seite = NeueSeite();
+        seite.AusgewaehltesJahr = 2026;
+
+        Assert.True(
+            seite.DiagrammVorhanden,
+            "Ohne dieses Merkmal bleibt die Karte unsichtbar und meldet nie ihre Groesse.");
+        Assert.Empty(seite.DiagrammBalken);
+    }
+
+    /// <summary>
+    /// Ohne gemeldete Zeichenflaeche gibt es keine Balken - aber das
+    /// Diagramm gilt trotzdem als vorhanden, sobald Zahlen da sind. Sonst
+    /// bliebe die Karte auch dann weg, wenn nur die Groesse noch fehlt.
+    /// </summary>
+    [Fact]
+    public void Ohne_Buchungen_in_beiden_Jahren_bleibt_das_Diagramm_weg()
+    {
+        var seite = NeueSeite();
+        seite.ZeichenflaecheGeaendert(600, 200);
+
+        Assert.False(seite.DiagrammVorhanden);
+        Assert.Empty(seite.DiagrammBalken);
+    }
+
+    [Fact]
+    public void Mit_Buchungen_entstehen_Balken_und_Achsen()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 3, 5));
+        Buche(_wohnenId, 40000, new DateOnly(2025, 3, 5));
+
+        var seite = NeueSeite();
+        seite.AusgewaehltesJahr = 2026;
+        seite.ZeichenflaecheGeaendert(600, 200);
+
+        Assert.True(seite.DiagrammVorhanden);
+        Assert.Contains(seite.DiagrammBalken, b => b.IstVorjahr);
+        Assert.Contains(seite.DiagrammBalken, b => b.IstJahr);
+        Assert.NotEmpty(seite.DiagrammWertachse);
+        Assert.NotEmpty(seite.DiagrammZeitachse);
+    }
+
+    /// <summary>
+    /// Ein Klick auf einen Balken fuehrt in die Buchungen SEINES Monats.
+    /// Im laufenden Jahr endet der letzte Monat heute und nicht an seinem
+    /// Monatsende - sonst zeigte die Liste mehr, als im Balken steckt.
+    /// </summary>
+    [Fact]
+    public void Ein_Klick_auf_einen_Balken_fuehrt_in_seinen_Monat()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 3, 5));
+
+        var seite = NeueSeite();
+        seite.AusgewaehltesJahr = 2026;
+
+        RueckblickSprung? sprung = null;
+        seite.AusgabenlisteAngefordert += (_, ziel) => sprung = ziel;
+
+        seite.MonatOeffnenCommand.Execute("2026-03");
+
+        Assert.NotNull(sprung);
+        Assert.Null(sprung.KategorieId);
+        Assert.Equal(new DateOnly(2026, 3, 1), sprung.Von);
+        Assert.Equal(new DateOnly(2026, 3, 31), sprung.BisEinschliesslich);
+    }
+
+    [Fact]
+    public void Der_letzte_Monat_endet_am_heutigen_Tag_und_nicht_am_Monatsende()
+    {
+        Buche(_wohnenId, 50000, new DateOnly(2026, 9, 5));
+
+        var seite = NeueSeite();
+        seite.AusgewaehltesJahr = 2026;
+        seite.GanzeKalenderjahre = false;
+
+        RueckblickSprung? sprung = null;
+        seite.AusgabenlisteAngefordert += (_, ziel) => sprung = ziel;
+
+        seite.MonatOeffnenCommand.Execute("2026-09");
+
+        Assert.NotNull(sprung);
+        Assert.Equal(Heute, sprung.BisEinschliesslich);
+    }
 }

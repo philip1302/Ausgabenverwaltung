@@ -1081,6 +1081,25 @@
         <Style Selector="Border.legende.einnahme">
             <Setter Property="Background" Value="{DynamicResource EinnahmeFarbe}" />
         </Style>
+        <!-- Der Monatsverlauf des Jahresrueckblicks. Zwei Rollen, nicht
+             zwei gleichwertige Reihen: das laufende Jahr ist der
+             Gegenstand und traegt die Akzentfarbe, das Vorjahr ist nur der
+             Bezug und tritt in ein Grau zurueck. Zwei kraeftige Farben
+             nebeneinander liessen offen, welche der beiden gemeint ist. -->
+        <Style Selector="Button.balken.rueckblick-vorjahr">
+            <Setter Property="Background" Value="{DynamicResource BorderStarkFarbe}" />
+        </Style>
+        <Style Selector="Button.balken.rueckblick-jahr">
+            <Setter Property="Background" Value="{DynamicResource AccentFarbe}" />
+        </Style>
+
+        <Style Selector="Border.legende.rueckblick-vorjahr">
+            <Setter Property="Background" Value="{DynamicResource BorderStarkFarbe}" />
+        </Style>
+        <Style Selector="Border.legende.rueckblick-jahr">
+            <Setter Property="Background" Value="{DynamicResource AccentFarbe}" />
+        </Style>
+
         <Style Selector="Border.legende.durchschnitt">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{DynamicResource TextTertiaerFarbe}" />

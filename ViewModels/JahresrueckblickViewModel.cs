@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using Ausgabenverwaltung.Anzeige;
 using Ausgabenverwaltung.Core.Categories;
+using Ausgabenverwaltung.Core.Charts;
+using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Reports;
 using Ausgabenverwaltung.Core.YearInReview;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Avalonia;
 using CommunityToolkit.Mvvm.Messaging;
 
 namespace Ausgabenverwaltung.ViewModels;
@@ -43,6 +47,11 @@ public sealed partial class JahresrueckblickViewModel : ViewModelBase
     private readonly HashSet<int> _aufgeklappteKategorien = new();
 
     private YearInReviewResult? _ergebnis;
+
+    // Die Groesse der Zeichenflaeche, wie sie die Ansicht meldet. Vor der
+    // ersten Meldung ist sie 0 und es wird nichts gezeichnet.
+    private double _flaecheBreite;
+    private double _flaecheHoehe;
     private IReadOnlyDictionary<int, string> _farben = new Dictionary<int, string>();
     private bool _ladenGesperrt;
 
@@ -62,6 +71,11 @@ public sealed partial class JahresrueckblickViewModel : ViewModelBase
         _heute = heute ?? (() => DateOnly.FromDateTime(DateTime.Now));
 
         Aktualisiere();
+
+        // Die Raender des Diagramms wachsen mit der Schriftgroesse; ohne
+        // Neuzeichnen ueberdeckten sich Beschriftung und Flaeche auf der
+        // Stufe "Sehr gross" (Regel 9).
+        Skalierung.Aktuell.PropertyChanged += (_, _) => ZeichneDiagramm();
 
         // Buchungsaenderungen aus anderen Bereichen sollen den Rueckblick
         // sofort mitziehen und nicht erst beim naechsten Navigieren
@@ -247,6 +261,7 @@ public sealed partial class JahresrueckblickViewModel : ViewModelBase
 
         BaueKarten();
         BaueZeilen();
+        ZeichneDiagramm();
     }
 
     private void BaueKarten()
@@ -330,6 +345,186 @@ public sealed partial class JahresrueckblickViewModel : ViewModelBase
         BaueZeilen();
     }
 
+    // ---------------- Monatsverlauf ----------------
+
+    /// <summary>
+    /// Die Balken beider Jahre. Das Vorjahr steht zuerst in der Liste und
+    /// wird dadurch zuerst gezeichnet - es ist der Bezug und liegt hinten.
+    /// </summary>
+    [ObservableProperty]
+    private IReadOnlyList<RueckblickBalken> _diagrammBalken = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<DiagrammLinie> _diagrammLinien = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<DiagrammWertBeschriftung> _diagrammWertachse = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<DiagrammZeitBeschriftung> _diagrammZeitachse = [];
+
+    /// <summary>
+    /// Ob ueberhaupt etwas zu zeigen ist. Ein leeres Diagramm bleibt ganz
+    /// weg, statt eine leere Flaeche mit Achsen zu zeigen - die sieht aus,
+    /// als waere etwas kaputt.
+    /// </summary>
+    [ObservableProperty]
+    private bool _diagrammVorhanden;
+
+    /// <summary>
+    /// Meldung der Ansicht ueber die Groesse der Zeichenflaeche. Sie steht
+    /// erst nach dem ersten Anzeigen fest und aendert sich bei jeder
+    /// Fenstergroesse - deshalb wird von dort aus gezeichnet und nicht
+    /// beim Laden.
+    /// </summary>
+    public void ZeichenflaecheGeaendert(double breite, double hoehe)
+    {
+        _flaecheBreite = breite;
+        _flaecheHoehe = hoehe;
+        ZeichneDiagramm();
+    }
+
+    /// <summary>
+    /// Uebersetzt das Ergebnis von Core.Charts in zeichenbare Elemente.
+    ///
+    /// Aufgebaut wie <see cref="StartseiteViewModel"/>: der linke Rand
+    /// traegt die Wertachse, der untere die Zeitachse, beide wachsen mit
+    /// der eingestellten Schriftgroesse (Regel 9).
+    /// </summary>
+    private void ZeichneDiagramm()
+    {
+        var monate = _ergebnis?.Months ?? [];
+
+        // Ohne eine einzige Buchung in beiden Jahren gibt es nichts zu
+        // vergleichen. Das sagt die Seite bereits im Klartext ueber ihren
+        // Leerzustand; ein zusaetzliches leeres Achsenkreuz hilft nicht.
+        var etwasDa = monate.Any(m => m.PreviousCents != 0 || m.CurrentCents != 0);
+
+        if (!etwasDa || _flaecheBreite <= 0 || _flaecheHoehe <= 0)
+        {
+            DiagrammVorhanden = etwasDa;
+            DiagrammBalken = [];
+            DiagrammLinien = [];
+            DiagrammWertachse = [];
+            DiagrammZeitachse = [];
+            return;
+        }
+
+        var faktor = Skalierung.Aktuell.Faktor;
+        var linkerRand = Math.Round(64 * faktor);
+        var untererRand = Math.Round(24 * faktor);
+
+        // Oben Luft lassen: die oberste Achsenbeschriftung sitzt mittig
+        // auf ihrem Strich und ragte sonst zur Haelfte ueber den Rand.
+        var obererRand = Math.Round(12 * faktor);
+
+        var breite = _flaecheBreite - linkerRand;
+        var hoehe = _flaecheHoehe - untererRand - obererRand;
+
+        var abschnitte = monate
+            .Select(m => new ComparePeriod(
+                m.Key, m.Label, m.PreviousCents, m.CurrentCents))
+            .ToList();
+
+        var layout = SeriesBars.Compare(abschnitte, breite, hoehe);
+
+        DiagrammVorhanden = !layout.IsEmpty;
+
+        if (layout.IsEmpty)
+        {
+            DiagrammBalken = [];
+            DiagrammLinien = [];
+            DiagrammWertachse = [];
+            DiagrammZeitachse = [];
+            return;
+        }
+
+        var vorjahrKopf = _ergebnis!.Periods.PreviousLabel;
+        var jahrKopf = _ergebnis.Periods.CurrentLabel;
+
+        DiagrammBalken = layout.Bars
+            .Select(balken => new RueckblickBalken(
+                balken.Key,
+                balken.X + linkerRand,
+                balken.Y + obererRand,
+                Math.Max(1, balken.Width),
+                Math.Max(1, balken.Height),
+                balken.IstVorjahr,
+                Hinweistext(balken, vorjahrKopf, jahrKopf)))
+            .ToList();
+
+        DiagrammLinien = layout.Lines
+            .Select(linie => new DiagrammLinie(
+                new Point(linkerRand, linie.Y + obererRand),
+                new Point(linkerRand + breite, linie.Y + obererRand),
+                linie.Kind,
+                null))
+            .ToList();
+
+        DiagrammWertachse = layout.Ticks
+            .Select(strich => new DiagrammWertBeschriftung(
+                strich.Y + obererRand - Math.Round(8 * faktor),
+                linkerRand - Math.Round(8 * faktor),
+                EuroText.Axis(strich.ValueCents)))
+            .ToList();
+
+        // Wie auf der Startseite wird bei Platzmangel nur jeder n-te Monat
+        // beschriftet. Das Mass ist hier kuerzer, weil nur das Kuerzel
+        // dasteht ("Mär") und nicht Monat und Jahr.
+        var abschnittsBreite = breite / abschnitte.Count;
+        var mindestBreite = Math.Round(36 * faktor);
+        var passendeAnzahl = Math.Max(1, (int)(breite / mindestBreite));
+        var schrittweite = Math.Max(
+            1, (int)Math.Ceiling(abschnitte.Count / (double)passendeAnzahl));
+
+        var textBreite = abschnittsBreite * schrittweite;
+        var versatz = (textBreite - abschnittsBreite) / 2;
+
+        DiagrammZeitachse = abschnitte
+            .Select((abschnitt, i) => (abschnitt, i))
+            // Von hinten zaehlen, damit der letzte Monat immer beschriftet
+            // ist - er ist der, an dem der Vergleich endet.
+            .Where(x => (abschnitte.Count - 1 - x.i) % schrittweite == 0)
+            .Select(x => new DiagrammZeitBeschriftung(
+                Math.Clamp(
+                    linkerRand + abschnittsBreite * x.i - versatz,
+                    0,
+                    Math.Max(0, _flaecheBreite - textBreite)),
+                hoehe + obererRand + Math.Round(4 * faktor),
+                textBreite,
+                x.abschnitt.Label,
+                x.abschnitt.Key))
+            .ToList();
+    }
+
+    private static string Hinweistext(CompareBar balken, string vorjahr, string jahr)
+    {
+        var jahrText = balken.IstVorjahr ? vorjahr : jahr;
+
+        return $"{balken.Label} {jahrText}\n"
+               + $"{EuroText.Format(balken.ValueCents)}\n\n"
+               + "Klicken zeigt die Buchungen";
+    }
+
+    /// <summary>
+    /// Ein Klick auf einen Balken fuehrt in die Buchungen seines Monats -
+    /// dasselbe Ziel wie bei einer Monatskarte.
+    ///
+    /// Auch der Vorjahresbalken fuehrt in SEINEN Monat und nicht in den des
+    /// laufenden Jahres: sonst zeigte ein Klick etwas anderes, als
+    /// angeklickt wurde.
+    /// </summary>
+    [RelayCommand]
+    private void MonatOeffnen(string? schluessel)
+    {
+        if (schluessel is null || _ergebnis is null)
+        {
+            return;
+        }
+
+        Springe(kategorieId: null, Monatsausschnitt(schluessel));
+    }
+
     [RelayCommand]
     private void KarteOeffnen(RueckblickKarte? karte)
     {
@@ -398,4 +593,55 @@ public sealed partial class JahresrueckblickViewModel : ViewModelBase
                       .ToList());
 
     public void MeldeExport(string hinweis) => ExportHinweis = hinweis;
+}
+
+/// <summary>
+/// Ein gezeichnetes Rechteck des Monatsverlaufs.
+///
+/// Die Farbe waehlt die Ansicht ueber <see cref="IstVorjahr"/> - das
+/// ViewModel kennt keine Farbwerte, sonst waeren sie nicht mehr
+/// themenabhaengig (dasselbe Muster wie bei DiagrammBalken).
+/// </summary>
+public sealed class RueckblickBalken
+{
+    public RueckblickBalken(
+        string schluessel,
+        double x,
+        double y,
+        double breite,
+        double hoehe,
+        bool istVorjahr,
+        string hinweis)
+    {
+        Schluessel = schluessel;
+        X = x;
+        Y = y;
+        Breite = breite;
+        Hoehe = hoehe;
+        IstVorjahr = istVorjahr;
+        IstJahr = !istVorjahr;
+        Hinweis = hinweis;
+    }
+
+    /// <summary>Der Monat, in dessen Buchungen ein Klick fuehrt.</summary>
+    public string Schluessel { get; }
+
+    public double X { get; }
+
+    public double Y { get; }
+
+    public double Breite { get; }
+
+    public double Hoehe { get; }
+
+    public bool IstVorjahr { get; }
+
+    /// <summary>
+    /// Das Gegenstueck zu <see cref="IstVorjahr"/>. Als eigenes Merkmal und
+    /// nicht ueber eine Verneinung in der Ansicht, weil Classes.x genau ein
+    /// bool erwartet.
+    /// </summary>
+    public bool IstJahr { get; }
+
+    public string Hinweis { get; }
 }

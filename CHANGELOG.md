@@ -34,6 +34,15 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ### Jahresrückblick
 
+- Über den Karten steht jetzt der Monatsverlauf beider Jahre: für jeden Monat
+  ein Balken für das laufende Jahr, davor der des Vorjahres in Grau. Damit ist
+  auf einen Blick zu sehen, in welchen Monaten es teurer wurde und in welchen
+  nicht — bisher stand die Veränderung nur als eine Zahl für das ganze Jahr da,
+  und die verschweigt, ob sich etwas dauerhaft verschoben hat oder ein einziger
+  Monat aus der Reihe fällt.
+- Die beiden Jahre teilen sich eine Skala, ein doppelt so hoher Balken ist also
+  auch der doppelte Betrag. Ein Klick auf einen Balken führt in die Buchungen
+  genau dieses Monats.
 - Unter „Auswertung“ gibt es jetzt den Jahresrückblick. Er stellt zwei Jahre
   nebeneinander und rechnet selbst aus, was sich am stärksten verändert hat.
   Ganz oben stehen Ausgaben, Einnahmen und was unterm Strich übrig blieb,
