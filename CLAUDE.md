@@ -14,7 +14,7 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
                                Enthaelt KEINEN UI-Code.
 - `Ausgabenverwaltung.Tests` — Tests gegen Core
 - `Ausgabenverwaltung`      — Avalonia-Oberflaeche
-- `docs/schema_v2.sql`       — massgebliches DB-Schema (neue Datenbanken)
+- `docs/schema_v4.sql`       — massgebliches DB-Schema (neue Datenbanken)
 - `docs/migration_*.sql`     — je ein Schritt zwischen zwei Schema-Staenden;
                                `schema_v1.sql` bleibt unveraendert liegen
 

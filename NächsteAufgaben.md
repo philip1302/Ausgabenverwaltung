@@ -1677,3 +1677,129 @@ oben aus dem Popup heraus.
 `GespeicherteFilterTests`, dazu der Pfeil in `LeerzustandTests`) und drei
 Durchläufe durch Paul: Speichern und Löschen sind in `settings.json`
 nachweisbar, der Farbwechsel im Protokoll ohne Ausnahme.
+
+---
+
+## Batch 7 — Weitere Visualisierung (Punkte 25–30)
+
+Der Baukasten in `Core/Charts` steht bereits: `NiceScale`, `ChartGeometry`,
+`Sparkline`, `Intensity`, `SeriesBars` und `BarChart`. Die Punkte hier bauen
+darauf auf; wo etwas Neues nötig ist, steht es dabei.
+
+**Gemeinsame Regel für alle Punkte dieses Batches:** Geometrie kommt als reine
+Zahlen nach Core (Regel 7), das ViewModel übersetzt in **bool-Merkmale statt
+Farbwerte**, die Farbe wählt ein Style-Selektor in `App.axaml` über
+`{DynamicResource …Farbe}` — sonst ist sie nicht mehr themenabhängig. Gezeichnet
+wird über `ItemsControl` mit `<Canvas/>` als `ItemsPanel` und einem
+`ItemContainerTheme`, das `Canvas.Left/Top` setzt.
+
+**Und:** kategoriegefärbte Diagramme brauchen IMMER Beschriftung oder Legende.
+`CategoryColorPalette` ist eine vom Anwender je Kategorie gewählte Palette, keine
+geordnete Serienpalette — zwei benachbarte Segmente können nahezu gleich
+aussehen, und das lässt sich beim Bauen nicht verhindern (Regel 10). Aus
+demselben Grund gibt es hier keine Torte, keinen Donut und keine Treemap:
+Längen lassen sich auch bei Farbkollision vergleichen, Winkel und Flächen nicht.
+
+---
+
+### [ ] 25. Anteilsbalken in der Summenspalte der Auswertung
+
+**Ziel:** Sehen, wie sich die Jahressumme auf die Kategorien verteilt, ohne
+Prozente zu rechnen.
+
+**Vorgehen:** In `ViewModels/ReportZeile.cs` ein `AnteilBreite` ergänzen —
+`Summe.SumCents` im Verhältnis zur größten Zeilensumme der Auswertung. Die
+größte Summe wandert wie `_stufen` als Feld ins `ReportViewModel` und wird in
+`LadeDaten` bestimmt, nicht in `BaueZeilen` (sonst wechselte der Maßstab beim
+Aufklappen). In `Views/ReportView.axaml` unter der Summenzelle ein schmaler
+`Border` in der Akzentfarbe. Kein neues SQL, keine neue Core-Geometrie.
+
+**Fertig, wenn:** die längste Leiste zur größten Kategorie gehört und beim
+Auf- und Zuklappen ihre Länge behält.
+
+---
+
+### [ ] 26. Sparkline je Kategoriezeile in der Auswertung
+
+**Ziel:** „Welche Kategorie steigt?" — ohne die Zeile Spalte für Spalte zu lesen.
+
+**Vorgehen:** `Sparkline.Compute` über die Zellen der Zeile in Spaltenreihenfolge
+(`ReportMatrixRow.Cell(key)` für jeden `PeriodKey`, fehlende Zellen als 0). Eine
+neue Spalte rechts neben dem Durchschnitt. **Wichtig:** alle Zeilen müssen
+dieselbe Achse teilen, sonst sieht eine Kategorie mit 20 € genauso bewegt aus wie
+eine mit 2.000 € — dafür braucht `Sparkline.Compute` eine Überladung, die eine
+fertige `AxisScale` entgegennimmt, statt sich selbst eine zu rechnen.
+
+**Fertig, wenn:** zwei Zeilen mit gleichem Verlauf, aber verschiedener Höhe
+verschieden hohe Linien zeigen.
+
+---
+
+### [ ] 27. Ausgaben nach Kategorie als waagerechte Rangliste (Startseite)
+
+**Ziel:** Die häufigste Frage überhaupt — „wofür ging das Geld diesen Monat?"
+
+**Vorgehen:** Neu `Core/Charts/RankedBars.cs`:
+```csharp
+public sealed record RankedValue(string Key, string Label, long ValueCents, string ColorHex);
+public sealed record RankedBar(string Key, string Label, double X, double Y,
+                              double Width, double Height, long ValueCents,
+                              string ColorHex, bool IstSonstige);
+public static RankedLayout Compute(IReadOnlyList<RankedValue> values,
+                                   double width, double height, int maxCount = 6);
+```
+Top N nach Betrag, der Rest fällt zu **einer** Zeile „Sonstige" zusammen —
+niemals weitere Farben erzeugen. Daten aus einem zusätzlichen
+`EvaluateMatrix`-Aufruf mit `DateRangePresets.ThisMonth`, nur die Wurzelzeilen.
+
+**Die Farbe kommt hier als Hex-Wert durch das ViewModel** — anders als sonst,
+weil sie zu den DATEN gehört und nicht zum Thema. Vorbild:
+`Border.farbbalken` in `AusgabenlisteView.axaml`, gebunden über
+`Anzeige/FarbeZuPinsel`. „Sonstige" bekommt `CategoryColorPalette.DefaultHex`.
+
+Name und Betrag stehen direkt am Balken, nicht in einer Legende.
+
+**Fertig, wenn:** bei sieben Kategorien sechs benannt sind und die siebte samt
+allen weiteren in „Sonstige" steckt, dessen Summe stimmt.
+
+---
+
+### [ ] 28. Hantel-Diagramm im Jahresrückblick
+
+**Ziel:** Je Kategorie auf einen Blick, wo sie voriges Jahr stand und wo jetzt.
+
+**Vorgehen:** Neu `Core/Charts/Dumbbell.cs` — je Gegenstand zwei Punkte auf einer
+waagerechten Achse und eine Linie dazwischen. Daten kommen fertig aus
+`ReviewComparison.Roots` (`PreviousCents`/`CurrentCents`), kein neues SQL. Die
+Linie trägt die Richtung: nach rechts heißt mehr. Zwei Abstufungen EINER Farbe
+für die beiden Punkte, nicht zwei Farben — es sind zwei Zeitpunkte desselben
+Gegenstands und keine zwei Dinge.
+
+**Fertig, wenn:** eine Kategorie, die von 0 auf einen Betrag steigt, als Linie
+von der Nulllinie aus erscheint und nicht als einzelner Punkt.
+
+---
+
+### [ ] 29. Kumulierter Jahresverlauf im Jahresrückblick
+
+**Ziel:** „Um diese Zeit lag ich 340 € über dem Vorjahr."
+
+**Vorgehen:** Die Werte aus `YearInReviewResult.Months` aufsummieren und durch
+`SeriesBars` — oder besser eine Linienfassung davon — zeichnen. Der Baukasten ist
+da; neu ist nur die Aufsummierung und dass zwei Linien statt Balken gezeichnet
+werden. Gehört unter den Monatsverlauf, nicht an seine Stelle: der eine zeigt
+einzelne Monate, der andere den Stand.
+
+---
+
+### [ ] 30. Zwei Mini-Balken auf jeder Befundkarte
+
+**Ziel:** Die Karte sagt „1.240 €" — daneben gehört, wie viel es vorher war.
+
+**Vorgehen:** In `ViewModels/RueckblickKarte.cs` zwei Breiten im Verhältnis
+zueinander; im Karten-Template zwei schmale `Border`. Alle Karten teilen sich
+einen Maßstab, sonst sehen zwei Karten mit ganz verschiedenen Beträgen gleich
+aus. Nichts Neues in Core.
+
+---
+
