@@ -19,6 +19,18 @@ public partial class StartseiteView : UserControl
     /// wird daraus hier nichts - das erledigt Core.Charts.BarChart ueber
     /// StartseiteViewModel.ZeichenflaecheGeaendert.
     /// </summary>
+    // Nur die Ausgabenkachel meldet: beide Kacheln stehen in einem
+    // UniformGrid und sind damit immer gleich breit. Zwei Meldungen
+    // derselben Zahl waeren zwei Stellen, an denen sie auseinanderlaufen
+    // koennte.
+    private void Verlaufflaeche_Groesse(object? sender, SizeChangedEventArgs e)
+    {
+        if (DataContext is StartseiteViewModel viewModel)
+        {
+            viewModel.VerlaufflaecheGeaendert(e.NewSize.Width, e.NewSize.Height);
+        }
+    }
+
     private void Zeichenflaeche_Groesse(object? sender, SizeChangedEventArgs e)
     {
         if (DataContext is StartseiteViewModel viewModel)

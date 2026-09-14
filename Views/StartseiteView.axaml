@@ -65,6 +65,29 @@
                             <TextBlock Grid.Column="2" Classes="kpi-label" Text="Ausgaben, diesen Monat" TextWrapping="Wrap" />
                         </Grid>
                         <TextBlock Classes="kpi-wert" Text="{Binding AusgabenMonatText}" />
+
+                        <!-- Der Verlauf der letzten zwoelf Monate. Keine
+                             Achse und keine Zahl: die Zahl steht darueber,
+                             die Linie sagt nur, wohin es geht. Sie bleibt
+                             weg, solange es nichts zu zeigen gibt.
+
+                             Verborgen wird die LINIE, nicht der Rahmen:
+                             ein unsichtbares Element wird nicht vermessen
+                             und meldet dann auch keine Groesse mehr - die
+                             Linie kann dann nie erscheinen. Der stehen
+                             bleibende Rahmen haelt ausserdem die
+                             Hinweiszeilen beider Kacheln auf einer Hoehe.
+
+                             Nur DIESE Flaeche meldet ihre Groesse - beide
+                             Kacheln sind gleich breit, weil sie in einem
+                             UniformGrid stehen. -->
+                        <Border Height="{anzeige:Breite 28}"
+                                SizeChanged="Verlaufflaeche_Groesse">
+                            <Polyline Classes="sparkline"
+                                      IsVisible="{Binding AusgabenVerlaufVorhanden}"
+                                      Points="{Binding AusgabenVerlauf}" />
+                        </Border>
+
                         <TextBlock Classes="kpi-hinweis" Text="{Binding AusgabenMonatHinweis}" />
                     </StackPanel>
                 </Border>
@@ -85,6 +108,13 @@
                             <TextBlock Grid.Column="2" Classes="kpi-label" Text="Einnahmen, diesen Monat" TextWrapping="Wrap" />
                         </Grid>
                         <TextBlock Classes="kpi-wert einnahme" Text="{Binding EinnahmenMonatText}" />
+
+                        <Border Height="{anzeige:Breite 28}">
+                            <Polyline Classes="sparkline einnahme"
+                                      IsVisible="{Binding EinnahmenVerlaufVorhanden}"
+                                      Points="{Binding EinnahmenVerlauf}" />
+                        </Border>
+
                         <TextBlock Classes="kpi-hinweis" Text="{Binding EinnahmenMonatHinweis}" />
                     </StackPanel>
                 </Border>

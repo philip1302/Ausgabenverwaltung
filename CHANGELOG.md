@@ -15,6 +15,17 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+### Startseite
+
+- Unter den Zahlen für Ausgaben und Einnahmen dieses Monats steht jetzt eine
+  kleine Linie mit dem Verlauf der letzten zwölf Monate. Eine Monatszahl allein
+  sagt nicht, ob sie hoch oder niedrig ist — die Linie daneben schon, ohne dass
+  man dafür nach unten ins Diagramm sehen muss.
+- Die Linie steht fest auf zwölf Monaten und ändert sich nicht mit, wenn man
+  das Diagramm darunter auf 6 oder 24 Monate stellt. Sonst wechselte sie beim
+  Umschalten ihre Bedeutung. Gibt es weniger als zwei Monate mit Buchungen,
+  bleibt sie weg, statt eine gerade Linie zu zeigen, die nichts belegt.
+
 ### Auswertung
 
 - Die Auswertung hinterlegt ihre Werte jetzt nach Höhe: je größer der Betrag,

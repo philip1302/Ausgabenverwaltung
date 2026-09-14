@@ -119,6 +119,35 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     /// leeren Flaeche.</summary>
     [ObservableProperty] private bool _diagrammLeer = true;
 
+    // ================= Verlauf in den Kacheln =================
+    //
+    // Die kleinen Linien unter den beiden Monatszahlen. Sie stehen FEST
+    // auf zwoelf Monaten und haengen bewusst NICHT am Umschalter des
+    // Diagramms darunter: eine Kachel, deren Verlauf beim Umschalten von
+    // 6 auf 24 Monate seine Bedeutung wechselt, ist schlimmer als keine.
+
+    private IReadOnlyList<long> _verlaufAusgaben = [];
+    private IReadOnlyList<long> _verlaufEinnahmen = [];
+
+    // Beide Kacheln sind gleich breit - sie stehen in einem UniformGrid.
+    // Deshalb reicht EINE gemeldete Groesse fuer beide Linien.
+    private double _verlaufBreite;
+    private double _verlaufHoehe;
+
+    [ObservableProperty] private IReadOnlyList<Point> _ausgabenVerlauf = [];
+    [ObservableProperty] private IReadOnlyList<Point> _einnahmenVerlauf = [];
+
+    /// <summary>
+    /// Ob es etwas zu zeigen gibt - haengt NUR an den Daten und NICHT
+    /// daran, ob schon eine Groesse gemeldet wurde (siehe
+    /// <see cref="ZeichneVerlauf"/>). Bei weniger als zwei Monaten mit
+    /// Buchungen bleibt die Linie weg: eine waagerechte Linie behauptete
+    /// sonst eine Ruhe, die nie gemessen wurde.
+    /// </summary>
+    [ObservableProperty] private bool _ausgabenVerlaufVorhanden;
+
+    [ObservableProperty] private bool _einnahmenVerlaufVorhanden;
+
     [ObservableProperty] private string _diagrammUeberschrift = string.Empty;
     [ObservableProperty] private string _diagrammZusammenfassung = string.Empty;
 
@@ -198,7 +227,11 @@ public sealed partial class StartseiteViewModel : ViewModelBase
 
         // Die Randbreiten haengen an der eingestellten Schriftgroesse -
         // wird sie verstellt, muss das Diagramm neu vermessen werden.
-        Skalierung.Aktuell.PropertyChanged += (_, _) => ZeichneDiagramm();
+        Skalierung.Aktuell.PropertyChanged += (_, _) =>
+        {
+            ZeichneDiagramm();
+            ZeichneVerlauf();
+        };
 
         Aktualisiere();
 
@@ -274,6 +307,8 @@ public sealed partial class StartseiteViewModel : ViewModelBase
         AktualisiereNaechsteFaelligkeit(heute);
         LadeAbschnitte();
         ZeichneDiagramm();
+        LadeVerlauf(heute);
+        ZeichneVerlauf();
         AktualisiereLetzteBuchungen();
     }
 
@@ -410,6 +445,111 @@ public sealed partial class StartseiteViewModel : ViewModelBase
                     zeile?.IncomeCents ?? 0);
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Die zwoelf Monatswerte fuer die Linien in den Kacheln.
+    ///
+    /// Eine eigene Abfrage und nicht der Ausschnitt aus
+    /// <see cref="LadeAbschnitte"/>: dessen Zeitraum haengt am Umschalter
+    /// des Diagramms, dieser hier darf es nicht. Zwei Abfragen gegen eine
+    /// oertliche Datei kosten nichts - dieselbe Ueberlegung wie im
+    /// Jahresrueckblick.
+    /// </summary>
+    private void LadeVerlauf(DateOnly heute)
+    {
+        const int monate = 12;
+
+        var monatsAnfang = new DateOnly(heute.Year, heute.Month, 1);
+        var erster = monatsAnfang.AddMonths(-(monate - 1));
+        var zeitraum = new DateRange(erster, monatsAnfang.AddMonths(1));
+
+        var zeilen = _reportRepository
+            .EvaluateTrend(zeitraum, ReportGrouping.Month)
+            .ToDictionary(zeile => zeile.GroupKey);
+
+        // Wie beim Diagramm ueber die lueckenlose Folge laufen: ein Monat
+        // ohne Buchungen ist eine 0 und keine Luecke, sonst ruecken die
+        // uebrigen zusammen und die Linie behauptet einen Verlauf, den es
+        // nicht gab.
+        var schluessel = ReportPeriods.Enumerate(
+            ReportPeriods.Key(erster, ReportGrouping.Month),
+            ReportPeriods.Key(heute, ReportGrouping.Month),
+            ReportGrouping.Month);
+
+        var ausgaben = new List<long>(monate);
+        var einnahmen = new List<long>(monate);
+
+        foreach (var key in schluessel)
+        {
+            zeilen.TryGetValue(key, out var zeile);
+
+            ausgaben.Add(
+                (zeile?.OwnExpenseCents ?? 0) + (zeile?.ForeignOpenExpenseCents ?? 0));
+            einnahmen.Add(zeile?.IncomeCents ?? 0);
+        }
+
+        _verlaufAusgaben = ausgaben;
+        _verlaufEinnahmen = einnahmen;
+    }
+
+    /// <summary>
+    /// Meldung der Ansicht ueber die Groesse der Linienflaeche. Eine
+    /// Meldung genuegt fuer beide Kacheln, siehe
+    /// <see cref="_verlaufBreite"/>.
+    /// </summary>
+    public void VerlaufflaecheGeaendert(double breite, double hoehe)
+    {
+        _verlaufBreite = breite;
+        _verlaufHoehe = hoehe;
+        ZeichneVerlauf();
+    }
+
+    private void ZeichneVerlauf()
+    {
+        // ZWEI getrennte Fragen, und das ist hier kein Feinschliff:
+        //
+        //   "Gibt es etwas zu zeigen?"  haengt NUR an den Daten.
+        //   "Wie sieht die Linie aus?"  haengt an der gemeldeten Groesse.
+        //
+        // Beides in einem Merkmal zu fuehren hat die Sparkline schon
+        // einmal vollstaendig verschwinden lassen: die Flaeche meldet ihre
+        // Groesse ueber SizeChanged, ein unsichtbares Element wird aber gar
+        // nicht erst vermessen. Haengt seine Sichtbarkeit am Ergebnis der
+        // Groessenrechnung, wird sie nie wahr - und es meldet nie.
+        AusgabenVerlaufVorhanden = HatVerlauf(_verlaufAusgaben);
+        EinnahmenVerlaufVorhanden = HatVerlauf(_verlaufEinnahmen);
+
+        AusgabenVerlauf = Linie(_verlaufAusgaben);
+        EinnahmenVerlauf = Linie(_verlaufEinnahmen);
+    }
+
+    /// <summary>
+    /// Ob die Reihe ueberhaupt etwas aussagt. Ein einziger Monat mit einer
+    /// Buchung ergibt eine Linie, die elf Monate auf der Nulllinie liegt
+    /// und dann hochschnellt - das sieht nach einem Ausbruch aus und ist
+    /// doch nur "hier faengt es an".
+    /// </summary>
+    private static bool HatVerlauf(IReadOnlyList<long> werte)
+        => werte.Count(wert => wert != 0) >= 2;
+
+    /// <summary>
+    /// Die Punkte der Linie. Leer, solange die Ansicht ihre Groesse noch
+    /// nicht gemeldet hat - das ist der Zustand unmittelbar nach dem
+    /// Aufbau und kein Fehler.
+    /// </summary>
+    private IReadOnlyList<Point> Linie(IReadOnlyList<long> werte)
+    {
+        if (!HatVerlauf(werte))
+        {
+            return [];
+        }
+
+        var layout = Sparkline.Compute(werte, _verlaufBreite, _verlaufHoehe);
+
+        return layout.IsEmpty
+            ? []
+            : layout.Points.Select(p => new Point(p.X, p.Y)).ToList();
     }
 
     /// <summary>
