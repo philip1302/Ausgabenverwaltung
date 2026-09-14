@@ -3,6 +3,7 @@ using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.OpenItems;
+using Ausgabenverwaltung.Core.Reports;
 
 namespace Ausgabenverwaltung.Core.Settings;
 
@@ -111,6 +112,8 @@ public sealed class AppSettingsStore
                 OpenItemsSortColumn = LiesAufzaehlung(
                     document.OpenItemsSortColumn, OpenItemsSortColumn.Datum),
                 OpenItemsSortAscending = document.OpenItemsSortAscending ?? true,
+
+                SavedFilters = LiesFilter(document.SavedFilters),
             };
         }
         catch (Exception)
@@ -152,6 +155,30 @@ public sealed class AppSettingsStore
             ExpenseListSortAscending = settings.ExpenseListSortAscending,
             OpenItemsSortColumn = settings.OpenItemsSortColumn.ToString(),
             OpenItemsSortAscending = settings.OpenItemsSortAscending,
+
+            SavedFilters = settings.SavedFilters.Select(filter => new SavedFilterDocument
+            {
+                Name = filter.Name,
+                PeriodKey = filter.PeriodKey,
+
+                // Als ISO-Datum und nicht in deutscher Schreibweise: die
+                // Datei ist Ablage und keine Anzeige, und '2026-01-31'
+                // laesst sich beim Hineinsehen von Hand nicht mit
+                // '01.03.2026' verwechseln (dieselbe Ueberlegung wie bei
+                // Regel 3 fuer die Datenbank).
+                From = filter.From is DateOnly von ? IsoDate.ToDateText(von) : null,
+                To = filter.ToInclusive is DateOnly bis ? IsoDate.ToDateText(bis) : null,
+
+                CategoryIds = filter.CategoryIds.ToList(),
+                PayerIds = filter.PayerIds.ToList(),
+                StatusOpen = filter.StatusOpen,
+                StatusSettled = filter.StatusSettled,
+                IncomeOnly = filter.IncomeOnly,
+                ExpensesOnly = filter.ExpensesOnly,
+                MyCosts = filter.MyCosts,
+                SearchText = filter.SearchText,
+                Grouping = filter.Grouping?.ToString(),
+            }).ToList(),
         };
 
         var folder = Path.GetDirectoryName(_filePath);
@@ -199,6 +226,74 @@ public sealed class AppSettingsStore
         };
     }
 
+    // Eine kaputte Zeile kostet ihren Filter und nicht die ganze Datei -
+    // dieselbe Nachsicht wie ueberall hier. Was danach uebrig bleibt,
+    // bringt Normalize in denselben Zustand, den das Speichern
+    // hinterlaesst (namenlose Eintraege und Doppelgaenger fliegen raus).
+    private static IReadOnlyList<SavedFilter> LiesFilter(
+        List<SavedFilterDocument>? gelesen)
+    {
+        if (gelesen is null)
+        {
+            return [];
+        }
+
+        var filter = new List<SavedFilter>();
+
+        foreach (var document in gelesen)
+        {
+            if (string.IsNullOrWhiteSpace(document.Name))
+            {
+                continue;
+            }
+
+            filter.Add(new SavedFilter
+            {
+                Name = document.Name,
+                PeriodKey = LeerAlsNull(document.PeriodKey),
+                From = LiesDatum(document.From),
+                ToInclusive = LiesDatum(document.To),
+                CategoryIds = document.CategoryIds ?? [],
+                PayerIds = document.PayerIds ?? [],
+                StatusOpen = document.StatusOpen ?? false,
+                StatusSettled = document.StatusSettled ?? false,
+                IncomeOnly = document.IncomeOnly ?? false,
+                ExpensesOnly = document.ExpensesOnly ?? false,
+                MyCosts = document.MyCosts ?? false,
+                SearchText = LeerAlsNull(document.SearchText),
+
+                // Ein unbekannter Name faellt auf NULL zurueck: "keine
+                // Gruppierung gespeichert" laesst die eingestellte
+                // stehen, eine erfundene wuerde sie umstellen.
+                Grouping = document.Grouping is string gruppe
+                    && Enum.TryParse<ReportGrouping>(gruppe, out var wert)
+                        ? wert
+                        : null,
+            });
+        }
+
+        return SavedFilters.Normalize(filter);
+    }
+
+    private static DateOnly? LiesDatum(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        try
+        {
+            return IsoDate.ParseDate(text);
+        }
+        catch (FormatException)
+        {
+            // Eine unlesbare Grenze wiegt weniger als der Filter: lieber
+            // eine offene Grenze als kein Filter.
+            return null;
+        }
+    }
+
     private static DateTime? ParseOrNull(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -240,6 +335,28 @@ public sealed class AppSettingsStore
         public bool? ExpenseListSortAscending { get; set; }
         public string? OpenItemsSortColumn { get; set; }
         public bool? OpenItemsSortAscending { get; set; }
+        public List<SavedFilterDocument>? SavedFilters { get; set; }
+    }
+
+    // Eigener Abschnitt je gespeichertem Filter. Wieder alle Felder
+    // nullable: eine Datei aus einer aelteren Fassung kennt keinen davon,
+    // und ein fehlendes Haekchen ist "nicht gesetzt" und nicht "false aus
+    // Versehen".
+    private sealed class SavedFilterDocument
+    {
+        public string? Name { get; set; }
+        public string? PeriodKey { get; set; }
+        public string? From { get; set; }
+        public string? To { get; set; }
+        public List<int>? CategoryIds { get; set; }
+        public List<int>? PayerIds { get; set; }
+        public bool? StatusOpen { get; set; }
+        public bool? StatusSettled { get; set; }
+        public bool? IncomeOnly { get; set; }
+        public bool? ExpensesOnly { get; set; }
+        public bool? MyCosts { get; set; }
+        public string? SearchText { get; set; }
+        public string? Grouping { get; set; }
     }
 
     // Eigener Abschnitt in der Datei statt vier flacher Felder: die vier

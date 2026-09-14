@@ -1,4 +1,4 @@
-namespace Ausgabenverwaltung.Core.Reports;
+﻿namespace Ausgabenverwaltung.Core.Reports;
 
 /// <summary>
 /// Die Zeitraum-Schnellwahl der Ausgabenliste ("dieser Monat", "dieses
@@ -64,6 +64,56 @@ public static class DateRangePresets
     /// praktische Bedeutung.
     /// </summary>
     public static DateRange Everything() => new(DateOnly.MinValue, DateOnly.MaxValue);
+
+    /// <summary>
+    /// Ein Schnellwahl-Zeitraum ueber den Schluessel, unter dem ihn die
+    /// Filterleisten fuehren ("DieserMonat", "DiesesJahr", "LetztesJahr",
+    /// "Letzte12Monate", "Letzte3Jahre", "Alles").
+    ///
+    /// Liefert false bei einem unbekannten Schluessel. "Alles" dagegen
+    /// liefert true mit NULL: unbegrenzt ist ein Ergebnis und kein
+    /// Fehlschlag.
+    ///
+    /// Warum als Nachschlagewerk und nicht nur als Knopf je Bereich: ein
+    /// gespeicherter Filter haelt den Schluessel fest und wird in beiden
+    /// Bereichen angewendet (siehe <see cref="SavedFilter.PeriodKey"/>).
+    /// Die Auswertung kennt "Letzte3Jahre", die Ausgabenliste
+    /// "DieserMonat" - koennte jeder Bereich nur seine eigenen Schluessel
+    /// lesen, wuerde ein drueben gespeicherter Filter hier stillschweigend
+    /// zu "alles" und zeigte mehr, als er soll.
+    /// </summary>
+    public static bool TryByKey(string? key, DateOnly today, out DateRange? range)
+    {
+        switch (key)
+        {
+            case "DieserMonat":
+                range = ThisMonth(today);
+                return true;
+            case "DiesesJahr":
+                range = ThisYear(today);
+                return true;
+            case "LetztesJahr":
+                range = LastYear(today);
+                return true;
+            case "Letzte12Monate":
+                range = LastTwelveMonths(today);
+                return true;
+            case "Letzte3Jahre":
+                range = LastThreeYears(today);
+                return true;
+
+            // "alles" laesst beide Felder leer - eine leere Grenze ist die
+            // natuerliche Schreibweise fuer "unbegrenzt" und vermeidet,
+            // dass dort 01.01.0001 bzw. 31.12.9999 steht.
+            case "Alles":
+                range = null;
+                return true;
+
+            default:
+                range = null;
+                return false;
+        }
+    }
 
     /// <summary>
     /// Zeitraum aus den von/bis-Eingaben der Filterleiste. Beide Grenzen

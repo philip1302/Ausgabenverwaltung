@@ -1,6 +1,7 @@
 ﻿using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.OpenItems;
+using Ausgabenverwaltung.Core.Reports;
 
 namespace Ausgabenverwaltung.Core.Settings;
 
@@ -125,4 +126,19 @@ public sealed record AppSettings
 
     /// <summary>Richtung zu <see cref="OpenItemsSortColumn"/>.</summary>
     public bool OpenItemsSortAscending { get; init; } = true;
+
+    /// <summary>
+    /// Die benannten Filtereinstellungen der Filterleiste, geteilt von
+    /// Ausgabenliste und Auswertung (siehe <see cref="SavedFilters"/>).
+    ///
+    /// Steht hier und nicht in der Datenbank, obwohl Kategorie- und
+    /// Personen-Ids darin vorkommen: ein gespeicherter Filter ist eine
+    /// Gewohnheit und kein Datenbestand. Der Preis dafuer ist, dass die
+    /// Liste nicht mitgesichert wird - verglichen mit einer Tabelle, die
+    /// bei jedem Zurueckspielen einer Sicherung Fremdschluessel auf
+    /// vielleicht nicht mehr vorhandene Kategorien mitbraechte, ist das
+    /// der kleinere Nachteil. Beim Anwenden faellt eine verschwundene
+    /// Kategorie einfach weg.
+    /// </summary>
+    public IReadOnlyList<SavedFilter> SavedFilters { get; init; } = [];
 }

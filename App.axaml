@@ -1,4 +1,4 @@
-<Application xmlns="https://github.com/avaloniaui"
+﻿<Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Ausgabenverwaltung.App"
              xmlns:local="using:Ausgabenverwaltung"
@@ -787,6 +787,28 @@
         </Style>
         <Style Selector=":is(TextBlock).tabellenzelle.mitte">
             <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <!-- ==== Deckel eines Flyouts ====
+             Das Fluent-Thema begrenzt jedes Flyout auf feste 456 Pixel
+             (FlyoutThemeMaxWidth). Der Inhalt unserer Flyouts waechst
+             dagegen mit der Schriftgroesse mit (anzeige:Breite): bei
+             Stufe "Groß" ist die Erklaerung im Jahresrueckblick
+             340 * 1,4 = 476 Pixel breit, stiess an den Deckel und bekam
+             eine waagerechte Bildlaufleiste - man musste den Text also
+             seitlich schieben, um ihn zu lesen.
+
+             Der Deckel waechst deshalb mit. Der Wert liegt ueber der
+             breitesten Flyout-Vorlage der Anwendung (340), und weil
+             beide mit demselben Faktor rechnen, bleibt das auf jeder
+             Schriftstufe so. Ohne Deckel bliebe das Flyout zwar auch
+             lesbar, koennte aber bei einem langen, nicht umbrechenden
+             Text ueber den Bildschirm hinauswachsen. Menues und
+             Kontextmenues stehen mit in der Auswahl: sie haben denselben
+             Deckel und dasselbe Problem, nur mit kuerzeren Texten und
+             deshalb erst eine Schriftstufe spaeter. -->
+        <Style Selector="FlyoutPresenter, MenuFlyoutPresenter, ContextMenu">
+            <Setter Property="MaxWidth" Value="{anzeige:Breite 560}" />
         </Style>
 
         <!-- Aufklapp-Pfeil vor einem Kategorienamen. Stand frueher in

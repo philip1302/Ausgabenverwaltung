@@ -100,7 +100,7 @@
             <Border DockPanel.Dock="Top" Classes="filterleiste" Margin="0,0,0,16"
                     SizeChanged="Filterleiste_SizeChanged">
                 <StackPanel Spacing="8">
-                    <Grid ColumnDefinitions="*,8,Auto,8,Auto">
+                    <Grid ColumnDefinitions="*,8,Auto,8,Auto,8,Auto">
                         <TextBox Grid.Column="0"
                                  Text="{Binding Suchtext}"
                                  MaxWidth="{anzeige:Breite 420}"
@@ -108,15 +108,86 @@
                                  ToolTip.Tip="Durchsucht Bemerkung, Kategorie und Zahler. Bei der Kategorie zählt der ganze Pfad: „Wohnen“ findet auch „Wohnen › Nebenkosten › Strom“."
                                  PlaceholderText="Bemerkung, Kategorie, Zahler…" />
 
-                        <Button Grid.Column="2" Classes="secondary"
-                                Content="{Binding FilterKnopfText}"
-                                Classes.aktiv="{Binding HatAktiveFilter}"
-                                ToolTip.Tip="Zeigt oder verbirgt die Filterfelder. Die Zahl sagt, wie viele Filter gerade gesetzt sind."
-                                Command="{Binding FilterUmschaltenCommand}" />
+                        <!-- Gespeicherte Filter: die Liste zum Anklicken und
+                             darunter das Ablegen des aktuellen Standes. Beides
+                             in EINEM Flyout, weil es dieselbe Sache ist -
+                             ein eigener Knopf "Filter speichern" daneben
+                             waere ein dritter Knopf in einer Zeile, die
+                             schon drei hat. -->
+                        <Button Grid.Column="2" Classes="secondary" Content="Filter ▾"
+                                ToolTip.Tip="Benannte Filtereinstellungen. Ein Klick auf einen Namen stellt die Leiste darauf ein; unten lässt sich der aktuelle Stand unter einem Namen ablegen.">
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedRight">
+                                    <StackPanel Width="{anzeige:Breite 300}" Spacing="8">
+                                        <TextBlock Text="Gespeicherte Filter"
+                                                   Classes="filterbeschriftung" />
+
+                                        <TextBlock IsVisible="{Binding !HatGespeicherteFilter}"
+                                                   TextWrapping="Wrap"
+                                                   Text="Noch nichts gespeichert. Stellen Sie die Filter ein, wie Sie sie brauchen, und geben Sie ihnen unten einen Namen." />
+
+                                        <ScrollViewer MaxHeight="{anzeige:Breite 240}"
+                                                      IsVisible="{Binding HatGespeicherteFilter}">
+                                            <ItemsControl ItemsSource="{Binding GespeicherteFilter}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="reports:SavedFilter">
+                                                        <Grid ColumnDefinitions="*,4,Auto" Margin="0,2">
+                                                            <Button Grid.Column="0"
+                                                                    Content="{Binding Name}"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Left"
+                                                                    ToolTip.Tip="Diesen Filter einstellen"
+                                                                    Command="{Binding $parent[ItemsControl].((vm:ReportViewModel)DataContext).GespeichertenFilterAnwendenCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                            <Button Grid.Column="2" Classes="chipkreuz"
+                                                                    Content="✕"
+                                                                    ToolTip.Tip="Diesen gespeicherten Filter löschen"
+                                                                    Command="{Binding $parent[ItemsControl].((vm:ReportViewModel)DataContext).GespeichertenFilterLoeschenCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+
+                                        <Separator />
+
+                                        <TextBlock Text="Aktuellen Stand speichern"
+                                                   Classes="filterbeschriftung" />
+                                        <TextBox Text="{Binding FilterName}"
+                                                 PlaceholderText="Name, z. B. Auto dieses Jahr" />
+
+                                        <!-- Der Fehler steht am Feld und nicht als
+                                             Dialog (Regel 13). -->
+                                        <TextBlock Classes="fehler" TextWrapping="Wrap"
+                                                   Text="{Binding FilterNameFehler}"
+                                                   IsVisible="{Binding FilterNameFehlerSichtbar}" />
+
+                                        <Button Classes="primary" Content="Speichern"
+                                                HorizontalAlignment="Right"
+                                                Command="{Binding FilterSpeichernCommand}" />
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
 
                         <Button Grid.Column="4" Classes="ghost" Content="Zurücksetzen"
                                 IsVisible="{Binding HatAktiveFilter}"
                                 Command="{Binding FilterZuruecksetzenCommand}" />
+
+                        <!-- Der Klapp-Pfeil steht ganz am Ende der Zeile und
+                             traegt keine Beschriftung mehr: aufgeklappt zeigt
+                             er nach oben, eingeklappt nach unten (Carbon
+                             Design System, "Accordion"). Der Pfeil sagt damit,
+                             was der Klick tut, und nimmt der Zeile ein Wort,
+                             das mit "Filter ▾" daneben ohnehin doppelt
+                             gelesen wurde. Wie viele Filter gesetzt sind,
+                             steht in seinem Hinweis - und WORAUF gefiltert
+                             wird, sagen die Chips darunter. -->
+                        <Button Grid.Column="6" Classes="aufklapp"
+                                Content="{Binding FilterKlappZeichen}"
+                                ToolTip.Tip="{Binding FilterKlappHinweis}"
+                                Command="{Binding FilterUmschaltenCommand}" />
                     </Grid>
 
                     <ItemsControl ItemsSource="{Binding AktiveFilter}"

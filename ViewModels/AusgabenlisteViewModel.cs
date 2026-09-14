@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -136,11 +136,24 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     /// <summary>
     /// Ob die Filterleiste ihre Felder zeigt. Eingeklappt bleibt eine
-    /// Zeile mit Suche und Filterknopf stehen; worauf gefiltert wird,
-    /// sagen die Chips darunter.
+    /// Zeile mit Suche, den gespeicherten Filtern und dem Klapp-Pfeil
+    /// stehen; worauf gefiltert wird, sagen die Chips darunter.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FilterKlappZeichen))]
+    [NotifyPropertyChangedFor(nameof(FilterKlappHinweis))]
     private bool _filterAufgeklappt = true;
+
+    /// <summary>
+    /// Der Pfeil am Klappknopf: aufgeklappt zeigt er nach oben,
+    /// eingeklappt nach unten.
+    ///
+    /// Das ist die uebliche Leserichtung solcher Knoepfe (Carbon Design
+    /// System, "Accordion": chevron down = zu, chevron up = offen). Der
+    /// Pfeil sagt damit zugleich, was ein Klick tut - nach oben
+    /// zusammenschieben, nach unten aufziehen.
+    /// </summary>
+    public string FilterKlappZeichen => FilterAufgeklappt ? "▲" : "▼";
 
     // Sobald der Anwender selbst auf- oder zugeklappt hat, entscheidet er
     // und nicht mehr die Fensterbreite. Ein Umschalten, das gleich wieder
@@ -181,15 +194,31 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HatAktiveFilter))]
-    [NotifyPropertyChangedFor(nameof(FilterKnopfText))]
+    [NotifyPropertyChangedFor(nameof(FilterKlappHinweis))]
     private int _aktiveFilterAnzahl;
 
     public bool HatAktiveFilter => AktiveFilterAnzahl > 0;
 
-    /// <summary>Die Anzahl steht am Knopf, damit eingeklappt sichtbar
-    /// bleibt, DASS gefiltert wird - was, sagen die Chips.</summary>
-    public string FilterKnopfText =>
-        AktiveFilterAnzahl == 0 ? "Filter" : $"Filter ({AktiveFilterAnzahl})";
+    /// <summary>
+    /// Beschriftung des Klappknopfs - er traegt nur einen Pfeil und
+    /// braucht deshalb einen Satz, der sagt, was er tut.
+    ///
+    /// Die Anzahl der gesetzten Filter steht mit darin: sie stand vorher
+    /// als "Filter (3)" auf dem Knopf und darf nicht ersatzlos
+    /// verschwinden. WORAUF gefiltert wird, sagen weiterhin die Chips -
+    /// die bleiben auch eingeklappt stehen.
+    /// </summary>
+    public string FilterKlappHinweis
+    {
+        get
+        {
+            var was = FilterAufgeklappt ? "Filterfelder verbergen" : "Filterfelder anzeigen";
+
+            return AktiveFilterAnzahl == 0
+                ? was
+                : $"{was} — {AktiveFilterAnzahl} Filter gesetzt";
+        }
+    }
 
     private void AktualisiereAktiveFilter()
     {
@@ -293,6 +322,214 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         _ladenGesperrt = false;
 
         LadeDaten();
+    }
+
+    // ---------------- Gespeicherte Filter ----------------
+
+    /// <summary>
+    /// Die benannten Filtereinstellungen hinter dem Knopf "Gespeichert"
+    /// (siehe <see cref="SavedFilters"/>).
+    ///
+    /// Geteilt mit der Auswertung: es ist dieselbe Leiste und dieselbe
+    /// Frage ("Auto, dieses Jahr"). Eine Liste, die je nach Bereich anders
+    /// aussieht, muesste sich der Anwender zweimal merken.
+    /// </summary>
+    public ObservableCollection<SavedFilter> GespeicherteFilter { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HatGespeicherteFilter))]
+    private int _gespeicherteFilterAnzahl;
+
+    public bool HatGespeicherteFilter => GespeicherteFilterAnzahl > 0;
+
+    /// <summary>Der Name, unter dem der aktuelle Stand abgelegt wird.</summary>
+    [ObservableProperty]
+    private string _filterName = string.Empty;
+
+    /// <summary>Fehlertext am Namensfeld, NULL wenn alles in Ordnung ist.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FilterNameFehlerSichtbar))]
+    private string? _filterNameFehler;
+
+    public bool FilterNameFehlerSichtbar => !string.IsNullOrEmpty(FilterNameFehler);
+
+    /// <summary>
+    /// Liest die Liste aus der Einstellungsdatei. Beim Aufbau und nach
+    /// jeder Aenderung, und ausserdem beim Betreten des Bereichs: die
+    /// Datei ist die einzige Wahrheit, und ein in der Auswertung
+    /// gespeicherter Filter soll hier ohne Neustart auftauchen.
+    /// </summary>
+    private void LadeGespeicherteFilter()
+    {
+        GespeicherteFilter.Clear();
+
+        foreach (var filter in _settingsStore.Load().SavedFilters)
+        {
+            GespeicherteFilter.Add(filter);
+        }
+
+        GespeicherteFilterAnzahl = GespeicherteFilter.Count;
+    }
+
+    /// <summary>
+    /// Legt den aktuellen Filterstand unter dem eingegebenen Namen ab.
+    /// Ein schon vergebener Name ersetzt seinen Eintrag - so bessert man
+    /// einen Filter nach, ohne den alten vorher loeschen zu muessen.
+    /// </summary>
+    [RelayCommand]
+    private void FilterSpeichern()
+    {
+        var einstellungen = _settingsStore.Load();
+
+        FilterNameFehler = SavedFilters.Validate(FilterName, einstellungen.SavedFilters);
+        if (FilterNameFehler is not null)
+        {
+            return;
+        }
+
+        var liste = SavedFilters.Save(einstellungen.SavedFilters, SammleFilter(FilterName));
+
+        // Regel 13: das Namensfeld wird erst geraeumt, wenn geschrieben
+        // wurde. Schlaegt das Schreiben fehl, steht der Name noch da und
+        // ein zweiter Versuch kostet keine Tipparbeit.
+        FilterNameFehler = Schreibvorgang.Versuche(
+            "Beim Speichern eines Filters",
+            () => _settingsStore.Save(einstellungen with { SavedFilters = liste })) is null
+            ? null
+            : "Der Filter ließ sich nicht merken — die Einstellungsdatei ist gerade "
+              + "nicht beschreibbar. An den Buchungen ändert das nichts, und die "
+              + "eingestellten Filter wirken weiter; ein zweiter Versuch hilft oft.";
+
+        if (FilterNameFehler is not null)
+        {
+            return;
+        }
+
+        LadeGespeicherteFilter();
+        FilterName = string.Empty;
+    }
+
+    /// <summary>
+    /// Stellt die Leiste auf einen gespeicherten Filter um.
+    ///
+    /// Wie beim Zuruecksetzen wird vorher ALLES geraeumt - auch die
+    /// Einschraenkung auf eine Vorlage oder eine einzelne Buchung. Bliebe
+    /// eine davon stehen, waere die Liste hinterher raetselhaft leer,
+    /// obwohl der gewaehlte Filter passt.
+    /// </summary>
+    [RelayCommand]
+    private void GespeichertenFilterAnwenden(SavedFilter? filter)
+    {
+        if (filter is null)
+        {
+            return;
+        }
+
+        _ladenGesperrt = true;
+
+        FilterAuswahlLeeren();
+        _vorlageFilterId = null;
+        VorlageFilterText = null;
+        EinzelfilterLeeren();
+
+        // Ein gespeicherter Schnellwahl-Zeitraum wird neu ausgerechnet und
+        // nicht als Datum uebernommen: "dieses Jahr" heisst in jedem Jahr
+        // etwas anderes (siehe SavedFilter.PeriodKey).
+        if (!WendeSchnellwahlAn(filter.PeriodKey))
+        {
+            AktiverZeitraumSchluessel = null;
+            VonText = filter.From is DateOnly von ? GermanDateInput.ToText(von) : string.Empty;
+            BisText = filter.ToInclusive is DateOnly bis
+                ? GermanDateInput.ToText(bis)
+                : string.Empty;
+        }
+
+        GespeicherteFilterHilfe.SetzeHaken(
+            KategorieWurzeln, filter.CategoryIds.ToHashSet());
+
+        foreach (var option in ZahlerOptionen)
+        {
+            option.SetzeStill(filter.PayerIds.Contains(option.Id));
+        }
+
+        StatusOffen = filter.StatusOpen;
+        StatusBeglichen = filter.StatusSettled;
+        NurEinnahmen = filter.IncomeOnly;
+        NurAusgaben = filter.ExpensesOnly;
+        MeineKosten = filter.MyCosts;
+        Suchtext = filter.SearchText ?? string.Empty;
+
+        OnPropertyChanged(nameof(KategorieFilterText));
+        OnPropertyChanged(nameof(ZahlerFilterText));
+
+        _ladenGesperrt = false;
+
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Loescht einen gespeicherten Filter. Ohne Rueckfrage: an den Daten
+    /// aendert das nichts, und der Filter ist mit denselben Haekchen in
+    /// einem Augenblick wieder angelegt.
+    /// </summary>
+    [RelayCommand]
+    private void GespeichertenFilterLoeschen(SavedFilter? filter)
+    {
+        if (filter is null)
+        {
+            return;
+        }
+
+        var einstellungen = _settingsStore.Load();
+        var liste = SavedFilters.Remove(einstellungen.SavedFilters, filter.Name);
+
+        if (Schreibvorgang.Versuche(
+                "Beim Loeschen eines Filters",
+                () => _settingsStore.Save(einstellungen with { SavedFilters = liste })) is not null)
+        {
+            // Der Eintrag bleibt stehen - er ist ja noch da. Das
+            // Uebrige steht im Protokoll.
+            return;
+        }
+
+        LadeGespeicherteFilter();
+    }
+
+    /// <summary>
+    /// Der Filterstand, so wie er in der Leiste steht. Roh und nicht als
+    /// fertiger <see cref="ReportFilter"/> - siehe
+    /// <see cref="SavedFilter"/>.
+    /// </summary>
+    private SavedFilter SammleFilter(string name)
+    {
+        var ueberSchnellwahl = AktiverZeitraumSchluessel is not null;
+
+        return new SavedFilter
+        {
+            Name = name,
+            PeriodKey = AktiverZeitraumSchluessel,
+
+            // Von Hand eingetragene Grenzen nur dann, wenn keine
+            // Schnellwahl aktiv ist: sonst stuenden beide Angaben in der
+            // Datei und die zweite waere schon morgen falsch.
+            From = ueberSchnellwahl ? null : GespeicherteFilterHilfe.LiesGrenze(VonText),
+            ToInclusive = ueberSchnellwahl
+                ? null
+                : GespeicherteFilterHilfe.LiesGrenze(BisText),
+
+            CategoryIds = GespeicherteFilterHilfe.Angehakt(KategorieWurzeln),
+            PayerIds = ZahlerOptionen
+                .Where(option => option.IstGewaehlt)
+                .Select(option => option.Id)
+                .ToList(),
+
+            StatusOpen = StatusOffen,
+            StatusSettled = StatusBeglichen,
+            IncomeOnly = NurEinnahmen,
+            ExpensesOnly = NurAusgaben,
+            MyCosts = MeineKosten,
+            SearchText = string.IsNullOrWhiteSpace(Suchtext) ? null : Suchtext.Trim(),
+        };
     }
 
     // Namen der Kategorien fuer die Beschriftung oben - beim Aufbau des
@@ -598,6 +835,8 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         _ladenGesperrt = false;
         _sortierungGemerkt = true;
 
+        LadeGespeicherteFilter();
+
         LadeDaten();
 
         // Buchungsaenderungen aus anderen Bereichen (Anlegen in "Erfassen",
@@ -627,6 +866,10 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         _ladenGesperrt = true;
         LadeAuswahllisten();
         _ladenGesperrt = false;
+
+        // Die gespeicherten Filter koennen sich in der Auswertung
+        // geaendert haben - beide Bereiche fuehren dieselbe Liste.
+        LadeGespeicherteFilter();
 
         LadeDaten();
     }
@@ -714,33 +957,40 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     [RelayCommand]
     private void Schnellwahl(string? bereich)
     {
-        AktiverZeitraumSchluessel = bereich;
+        _ladenGesperrt = true;
+        var gesetzt = WendeSchnellwahlAn(bereich);
+        _ladenGesperrt = false;
 
+        if (gesetzt)
+        {
+            LadeDaten();
+        }
+    }
+
+    /// <summary>
+    /// Legt Von/Bis auf einen Schnellwahl-Zeitraum. Liefert false bei
+    /// einem unbekannten Schluessel - dann bleibt alles stehen.
+    ///
+    /// Laedt bewusst NICHT neu und schliesst die Ladesperre nicht selbst:
+    /// beim Anwenden eines gespeicherten Filters ist der Zeitraum nur
+    /// einer von mehreren Werten, und die Liste soll danach einmal
+    /// geladen werden und nicht je Feld.
+    /// </summary>
+    private bool WendeSchnellwahlAn(string? bereich)
+    {
         var heute = DateOnly.FromDateTime(DateTime.Now);
 
-        // "alles" laesst beide Felder leer - eine leere Grenze ist die
-        // natuerliche Schreibweise fuer "unbegrenzt" und vermeidet, dass
-        // dort 01.01.0001 bzw. 31.12.9999 steht.
-        DateRange? bereichWerte;
-        switch (bereich)
+        // Welcher Schluessel welchen Zeitraum meint, steht in Core
+        // (Regel 7) - und zwar fuer beide Filterleisten gemeinsam, damit
+        // ein in der Auswertung gespeicherter Filter hier dasselbe
+        // bedeutet.
+        if (!DateRangePresets.TryByKey(bereich, heute, out var bereichWerte))
         {
-            case "DieserMonat":
-                bereichWerte = DateRangePresets.ThisMonth(heute);
-                break;
-            case "DiesesJahr":
-                bereichWerte = DateRangePresets.ThisYear(heute);
-                break;
-            case "Letzte12Monate":
-                bereichWerte = DateRangePresets.LastTwelveMonths(heute);
-                break;
-            case "Alles":
-                bereichWerte = null;
-                break;
-            default:
-                return;
+            return false;
         }
 
-        _ladenGesperrt = true;
+        AktiverZeitraumSchluessel = bereich;
+
         if (bereichWerte is DateRange werte)
         {
             VonText = GermanDateInput.ToText(werte.From);
@@ -753,9 +1003,8 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             VonText = string.Empty;
             BisText = string.Empty;
         }
-        _ladenGesperrt = false;
 
-        LadeDaten();
+        return true;
     }
 
     [RelayCommand]

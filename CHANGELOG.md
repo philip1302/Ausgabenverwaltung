@@ -64,7 +64,43 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
   Ausgaben oder nur noch über Einnahmen. Der gesetzte Filter steht auch bei
   eingeklappter Leiste als Merkmal darunter und lässt sich dort wegklicken.
 
+### Gespeicherte Filter
+
+- Ausgabenliste und Auswertung haben jetzt in der Filterzeile den Knopf
+  „Filter ▾“. Er legt die gerade eingestellten Filter unter einem Namen ab und
+  stellt sie später mit einem Klick wieder her. Wer immer wieder dieselbe Frage
+  stellt — „was kostet das Auto dieses Jahr“ —, setzt dafür nicht mehr jedes Mal
+  dieselben sechs Häkchen.
+- Beide Bereiche teilen sich eine Liste: was in der Ausgabenliste gespeichert
+  wurde, steht auch in der Auswertung bereit und umgekehrt. In der Auswertung
+  gehört die Zeiteinteilung (Jahr, Quartal, Monat) mit zum gespeicherten Stand.
+- War der Zeitraum über einen der Knöpfe „Dieser Monat“, „Dieses Jahr“ oder
+  „Letzte 12 Monate“ eingestellt, wird er beim Anwenden neu ausgerechnet:
+  „Dieses Jahr“ meint auch im nächsten Jahr das laufende. Ein von Hand
+  eingetragener Zeitraum bleibt dagegen stehen, wie er war.
+- Ein Name, den es schon gibt, ersetzt den bisherigen Stand — so lässt sich ein
+  Filter nachbessern, ohne ihn vorher zu löschen. Weg kommt er über das Kreuz
+  neben seinem Namen; eine Rückfrage gibt es dafür nicht, denn an den Buchungen
+  ändert das nichts.
+
+### Filterleiste
+
+- Die Filterfelder klappt jetzt ein kleiner Pfeil am rechten Ende der Zeile auf
+  und zu, statt eines Knopfes mitten in der Reihe. Aufgeklappt zeigt er nach
+  oben, eingeklappt nach unten — er sagt also, was ein Klick tut. Wie viele
+  Filter gesetzt sind, steht in seinem Hinweis; worauf gefiltert wird, sagen wie
+  bisher die Merkmale darunter.
+
 ### Sonstiges
+
+- Das Ändern einer Kategoriefarbe endete bisher jedes Mal mit einer
+  Fehlermeldung, obwohl die Farbe längst gesetzt und gespeichert war — die
+  Auswahl blieb dabei offen stehen. Sie schließt sich jetzt nach der Wahl, und
+  die Meldung bleibt aus.
+- Bei großer Schrift werden aufklappende Erklärungen und Auswahllisten jetzt so
+  breit, wie ihr Inhalt sie braucht. Vorher stießen sie an eine feste Grenze und
+  bekamen eine Bildlaufleiste, mit der man den Text seitlich schieben musste —
+  am deutlichsten bei der Erklärung hinter dem Fragezeichen im Jahresrückblick.
 
 - Weil in der Seitenleiste ein Bereich dazugekommen ist, führen Strg + 1 bis
   Strg + 9 jetzt jeweils eine Stelle weiter nach unten. Die Datensicherung

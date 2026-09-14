@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -10,6 +10,7 @@ using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.People;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Reports;
+using Ausgabenverwaltung.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -36,6 +37,7 @@ public sealed partial class ReportViewModel : ViewModelBase
     private readonly ExpenseRepository _expenseRepository;
     private readonly CategoryRepository _categoryRepository;
     private readonly PersonRepository _personRepository;
+    private readonly AppSettingsStore _settingsStore;
 
     // Unterdrueckt das Neuladen, solange mehrere Filterwerte auf einmal
     // gesetzt werden (Schnellwahl, Zuruecksetzen, Neuaufbau der
@@ -109,7 +111,13 @@ public sealed partial class ReportViewModel : ViewModelBase
     // als jede der beiden Fassungen fuer sich.
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FilterKlappZeichen))]
+    [NotifyPropertyChangedFor(nameof(FilterKlappHinweis))]
     private bool _filterAufgeklappt = true;
+
+    /// <summary>Siehe AusgabenlisteViewModel: aufgeklappt zeigt der Pfeil
+    /// nach oben, eingeklappt nach unten.</summary>
+    public string FilterKlappZeichen => FilterAufgeklappt ? "▲" : "▼";
 
     private bool _klappzustandVonHand;
 
@@ -134,13 +142,22 @@ public sealed partial class ReportViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HatAktiveFilter))]
-    [NotifyPropertyChangedFor(nameof(FilterKnopfText))]
+    [NotifyPropertyChangedFor(nameof(FilterKlappHinweis))]
     private int _aktiveFilterAnzahl;
 
     public bool HatAktiveFilter => AktiveFilterAnzahl > 0;
 
-    public string FilterKnopfText =>
-        AktiveFilterAnzahl == 0 ? "Filter" : $"Filter ({AktiveFilterAnzahl})";
+    public string FilterKlappHinweis
+    {
+        get
+        {
+            var was = FilterAufgeklappt ? "Filterfelder verbergen" : "Filterfelder anzeigen";
+
+            return AktiveFilterAnzahl == 0
+                ? was
+                : $"{was} — {AktiveFilterAnzahl} Filter gesetzt";
+        }
+    }
 
     private void AktualisiereAktiveFilter()
     {
@@ -243,6 +260,204 @@ public sealed partial class ReportViewModel : ViewModelBase
     public string ZahlerFilterText => FilterCaption.Payers(
         ZahlerOptionen.Where(option => option.IstGewaehlt)
                       .Select(option => option.Bezeichnung).ToList());
+
+    // ---------------- Gespeicherte Filter ----------------
+    //
+    // Wieder wortgleich zur Ausgabenliste, mit einem Unterschied: hier
+    // gehoert die Gruppierung zum gespeicherten Stand.
+
+    /// <summary>
+    /// Die benannten Filtereinstellungen hinter dem Knopf "Gespeichert"
+    /// (siehe <see cref="SavedFilters"/>). Dieselbe Liste wie in der
+    /// Ausgabenliste - beide lesen sie aus den Einstellungen.
+    /// </summary>
+    public ObservableCollection<SavedFilter> GespeicherteFilter { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HatGespeicherteFilter))]
+    private int _gespeicherteFilterAnzahl;
+
+    public bool HatGespeicherteFilter => GespeicherteFilterAnzahl > 0;
+
+    /// <summary>Der Name, unter dem der aktuelle Stand abgelegt wird.</summary>
+    [ObservableProperty]
+    private string _filterName = string.Empty;
+
+    /// <summary>Fehlertext am Namensfeld, NULL wenn alles in Ordnung ist.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FilterNameFehlerSichtbar))]
+    private string? _filterNameFehler;
+
+    public bool FilterNameFehlerSichtbar => !string.IsNullOrEmpty(FilterNameFehler);
+
+    private void LadeGespeicherteFilter()
+    {
+        GespeicherteFilter.Clear();
+
+        foreach (var filter in _settingsStore.Load().SavedFilters)
+        {
+            GespeicherteFilter.Add(filter);
+        }
+
+        GespeicherteFilterAnzahl = GespeicherteFilter.Count;
+    }
+
+    /// <summary>
+    /// Legt den aktuellen Filterstand unter dem eingegebenen Namen ab.
+    /// Ein schon vergebener Name ersetzt seinen Eintrag.
+    /// </summary>
+    [RelayCommand]
+    private void FilterSpeichern()
+    {
+        var einstellungen = _settingsStore.Load();
+
+        FilterNameFehler = SavedFilters.Validate(FilterName, einstellungen.SavedFilters);
+        if (FilterNameFehler is not null)
+        {
+            return;
+        }
+
+        var liste = SavedFilters.Save(einstellungen.SavedFilters, SammleFilter(FilterName));
+
+        // Regel 13: das Namensfeld wird erst geraeumt, wenn geschrieben
+        // wurde.
+        FilterNameFehler = Schreibvorgang.Versuche(
+            "Beim Speichern eines Filters",
+            () => _settingsStore.Save(einstellungen with { SavedFilters = liste })) is null
+            ? null
+            : "Der Filter ließ sich nicht merken — die Einstellungsdatei ist gerade "
+              + "nicht beschreibbar. An den Buchungen ändert das nichts, und die "
+              + "eingestellten Filter wirken weiter; ein zweiter Versuch hilft oft.";
+
+        if (FilterNameFehler is not null)
+        {
+            return;
+        }
+
+        LadeGespeicherteFilter();
+        FilterName = string.Empty;
+    }
+
+    /// <summary>
+    /// Stellt die Leiste auf einen gespeicherten Filter um. Wie beim
+    /// Zuruecksetzen wird vorher alles geraeumt.
+    /// </summary>
+    [RelayCommand]
+    private void GespeichertenFilterAnwenden(SavedFilter? filter)
+    {
+        if (filter is null)
+        {
+            return;
+        }
+
+        _ladenGesperrt = true;
+
+        FilterAuswahlLeeren();
+
+        // Ein gespeicherter Schnellwahl-Zeitraum wird neu ausgerechnet und
+        // nicht als Datum uebernommen: "dieses Jahr" heisst in jedem Jahr
+        // etwas anderes (siehe SavedFilter.PeriodKey).
+        if (!WendeSchnellwahlAn(filter.PeriodKey))
+        {
+            AktiverZeitraumSchluessel = null;
+            VonText = filter.From is DateOnly von ? GermanDateInput.ToText(von) : string.Empty;
+            BisText = filter.ToInclusive is DateOnly bis
+                ? GermanDateInput.ToText(bis)
+                : string.Empty;
+        }
+
+        GespeicherteFilterHilfe.SetzeHaken(
+            KategorieWurzeln, filter.CategoryIds.ToHashSet());
+
+        foreach (var option in ZahlerOptionen)
+        {
+            option.SetzeStill(filter.PayerIds.Contains(option.Id));
+        }
+
+        StatusOffen = filter.StatusOpen;
+        StatusBeglichen = filter.StatusSettled;
+        NurEinnahmen = filter.IncomeOnly;
+        NurAusgaben = filter.ExpensesOnly;
+        MeineKosten = filter.MyCosts;
+        Suchtext = filter.SearchText ?? string.Empty;
+
+        // Ein in der Ausgabenliste gespeicherter Filter kennt keine
+        // Gruppierung; dann bleibt die eingestellte stehen, statt auf eine
+        // erfundene zu springen.
+        if (filter.Grouping is ReportGrouping gruppierung)
+        {
+            AusgewaehlteGruppierung = GruppierungOptionen
+                .FirstOrDefault(option => option.Wert == gruppierung)
+                ?? AusgewaehlteGruppierung;
+        }
+
+        OnPropertyChanged(nameof(KategorieFilterText));
+        OnPropertyChanged(nameof(ZahlerFilterText));
+
+        _ladenGesperrt = false;
+
+        LadeDaten();
+    }
+
+    /// <summary>
+    /// Loescht einen gespeicherten Filter. Ohne Rueckfrage: an den Daten
+    /// aendert das nichts.
+    /// </summary>
+    [RelayCommand]
+    private void GespeichertenFilterLoeschen(SavedFilter? filter)
+    {
+        if (filter is null)
+        {
+            return;
+        }
+
+        var einstellungen = _settingsStore.Load();
+        var liste = SavedFilters.Remove(einstellungen.SavedFilters, filter.Name);
+
+        if (Schreibvorgang.Versuche(
+                "Beim Loeschen eines Filters",
+                () => _settingsStore.Save(einstellungen with { SavedFilters = liste })) is not null)
+        {
+            // Der Eintrag bleibt stehen - er ist ja noch da.
+            return;
+        }
+
+        LadeGespeicherteFilter();
+    }
+
+    /// <summary>Der Filterstand, so wie er in der Leiste steht.</summary>
+    private SavedFilter SammleFilter(string name)
+    {
+        var ueberSchnellwahl = AktiverZeitraumSchluessel is not null;
+
+        return new SavedFilter
+        {
+            Name = name,
+            PeriodKey = AktiverZeitraumSchluessel,
+            From = ueberSchnellwahl ? null : GespeicherteFilterHilfe.LiesGrenze(VonText),
+            ToInclusive = ueberSchnellwahl
+                ? null
+                : GespeicherteFilterHilfe.LiesGrenze(BisText),
+
+            CategoryIds = GespeicherteFilterHilfe.Angehakt(KategorieWurzeln),
+            PayerIds = ZahlerOptionen
+                .Where(option => option.IstGewaehlt)
+                .Select(option => option.Id)
+                .ToList(),
+
+            StatusOpen = StatusOffen,
+            StatusSettled = StatusBeglichen,
+            IncomeOnly = NurEinnahmen,
+            ExpensesOnly = NurAusgaben,
+            MyCosts = MeineKosten,
+            SearchText = string.IsNullOrWhiteSpace(Suchtext) ? null : Suchtext.Trim(),
+
+            // Die Gruppierung gehoert hier zum Stand: "Auto nach Jahren"
+            // ist eine andere Frage als "Auto nach Monaten", und sie
+            // wieder von Hand umzustellen waere der halbe Weg.
+            Grouping = AusgewaehlteGruppierung.Wert,
+        };
+    }
 
     // Siehe AusgabenlisteViewModel: Namen fuer die Beschriftung, beim
     // Aufbau des Baums mitgefuellt.
@@ -357,12 +572,14 @@ public sealed partial class ReportViewModel : ViewModelBase
         ExpenseRepository expenseRepository,
         CategoryRepository categoryRepository,
         PersonRepository personRepository,
+        AppSettingsStore settingsStore,
         IMessenger messenger)
     {
         _reportRepository = reportRepository;
         _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
         _personRepository = personRepository;
+        _settingsStore = settingsStore;
 
         _ausgewaehlteGruppierung = GruppierungOptionen[2];
 
@@ -370,6 +587,8 @@ public sealed partial class ReportViewModel : ViewModelBase
         LadeKategorieAuswahl();
         SetzeVorgabeZeitraum();
         _ladenGesperrt = false;
+
+        LadeGespeicherteFilter();
 
         LadeDaten();
 
@@ -391,6 +610,10 @@ public sealed partial class ReportViewModel : ViewModelBase
         _ladenGesperrt = true;
         LadeKategorieAuswahl();
         _ladenGesperrt = false;
+
+        // Die gespeicherten Filter koennen sich in der Ausgabenliste
+        // geaendert haben - beide Bereiche fuehren dieselbe Liste.
+        LadeGespeicherteFilter();
 
         LadeDaten();
     }
@@ -480,36 +703,32 @@ public sealed partial class ReportViewModel : ViewModelBase
     [RelayCommand]
     private void Schnellwahl(string? bereich)
     {
-        AktiverZeitraumSchluessel = bereich;
+        _ladenGesperrt = true;
+        var gesetzt = WendeSchnellwahlAn(bereich);
+        _ladenGesperrt = false;
 
+        if (gesetzt)
+        {
+            LadeDaten();
+        }
+    }
+
+    /// <summary>
+    /// Legt Von/Bis auf einen Schnellwahl-Zeitraum - wortgleich zur
+    /// Ausgabenliste. Liefert false bei einem unbekannten Schluessel,
+    /// laedt nicht neu und schliesst die Ladesperre nicht selbst.
+    /// </summary>
+    private bool WendeSchnellwahlAn(string? bereich)
+    {
         var heute = DateOnly.FromDateTime(DateTime.Now);
 
-        // "alles" laesst beide Felder leer - eine leere Grenze ist die
-        // natuerliche Schreibweise fuer "unbegrenzt" und vermeidet, dass
-        // dort 01.01.0001 bzw. 31.12.9999 steht.
-        DateRange? bereichWerte;
-        switch (bereich)
+        if (!DateRangePresets.TryByKey(bereich, heute, out var bereichWerte))
         {
-            case "DiesesJahr":
-                bereichWerte = DateRangePresets.ThisYear(heute);
-                break;
-            case "LetztesJahr":
-                bereichWerte = DateRangePresets.LastYear(heute);
-                break;
-            case "Letzte12Monate":
-                bereichWerte = DateRangePresets.LastTwelveMonths(heute);
-                break;
-            case "Letzte3Jahre":
-                bereichWerte = DateRangePresets.LastThreeYears(heute);
-                break;
-            case "Alles":
-                bereichWerte = null;
-                break;
-            default:
-                return;
+            return false;
         }
 
-        _ladenGesperrt = true;
+        AktiverZeitraumSchluessel = bereich;
+
         if (bereichWerte is DateRange werte)
         {
             VonText = GermanDateInput.ToText(werte.From);
@@ -522,9 +741,8 @@ public sealed partial class ReportViewModel : ViewModelBase
             VonText = string.Empty;
             BisText = string.Empty;
         }
-        _ladenGesperrt = false;
 
-        LadeDaten();
+        return true;
     }
 
     [RelayCommand]

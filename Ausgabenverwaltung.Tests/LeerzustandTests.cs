@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Expenses;
@@ -197,7 +197,7 @@ public class LeerzustandTests : IDisposable
 
         Assert.Empty(liste.AktiveFilter);
         Assert.False(liste.HatAktiveFilter);
-        Assert.Equal("Filter", liste.FilterKnopfText);
+        Assert.Equal("Filterfelder verbergen", liste.FilterKlappHinweis);
     }
 
     [Fact]
@@ -209,7 +209,10 @@ public class LeerzustandTests : IDisposable
         var chip = Assert.Single(liste.AktiveFilter);
 
         Assert.Equal(FilterArt.Suche, chip.Art);
-        Assert.Equal("Filter (1)", liste.FilterKnopfText);
+
+        // Die Anzahl stand frueher als "Filter (1)" auf dem Knopf; seit
+        // dort nur noch ein Pfeil steht, traegt sie sein Hinweistext.
+        Assert.Equal("Filterfelder verbergen — 1 Filter gesetzt", liste.FilterKlappHinweis);
     }
 
     /// <summary>
@@ -259,5 +262,25 @@ public class LeerzustandTests : IDisposable
 
         liste.PasseAnBreiteAn(1200);
         Assert.False(liste.FilterAufgeklappt);
+    }
+
+    /// <summary>
+    /// Der Pfeil am Klappknopf zeigt den Zustand an: aufgeklappt nach
+    /// oben, eingeklappt nach unten - und sein Hinweis sagt, was der
+    /// Klick tut (Carbon Design System, "Accordion").
+    /// </summary>
+    [Fact]
+    public void Der_Klapp_Pfeil_zeigt_nach_oben_solange_die_Leiste_offen_ist()
+    {
+        var liste = NeueListe();
+
+        Assert.True(liste.FilterAufgeklappt);
+        Assert.Equal("▲", liste.FilterKlappZeichen);
+        Assert.Equal("Filterfelder verbergen", liste.FilterKlappHinweis);
+
+        liste.FilterUmschaltenCommand.Execute(null);
+
+        Assert.Equal("▼", liste.FilterKlappZeichen);
+        Assert.Equal("Filterfelder anzeigen", liste.FilterKlappHinweis);
     }
 }

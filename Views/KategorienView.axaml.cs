@@ -1,6 +1,8 @@
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Ausgabenverwaltung.ViewModels;
 
 namespace Ausgabenverwaltung.Views;
@@ -89,7 +91,42 @@ public partial class KategorienView : UserControl
         if (DataContext is not KategorienViewModel viewModel) return;
 
         viewModel.FarbeSetzenCommand.Execute(option);
-        FarbAuswahl.Flyout?.Hide();
+
+        SchliesseUmgebendesFlyout(control);
+    }
+
+    // Schliesst das Flyout, in dem der angeklickte Knopf steckt.
+    //
+    // Hier stand frueher FarbAuswahl.Flyout?.Hide(). Der Name FarbAuswahl
+    // gehoert aber zur ZEILENVORLAGE und damit deren Namensraum, nicht dem
+    // der Ansicht: das erzeugte Feld blieb immer null. Jeder Farbwechsel
+    // endete deshalb in einer NullReferenceException - die Farbe war
+    // gesetzt und gespeichert, aber die Auswahl blieb offen stehen und der
+    // Anwender bekam eine Fehlermeldung fuer etwas, das geklappt hatte.
+    //
+    // Aus einer Vorlage heraus fuehrt der Weg deshalb nicht ueber den
+    // Namen, sondern nach oben aus dem Popup hinaus. Dieselbe Falle gilt
+    // fuer jeden weiteren Knopf, der in einer Zeilenvorlage ein Flyout
+    // aufmacht - ZielAuswahl weiter oben steht dagegen frei in der Ansicht
+    // und darf seinen Namen behalten.
+    private static void SchliesseUmgebendesFlyout(Control control)
+    {
+        if (control.FindLogicalAncestorOfType<Popup>() is not { } popup)
+        {
+            return;
+        }
+
+        // Ueber den Knopf, an dem das Flyout haengt: nur er kennt das
+        // Flyout selbst, und nur ueber dessen Hide() erfaehrt es vom
+        // Schliessen. Das Popup direkt zuzuklappen ginge am Zustand des
+        // Flyouts vorbei - deshalb nur als Rueckfallweg.
+        if (popup.PlacementTarget is Button ziel && ziel.Flyout is { } flyout)
+        {
+            flyout.Hide();
+            return;
+        }
+
+        popup.IsOpen = false;
     }
 
     // Nach der Wahl der Zielkategorie schliesst sich das Aufklappfenster,

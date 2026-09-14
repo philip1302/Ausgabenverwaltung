@@ -1615,3 +1615,65 @@ der beiden Richtungen.
 kein Filter außerhalb seiner Karte, zusammengehörende Filter bleiben
 beieinander, und es gibt keinen Zustand, in dem ein Filter zwar da, aber
 nicht erreichbar ist.
+
+---
+
+## Batch 6 — Gespeicherte Filter (Punkt 24)
+
+Nicht vorab geplant, sondern aus einem Vorschlag entstanden: nach Punkt 23
+gab es Filterchips, aber keine Möglichkeit, eine wiederkehrende Frage
+festzuhalten.
+
+### [x] 24. Filter benennen und wieder aufrufen
+
+**Erledigt in:** Filter lassen sich benennen und wieder aufrufen
+
+Paul: „Ich stelle mir das so vor, dass ich irgendwo Speichern drücken kann
+in der Filterliste und dann einen Namen vergebe und es ein kleines Dropdown
+mit meinen Filtern gibt, die ich dann anklicken kann."
+
+Umgesetzt:
+
+- `Core/Reports/SavedFilter.cs` hält den Stand der Leiste **roh** — die
+  angehakten Kategorie-Ids, nicht die daraus abgeleiteten Äste und
+  Ausschlüsse. Nur so lassen sich die Häkchen wieder hinlegen.
+- `Core/Reports/SavedFilters.cs` trägt die Regeln: Namensprüfung,
+  Ersetzen bei gleichem Namen, Löschen, Sortierung nach de-DE, Obergrenzen
+  (20 Filter, 40 Zeichen) und `Normalize` für eine von Hand verbogene
+  Einstellungsdatei.
+- **Der Zeitraum wird als Schlüssel gespeichert**, wenn er über die
+  Schnellwahl kam (`PeriodKey`), sonst als festes Datum. „Dieses Jahr"
+  meint sonst ab Januar plötzlich das falsche Jahr. Damit ein in der
+  Auswertung gespeicherter Filter („Letzte 3 Jahre") in der Ausgabenliste
+  nicht stillschweigend zu „alles" wird, löst `DateRangePresets.TryByKey`
+  die Schlüssel **beider** Leisten auf.
+- Die Liste liegt in `settings.json` und wird von beiden Bereichen geteilt.
+  Bewusst nicht in der Datenbank: ein gespeicherter Filter ist eine
+  Gewohnheit und kein Datenbestand.
+- Oberfläche: Knopf „Filter ▾" in der immer sichtbaren Zeile, dahinter die
+  Liste zum Anklicken, das ✕ zum Löschen und darunter das Namensfeld.
+
+**Nachgebessert am selben Tag**, nachdem Paul es gesehen hat:
+
+- Der Knopf hieß erst „Gespeichert" — jetzt „Filter ▾".
+- Der Umschaltknopf „Filter (3)" ist ein **Pfeil am rechten Ende** der
+  Zeile: aufgeklappt nach oben, eingeklappt nach unten (Carbon Design
+  System, [Accordion](https://carbondesignsystem.com/components/accordion/usage/);
+  ebenso GitLab und eBay). Die Anzahl gesetzter Filter steht in seinem
+  Hinweis, damit sie nicht ersatzlos verschwindet.
+- Aufklappfenster stießen bei großer Schrift an den festen Deckel des
+  Fluent-Themas (`FlyoutThemeMaxWidth` = 456) und bekamen eine waagerechte
+  Bildlaufleiste — am deutlichsten die Erklärung im Jahresrückblick
+  (340 × 1,4 = 476). Der Deckel wächst jetzt mit (`App.axaml`).
+
+**Nebenbei gefunden und behoben:** `KategorienView.Farbe_Gewaehlt` rief
+`FarbAuswahl.Flyout?.Hide()`. Der Name steht in der **Zeilenvorlage** und
+gehört damit deren Namensraum — das Feld war immer `null`, jeder
+Farbwechsel endete in einer `NullReferenceException`, nachdem die Farbe
+längst gespeichert war. Der Weg führt jetzt vom angeklickten Farbfeld nach
+oben aus dem Popup heraus.
+
+**Geprüft:** `dotnet build`/`dotnet test` (21 neue Tests in
+`GespeicherteFilterTests`, dazu der Pfeil in `LeerzustandTests`) und drei
+Durchläufe durch Paul: Speichern und Löschen sind in `settings.json`
+nachweisbar, der Farbwechsel im Protokoll ohne Ausnahme.
