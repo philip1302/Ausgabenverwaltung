@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using Ausgabenverwaltung.Core.Categories;
+using Ausgabenverwaltung.Core.Charts;
 using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Expenses;
@@ -567,11 +568,30 @@ public sealed partial class AusgabenlisteViewModel : FilterleisteViewModel
     /// ausduennen, und der Anwender erwartet nach dem Klick genau die
     /// Buchungen dieses Balkens.
     ///
+    /// <paramref name="balkenArt"/> sagt, WELCHER Teil des Monats gemeint
+    /// ist. Eine Saeule der Detailansicht ist gestapelt; wer auf
+    /// "Ausgelegt, noch offen" klickt, will diese Auslagen sehen und
+    /// nicht den ganzen Monat. Die drei Faelle bilden genau die drei
+    /// Spalten der Trendabfrage nach (siehe
+    /// ReportRepository.EvaluateTrend) - Liste und Balken zeigen so
+    /// dieselbe Menge:
+    ///
+    /// - eigene Ausgaben: Ausgaben, Zahler bin ich;
+    /// - ausgelegt und noch offen: Ausgaben mit dem Haekchen "offen" -
+    ///   das bedeutet in der Abfrage bereits "fremder Zahler UND kein
+    ///   Begleichungsdatum" (Regel 4, siehe ReportFilterSql.Where);
+    /// - Einnahmen: Einnahmen mit dem Haekchen "beglichen" - erst dann
+    ///   ist das Geld tatsaechlich geflossen.
+    ///
+    /// Ein Netto-Balken ist die Summe von allem und schraenkt deshalb
+    /// nicht weiter ein.
+    ///
     /// <paramref name="bisEinschliesslich"/> ist der letzte Tag, der noch
     /// dazugehoert - die Filterleiste versteht ihre beiden Felder
     /// einschliessend (siehe DateRangePresets.FromInclusiveBounds).
     /// </summary>
-    public void ZeigeZeitraum(DateOnly von, DateOnly bisEinschliesslich)
+    public void ZeigeZeitraum(
+        DateOnly von, DateOnly bisEinschliesslich, BarKind balkenArt)
     {
         LadenGesperrt = true;
         FilterAuswahlLeeren();
@@ -583,6 +603,31 @@ public sealed partial class AusgabenlisteViewModel : FilterleisteViewModel
 
         VonText = GermanDateInput.ToText(von);
         BisText = GermanDateInput.ToText(bisEinschliesslich);
+
+        switch (balkenArt)
+        {
+            case BarKind.OwnExpenses:
+                NurAusgaben = true;
+
+                // "Zahler bin ich" steht in der Zahlerliste und nicht in
+                // "Meine Kosten": letzteres zaehlt die offenen Auslagen
+                // anderer mit (PayerScope.SelfAndOpen) und waere damit die
+                // ganze Saeule statt ihres unteren Abschnitts.
+                ZahlerOptionen
+                    .FirstOrDefault(option => option.IstSelbst)
+                    ?.SetzeStill(true);
+                break;
+
+            case BarKind.ForeignOpenExpenses:
+                NurAusgaben = true;
+                StatusOffen = true;
+                break;
+
+            case BarKind.Income:
+                NurEinnahmen = true;
+                StatusBeglichen = true;
+                break;
+        }
 
         SortSpalte = ExpenseSortColumn.Datum;
         SortAufsteigend = false;

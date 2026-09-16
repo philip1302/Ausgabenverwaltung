@@ -979,7 +979,19 @@
         <!-- Ein Balken ist ein Knopf, damit der Klick in die Buchungen
              springt und die Flaeche mit der Tastatur erreichbar bleibt.
              Deshalb muss hier alles abgeraeumt werden, was einen Knopf
-             sonst ausmacht. -->
+             sonst ausmacht.
+
+             ClickMode="Press" ist der eine Setter, der hier nicht nur
+             aufraeumt: Ein Knopf loest sonst erst beim LOSLASSEN aus, und
+             nur, wenn der Zeiger dann noch auf ihm steht. Der Kurzhinweis
+             erscheint dagegen, sobald der Zeiger ihn beruehrt. Bei einem
+             flachen Balken genuegte schon ein Bildpunkt Zittern zwischen
+             Druecken und Loslassen, und der Klick verfiel - der Hinweis
+             stand da und versprach etwas, das nicht geschah. Auf den
+             Druck hin ist beides dieselbe Frage: steht der Zeiger auf
+             diesem Balken? Ein Balken ist der richtige Ort dafuer, denn
+             er fuehrt nur an eine andere Stelle in der Anwendung; es
+             geht nichts verloren, was ein Zurueckziehen rechtfertigte. -->
         <Style Selector="Button.balken">
             <Setter Property="Padding" Value="0" />
             <Setter Property="MinWidth" Value="0" />
@@ -989,6 +1001,7 @@
             <Setter Property="VerticalAlignment" Value="Stretch" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="ClickMode" Value="Press" />
         </Style>
 
         <!-- Eigene Ausgabe: neutral, dieselbe Farbe wie normaler Text -
@@ -1045,7 +1058,15 @@
             <Setter Property="StrokeThickness" Value="1.5" />
             <Setter Property="StrokeLineCap" Value="Round" />
             <Setter Property="StrokeJoin" Value="Round" />
-            <Setter Property="Fill" Value="Transparent" />
+            <!-- KEIN Fill, auch nicht "Transparent": eine Polyline mit
+                 Fuellung wird geschlossen, und der Strich zeichnet die
+                 Schliesskante mit - eine gerade Linie vom ersten zum
+                 letzten Monat, quer durch den Verlauf. Sie sah aus wie
+                 eine zweite Kennlinie und war doch nur ein Artefakt.
+                 (Nachgemessen mit Avalonia 12.1: mit Fill erscheint die
+                 Sehne, ohne Fill nicht. Ein Path mit eigener Geometrie
+                 ist davon nicht betroffen, die Symbole bleiben wie sie
+                 sind.) -->
         </Style>
         <Style Selector="Polyline.sparkline.einnahme">
             <Setter Property="Stroke" Value="{DynamicResource EinnahmeFarbe}" />

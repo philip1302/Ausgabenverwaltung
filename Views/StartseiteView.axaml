@@ -285,8 +285,15 @@
                             </ItemsControl>
 
                             <!-- Balken. Als Button, damit der Klick in die
-                                 Buchungen des Monats springt - und damit die
-                                 Flaeche mit der Tastatur erreichbar bleibt. -->
+                                 Buchungen springt - und damit die Flaeche mit
+                                 der Tastatur erreichbar bleibt.
+
+                                 Der Knopf ist GENAU der gezeichnete Balken,
+                                 keinen Bildpunkt groesser. Dass der Klick
+                                 ueberall dort ankommt, wo auch der Kurzhinweis
+                                 erscheint, erledigt ClickMode="Press" (siehe
+                                 Button.balken in App.axaml) und nicht eine
+                                 vergroesserte Flaeche. -->
                             <ItemsControl ItemsSource="{Binding DiagrammBalken}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
@@ -306,7 +313,7 @@
                                                 Width="{Binding Breite}" Height="{Binding Hoehe}"
                                                 ToolTip.Tip="{Binding Hinweis}"
                                                 Command="{Binding $parent[ItemsControl].((vm:StartseiteViewModel)DataContext).MonatOeffnenCommand}"
-                                                CommandParameter="{Binding Schluessel}"
+                                                CommandParameter="{Binding}"
                                                 Classes.eigene-ausgabe="{Binding IstEigeneAusgabe}"
                                                 Classes.offene-ausgabe="{Binding IstOffeneFremdausgabe}"
                                                 Classes.einnahme="{Binding IstEinnahme}"

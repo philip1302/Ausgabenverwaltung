@@ -62,6 +62,26 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 - Sind alle Kategorien archiviert, steht dort stattdessen, dass sie nur
   ausgeblendet sind, mit einem Knopf zum Einblenden — verloren ist nichts.
 
+### Startseite
+
+- Ein Balken im Diagramm nimmt den Klick jetzt überall dort an, wo auch sein
+  Kurzhinweis erscheint. Bisher zählte der Klick erst beim Loslassen der Taste,
+  und nur, wenn der Zeiger dann noch genau auf dem Balken stand — bei einem
+  flachen Balken reichte das kleinste Zittern der Hand, und nichts geschah,
+  obwohl der Hinweis danebenstand und den Sprung in die Buchungen versprach. Die
+  Fläche des Balkens selbst bleibt dabei unverändert; sie wird nicht größer, als
+  man sieht.
+- Ein Klick auf einen Balken im Diagramm zeigt jetzt genau die Buchungen, aus
+  denen dieser Balken besteht. Wer das rote Stück „Ausgelegt, noch offen"
+  anklickt, bekommt die offenen Auslagen dieses Monats zu sehen und nicht mehr
+  alles, was in dem Monat sonst noch gebucht wurde; dasselbe gilt für die selbst
+  gezahlten Ausgaben und für die Einnahmen. Der Hinweis am Balken hatte das
+  schon versprochen.
+- Die kleine Verlaufslinie unter den Monatszahlen zeigt jetzt nur noch den
+  Verlauf selbst. Quer darüber lag bisher zusätzlich eine gerade Linie vom
+  ersten zum letzten Monat, die aussah wie ein zweiter Wert und in Wahrheit
+  keiner war.
+
 ## 1.6.0 — 14.09.2026
 
 ### Startseite

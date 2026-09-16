@@ -1,5 +1,6 @@
-using System.Data;
+﻿using System.Data;
 using Ausgabenverwaltung.Core.Categories;
+using Ausgabenverwaltung.Core.Charts;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Expenses;
@@ -128,7 +129,10 @@ public class GemerkteAnsichtTests : IDisposable
         var erste = NeueListe();
         erste.SpalteSortierenCommand.Execute("Kategorie");
 
-        erste.ZeigeZeitraum(new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31));
+        // Die Balkenart spielt hier keine Rolle - geprueft wird die
+        // Sortierung. Netto schraenkt als einzige gar nicht ein.
+        erste.ZeigeZeitraum(
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31), BarKind.NetPositive);
 
         Assert.Equal(ExpenseSortColumn.Datum, erste.SortSpalte);
         Assert.False(erste.SortAufsteigend);

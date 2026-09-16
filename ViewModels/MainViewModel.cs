@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Ausgabenverwaltung.Anzeige;
@@ -280,11 +280,16 @@ public sealed partial class MainViewModel : ViewModelBase
         // Klick auf einen Balken im Diagramm: zeigt die Buchungen genau
         // dieses Monats - derselbe Weg wie beim Sprung aus einer Zelle
         // der Auswertung.
-        startseite.ZeitraumAngefordert += (_, zeitraum) =>
+        startseite.ZeitraumAngefordert += (_, sprung) =>
         {
             // Das Ende des Zeitraums ist ausschliessend, die Filterleiste
-            // versteht ihre Felder einschliessend.
-            _ausgabenliste.ZeigeZeitraum(zeitraum.From, zeitraum.ToExclusive.AddDays(-1));
+            // versteht ihre Felder einschliessend. Die Art des Balkens geht
+            // mit: der Anwender hat einen ABSCHNITT der Saeule angeklickt
+            // und will dessen Buchungen sehen, nicht den ganzen Monat.
+            _ausgabenliste.ZeigeZeitraum(
+                sprung.Zeitraum.From,
+                sprung.Zeitraum.ToExclusive.AddDays(-1),
+                sprung.Art);
 
             SelectedNavigationItem = NavigationItems
                 .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));

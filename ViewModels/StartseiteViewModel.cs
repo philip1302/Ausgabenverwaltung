@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -170,7 +170,7 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     private IReadOnlyList<PeriodValue> _abschnitte = [];
 
     /// <summary>Wird ausgeloest, wenn ein Balken angeklickt wird - siehe MainViewModel.</summary>
-    public event EventHandler<DateRange>? ZeitraumAngefordert;
+    public event EventHandler<BalkenSprung>? ZeitraumAngefordert;
 
     [RelayCommand]
     private void AusgabeErfassen() => ErfassenAngefordert?.Invoke(this, EventArgs.Empty);
@@ -270,21 +270,28 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Klick auf einen Balken: zeigt die Buchungen genau dieses
-    /// Zeitabschnitts. Den Zeitraum zum Schluessel liefert
+    /// Klick auf einen Balken: zeigt die Buchungen, aus denen GENAU
+    /// DIESER Balken besteht. Den Zeitraum zum Schluessel liefert
     /// <see cref="ReportPeriods.Range"/> - dieselbe Mechanik wie beim
     /// Sprung aus einer Zelle der Auswertung.
+    ///
+    /// Mitgegeben wird ausserdem die Art des Balkens: eine Saeule ist
+    /// gestapelt, und der Anwender klickt auf einen ABSCHNITT davon. Wer
+    /// auf das rote Stueck "Ausgelegt, noch offen" zielt, meint die
+    /// offenen Auslagen und nicht den ganzen Monat - der Hinweis am
+    /// Balken verspricht genau das (siehe <see cref="Hinweistext"/>).
     /// </summary>
     [RelayCommand]
-    private void MonatOeffnen(string? schluessel)
+    private void MonatOeffnen(DiagrammBalken? balken)
     {
-        if (string.IsNullOrEmpty(schluessel))
+        if (balken is null || string.IsNullOrEmpty(balken.Schluessel))
         {
             return;
         }
 
-        ZeitraumAngefordert?.Invoke(
-            this, ReportPeriods.Range(schluessel, ReportGrouping.Month));
+        ZeitraumAngefordert?.Invoke(this, new BalkenSprung(
+            ReportPeriods.Range(balken.Schluessel, ReportGrouping.Month),
+            balken.Art));
     }
 
     /// <summary>
@@ -704,7 +711,14 @@ public sealed partial class StartseiteViewModel : ViewModelBase
             _ => "Netto",
         };
 
-        return $"{monat}\n{was}: {EuroText.Format(balken.ValueCents)}\n\nKlicken zeigt die Buchungen";
+        // Die Netto-Ansicht kennt keine Aufteilung - dort fuehrt der Klick
+        // in den ganzen Monat, und genau das muss der Hinweis auch sagen.
+        var wohin = balken.Kind is BarKind.OwnExpenses
+            or BarKind.ForeignOpenExpenses or BarKind.Income
+            ? "Klicken zeigt diese Buchungen"
+            : "Klicken zeigt die Buchungen des Monats";
+
+        return $"{monat}\n{was}: {EuroText.Format(balken.ValueCents)}\n\n{wohin}";
     }
 
     private static string Durchschnittstext(ChartLine linie) => linie.Kind switch
@@ -727,6 +741,15 @@ public sealed partial class StartseiteViewModel : ViewModelBase
 }
 
 /// <summary>
+/// Was ein Klick auf einen Balken anfordert: der Zeitabschnitt UND der
+/// Ausschnitt, fuer den der Balken steht. Beides gehoert zusammen -
+/// ohne die Art wuesste die Ausgabenliste nur "irgendein Monat" und
+/// zeigte bei einem Klick auf die offenen Auslagen alles, was in diesem
+/// Monat sonst noch gebucht wurde.
+/// </summary>
+public sealed record BalkenSprung(DateRange Zeitraum, BarKind Art);
+
+/// <summary>
 /// Ein Rechteck im Diagramm, fertig platziert. Die Farbe waehlt die
 /// Ansicht ueber die Klassenmerkmale - das ViewModel kennt keine
 /// Farbwerte, sonst waeren sie nicht mehr themenabhaengig.
@@ -743,6 +766,7 @@ public sealed class DiagrammBalken
         Breite = breite;
         Hoehe = hoehe;
         Hinweis = hinweis;
+        Art = art;
 
         IstEigeneAusgabe = art == BarKind.OwnExpenses;
         IstOffeneFremdausgabe = art == BarKind.ForeignOpenExpenses;
@@ -757,6 +781,13 @@ public sealed class DiagrammBalken
     public double Breite { get; }
     public double Hoehe { get; }
     public string Hinweis { get; }
+
+    /// <summary>
+    /// Wofuer der Balken steht. Die Ansicht braucht davon nur die
+    /// Merkmale unten (Farbe ueber Klassen), der Klick dagegen die Art
+    /// selbst: er fuehrt in genau diesen Ausschnitt des Monats.
+    /// </summary>
+    public BarKind Art { get; }
 
     public bool IstEigeneAusgabe { get; }
     public bool IstOffeneFremdausgabe { get; }
