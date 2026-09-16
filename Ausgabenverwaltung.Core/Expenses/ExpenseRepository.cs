@@ -315,6 +315,57 @@ public sealed class ExpenseRepository
         return geaendert;
     }
 
+    /// <summary>
+    /// Schreibt den Beglichen-Stand mehrerer Buchungen zurueck, wie er in
+    /// <see cref="SettledState"/> festgehalten wurde - der Weg zurueck aus
+    /// einem Abhaken.
+    ///
+    /// Anders als ein <see cref="SetSettledMany"/> mit NULL trifft das
+    /// auch den Fall, dass eine Zeile vorher schon ein (aelteres)
+    /// Begleichungsdatum trug und beim Abhaken ueberschrieben wurde: sie
+    /// bekommt genau dieses Datum wieder, nicht "offen".
+    ///
+    /// Zurueck kommt die Zahl der tatsaechlich geaenderten Zeilen. Sie ist
+    /// kleiner als die Liste, wenn eine Buchung zwischenzeitlich anderswo
+    /// geloescht wurde - die Ruecknahme holt sie nicht zurueck, das ist
+    /// Sache des Loeschen-Rueckgaengig.
+    /// </summary>
+    public int RestoreSettledDates(IReadOnlyList<SettledState> states)
+    {
+        if (states.Count == 0)
+        {
+            return 0;
+        }
+
+        const string sql = """
+            UPDATE Expense
+            SET SettledDate = @SettledDateText,
+                ModifiedUtc = @NowUtcText
+            WHERE Id = @Id
+            """;
+
+        var nowUtcText = JetztUtcText();
+
+        // Eine Parameterliste statt einer Schleife mit Einzelaufrufen (wie
+        // in RestoreMany): Dapper fuehrt dieselbe Anweisung je Element aus,
+        // alle innerhalb derselben Transaktion. Je Zeile ein eigenes Datum -
+        // deshalb hier "Id = @Id" und kein "IN @Ids".
+        var parameter = states.Select(state => new
+        {
+            state.Id,
+            SettledDateText = state.SettledDate is DateOnly datum
+                ? IsoDate.ToDateText(datum)
+                : null,
+            NowUtcText = nowUtcText,
+        }).ToList();
+
+        var zurueckgenommen = AendereInTransaktion(sql, parameter);
+
+        AppLog.Current.Info(LogEvents.ExpensesSettlementUndone(zurueckgenommen));
+
+        return zurueckgenommen;
+    }
+
     // Der gemeinsame Rahmen der drei Sammelaenderungen. Dapper erweitert
     // "IN @Ids" selbst zu einer Parameterliste; die Transaktion muss dabei
     // mitgereicht werden, sonst laeuft die Anweisung ausserhalb.

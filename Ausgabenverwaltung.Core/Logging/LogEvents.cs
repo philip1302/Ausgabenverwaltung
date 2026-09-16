@@ -234,6 +234,16 @@ public static class LogEvents
             ? $"{count} Ausgaben als beglichen markiert."
             : $"{count} Ausgaben wieder als offen markiert.";
 
+    /// <summary>
+    /// Das Gegenstueck zu <see cref="ExpensesSettled"/>: der Anwender hat
+    /// das Abhaken ueber das Band zurueckgenommen. Nur die Anzahl - welches
+    /// Datum vorher dort stand, geht das Protokoll nichts an (Regel 11).
+    /// </summary>
+    public static string ExpensesSettlementUndone(int count)
+        => count == 1
+            ? "Abhaken von 1 Ausgabe zurueckgenommen."
+            : $"Abhaken von {count} Ausgaben zurueckgenommen.";
+
     // ---------------- Offene Posten ----------------
     public static string OpenItemSettled(int id, bool settled)
         => settled

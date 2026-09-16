@@ -50,13 +50,33 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     // formatierte Texte, aus denen sich kein rechenbares CSV bauen laesst.
     private IReadOnlyList<ExpenseListItem> _angezeigteBuchungen = Array.Empty<ExpenseListItem>();
 
-    // Die zuletzt geloeschten Buchungen mit allen ihren Werten - der
-    // Vorrat, aus dem "Rueckgaengig" sie wieder anlegt. Gehalten wird er
-    // bis zum Bereichswechsel (siehe AktualisiereListe), bewusst ohne
-    // Zeitablauf: eine geloeschte Buchung ist muehsamer wiederzubeschaffen
-    // als ein Haekchen, und ein Band, das von selbst verschwindet, nimmt
-    // dem Anwender die Entscheidung ab.
-    private IReadOnlyList<Expense> _geloeschteBuchungen = Array.Empty<Expense>();
+    // Der Weg zurueck aus dem letzten umkehrbaren Vorgang - das, was das
+    // Rueckgaengig-Band gerade anbietet. NULL, solange es nichts
+    // zurueckzunehmen gibt. Gehalten wird er bis zum Bereichswechsel (siehe
+    // AktualisiereListe), bewusst ohne Zeitablauf: ein Band, das von selbst
+    // verschwindet, nimmt dem Anwender die Entscheidung ab.
+    private Ruecknahme? _ruecknahme;
+
+    /// <summary>
+    /// Ein umkehrbarer Vorgang, solange das Band steht. Es gibt ihn fuer
+    /// das Loeschen (die Buchungen werden wieder angelegt) und fuer das
+    /// Abhaken (der Beglichen-Stand wird zurueckgeschrieben) - das Band
+    /// kennt den Unterschied nicht, es fuehrt nur aus.
+    /// </summary>
+    /// <param name="Anlass">
+    /// Der Anlasstext fuer <see cref="Schreibvorgang.Versuche"/> - er steht
+    /// in der Fehlermeldung, wenn die Ruecknahme selbst scheitert.
+    /// </param>
+    /// <param name="Tipp">
+    /// Was der Knopf "Rückgängig" tut, als Kurzhinweis am Knopf.
+    /// </param>
+    /// <param name="Ausfuehren">
+    /// Der Weg zurueck. Liefert den Satz, der danach im Erfolgsband steht.
+    /// </param>
+    private sealed record Ruecknahme(
+        string Anlass,
+        string Tipp,
+        Func<string> Ausfuehren);
 
     /// <summary>
     /// Bitte um einen Wechsel in den Vorlagenbereich, mit einem aus dieser
@@ -729,17 +749,31 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     public bool BearbeitenAktiv => Bearbeiten is not null;
 
     /// <summary>
-    /// Das Rueckgaengig-Band nach einem Loeschvorgang ("3 Buchungen
-    /// gelöscht · Rückgängig"). Es ersetzt die fruehere Sicherheitsabfrage:
-    /// eine Aktion umkehrbar zu machen ist mehr wert als eine Nachfrage,
-    /// die ohnehin weggeklickt wird. Das Vorlagen-Loeschen behaelt seine
+    /// Das Rueckgaengig-Band nach einem umkehrbaren Vorgang ("3 Buchungen
+    /// gelöscht · Rückgängig", "1 Buchung als beglichen markiert ·
+    /// Rückgängig"). Es ersetzt die fruehere Sicherheitsabfrage: eine
+    /// Aktion umkehrbar zu machen ist mehr wert als eine Nachfrage, die
+    /// ohnehin weggeklickt wird. Das Vorlagen-Loeschen behaelt seine
     /// Nachfrage - dort ist das Schadensausmass groesser.
+    ///
+    /// Jeder Vorgang, der sich zuruecknehmen laesst, meldet sich HIER und
+    /// nicht im Erfolgsband: zwei Baender uebereinander lesen sich wie zwei
+    /// Vorgaenge, und ein Erfolgsband ohne Knopf verschweigt, dass es
+    /// zurueck geht.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RueckgaengigSichtbar))]
+    [NotifyPropertyChangedFor(nameof(RueckgaengigTipp))]
     private string? _rueckgaengigText;
 
     public bool RueckgaengigSichtbar => RueckgaengigText is not null;
+
+    /// <summary>
+    /// Der Kurzhinweis am Knopf "Rückgängig" - je Vorgang ein anderer Satz,
+    /// weil "Legt die gelöschten Buchungen wieder an" nach einem Abhaken
+    /// etwas anderes verspricht als es tut.
+    /// </summary>
+    public string RueckgaengigTipp => _ruecknahme?.Tipp ?? string.Empty;
 
     /// <summary>
     /// Ein Schreibfehler in der Liste selbst - beim Loeschen. Als Band
@@ -861,7 +895,7 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         // ist der Preis dafuer, dass es sonst NICHT von selbst verschwindet:
         // solange der Anwender in der Liste steht, soll er sich Zeit lassen
         // duerfen.
-        VergissGeloeschte();
+        VergissRuecknahme();
 
         _ladenGesperrt = true;
         LadeAuswahllisten();
@@ -1446,9 +1480,10 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     {
         Bearbeiten = null;
 
-        // Beide Baender von vorhin gehoerten zu einem anderen Vorgang.
+        // Beide Baender von vorhin gehoerten zu einem anderen Vorgang -
+        // auch das Rueckgaengig-Angebot, das dort noch stand.
         ErfolgText = null;
-        RueckgaengigText = null;
+        VergissRuecknahme();
 
         var gesichert = _expenseRepository.GetByIds(ids);
 
@@ -1474,31 +1509,61 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             EinzelfilterLeeren();
         }
 
-        _geloeschteBuchungen = gesichert;
-        RueckgaengigText = bandText;
+        // Die geloeschten Werte bleiben in der Ruecknahme liegen; sie legt
+        // sie auf Wunsch wieder an. Die Zeilen bekommen dabei neue Ids
+        // (siehe ExpenseRepository.RestoreMany) - alles uebrige steht danach
+        // wieder so da wie vorher.
+        BieteRuecknahmeAn(
+            bandText,
+            new Ruecknahme(
+                "Beim Wiederherstellen geloeschter Ausgaben",
+                "Legt die gelöschten Buchungen wieder an",
+                () =>
+                {
+                    var anzahl = _expenseRepository.RestoreMany(gesichert);
+                    return anzahl == 1
+                        ? "Buchung wiederhergestellt."
+                        : $"{anzahl} Buchungen wiederhergestellt.";
+                }));
 
         _messenger.Send(new BuchungenGeaendertNachricht());
     }
 
+    // ---------------- Rueckgaengig-Band ----------------
+
     /// <summary>
-    /// Holt die zuletzt geloeschten Buchungen zurueck. Sie bekommen dabei
-    /// neue Ids (siehe <see cref="ExpenseRepository.RestoreMany"/>) - alles
-    /// uebrige steht danach wieder so da wie vorher.
+    /// Stellt das Band auf, mit dem sich der eben ausgefuehrte Vorgang
+    /// zuruecknehmen laesst. Das Erfolgsband wird dabei geraeumt: der Satz
+    /// zum Vorgang steht im Band mit dem Knopf, und nur dort.
+    /// </summary>
+    private void BieteRuecknahmeAn(string bandText, Ruecknahme ruecknahme)
+    {
+        ErfolgText = null;
+
+        // Erst die Ruecknahme, dann der Text: dessen Meldung zieht
+        // RueckgaengigTipp mit, der aus der Ruecknahme kommt.
+        _ruecknahme = ruecknahme;
+        RueckgaengigText = bandText;
+    }
+
+    /// <summary>
+    /// Nimmt den letzten umkehrbaren Vorgang zurueck - je nachdem, was das
+    /// Band anbietet: die geloeschten Buchungen werden wieder angelegt, ein
+    /// Abhaken wird auf den vorherigen Beglichen-Stand zurueckgesetzt.
     /// </summary>
     [RelayCommand]
-    private void LoeschenRueckgaengig()
+    private void Rueckgaengig()
     {
-        if (_geloeschteBuchungen.Count == 0)
+        if (_ruecknahme is not { } ruecknahme)
         {
             return;
         }
 
-        var wiederherzustellen = _geloeschteBuchungen;
-        var anzahl = 0;
+        var erfolgstext = string.Empty;
 
         SchreibFehlerText = Schreibvorgang.Versuche(
-            "Beim Wiederherstellen geloeschter Ausgaben",
-            () => anzahl = _expenseRepository.RestoreMany(wiederherzustellen));
+            ruecknahme.Anlass,
+            () => erfolgstext = ruecknahme.Ausfuehren());
 
         if (SchreibFehlerText is not null)
         {
@@ -1507,26 +1572,23 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             return;
         }
 
-        _geloeschteBuchungen = Array.Empty<Expense>();
-        RueckgaengigText = null;
-        ErfolgText = anzahl == 1
-            ? "Buchung wiederhergestellt."
-            : $"{anzahl} Buchungen wiederhergestellt.";
+        VergissRuecknahme();
+        ErfolgText = erfolgstext;
 
         _messenger.Send(new BuchungenGeaendertNachricht());
     }
 
     /// <summary>
-    /// Nimmt das Angebot an, ohne es anzunehmen: das Band verschwindet, die
-    /// Loeschung bleibt. Raeumt zugleich den gemerkten Vorrat - was nicht
+    /// Nimmt das Angebot an, ohne es anzunehmen: das Band verschwindet, der
+    /// Vorgang bleibt. Raeumt zugleich den gemerkten Vorrat - was nicht
     /// mehr angeboten wird, muss auch nicht mehr vorgehalten werden.
     /// </summary>
     [RelayCommand]
-    private void RueckgaengigSchliessen() => VergissGeloeschte();
+    private void RueckgaengigSchliessen() => VergissRuecknahme();
 
-    private void VergissGeloeschte()
+    private void VergissRuecknahme()
     {
-        _geloeschteBuchungen = Array.Empty<Expense>();
+        _ruecknahme = null;
         RueckgaengigText = null;
     }
 
@@ -1612,11 +1674,21 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     /// Eine angestossene, noch nicht ausgefuehrte Sammelaktion. Steht
     /// zwischen Nachfrage und Bestaetigung.
     /// </summary>
+    /// <param name="RuecknahmeDanach">
+    /// Der Weg zurueck, wenn die Aktion umkehrbar ist - dann steht ihr Satz
+    /// im Rueckgaengig-Band statt im Erfolgsband. NULL bei den Aktionen, die
+    /// sich nicht zuruecknehmen lassen (Kategorie und Zahler umbuchen: dort
+    /// waere der alte Stand je Zeile ein anderer, und die Auswahl ist nach
+    /// dem Neuladen ohnehin weg). Wird erst NACH dem Schreiben aufgerufen,
+    /// darf sich also auf den in <see cref="Sammelaktion.Ausfuehren"/>
+    /// gemerkten Stand stuetzen.
+    /// </param>
     private sealed record Sammelaktion(
         string Frage,
         string Anlass,
         Func<int> Ausfuehren,
-        Func<int, string> Erfolgstext);
+        Func<int, string> Erfolgstext,
+        Func<Ruecknahme>? RuecknahmeDanach = null);
 
     private Sammelaktion? _offeneSammelaktion;
 
@@ -1668,6 +1740,11 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     /// Erfolgstext sagt das ausdruecklich, wenn weniger Zeilen gewandert
     /// sind als markiert waren. Ohne diesen Satz saehe es aus, als haette
     /// die Aktion die Haelfte vergessen.
+    ///
+    /// Umkehrbar: der Satz landet im Rueckgaengig-Band, und die Ruecknahme
+    /// schreibt genau den Stand zurueck, der vorher in den Zeilen stand
+    /// (siehe <see cref="MerkeBeglichenStand"/>) - auch ein aelteres
+    /// Begleichungsdatum, das beim Abhaken ueberschrieben wurde.
     /// </summary>
     [RelayCommand]
     private void SammelAlsBeglichen()
@@ -1680,16 +1757,26 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         var heute = DateOnly.FromDateTime(DateTime.Now);
         var markiert = ids.Count;
+        IReadOnlyList<SettledState> vorher = Array.Empty<SettledState>();
 
         StosseSammelaktionAn(new Sammelaktion(
             $"{ZeilenText(markiert)} als beglichen markieren?",
             "Beim Markieren mehrerer Ausgaben als beglichen",
-            () => _expenseRepository.SetSettledMany(ids, heute),
+            () =>
+            {
+                // Der Stand VOR dem Schreiben, aus der Datenbank und nicht
+                // aus den Anzeigezeilen: gelesen wird hier und nicht schon
+                // beim Anstossen der Aktion, damit zwischen Nachfrage und
+                // Bestaetigung nichts dazwischenkommt.
+                vorher = MerkeBeglichenStand(ids);
+                return _expenseRepository.SetSettledMany(ids, heute);
+            },
             anzahl => anzahl == markiert
                 ? $"{ZeilenText(anzahl)} als beglichen markiert."
                 : $"{ZeilenText(anzahl)} als beglichen markiert. "
                   + $"{ZeilenText(markiert - anzahl)} blieben unverändert: "
-                  + "bei eigenen Ausgaben gibt es keinen Beglichen-Status."),
+                  + "bei eigenen Ausgaben gibt es keinen Beglichen-Status.",
+            () => BeglichenRuecknahme(vorher)),
             markiert);
     }
 
@@ -1714,6 +1801,10 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
         Bearbeiten = null;
         ErfolgText = null;
         SchreibFehlerText = null;
+
+        // Ein neuer Vorgang loest das Angebot des vorherigen ab: was das
+        // Band anbietet, muss zu dem gehoeren, was gerade geschehen ist.
+        VergissRuecknahme();
 
         if (betroffene >= SammelBestaetigungSchwelle)
         {
@@ -1742,7 +1833,18 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         _offeneSammelaktion = null;
         SammelAnfrageText = null;
-        ErfolgText = aktion.Erfolgstext(geaendert);
+
+        // Nur anbieten, wenn es etwas zurueckzunehmen gibt: hat die Aktion
+        // keine einzige Zeile getroffen (etwa lauter eigene Ausgaben,
+        // Regel 4), waere ein Knopf "Rückgängig" ein Angebot ohne Inhalt.
+        if (aktion.RuecknahmeDanach is { } ruecknahme && geaendert > 0)
+        {
+            BieteRuecknahmeAn(aktion.Erfolgstext(geaendert), ruecknahme());
+        }
+        else
+        {
+            ErfolgText = aktion.Erfolgstext(geaendert);
+        }
 
         // Betrag, Kategorie, Zahler oder Status mehrerer Buchungen haben
         // sich geaendert - jede Liste und jede Auswertung zeigt sonst
@@ -1770,6 +1872,11 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
     /// anklickbar (siehe <see cref="AusgabeZeile.IstOffen"/>) - hier steht
     /// die Pruefung noch einmal, weil sich ein Kommando nicht darauf
     /// verlassen darf, wer es aufruft.
+    ///
+    /// Wie die Sammelaktion ist der Handgriff umkehrbar: er meldet sich im
+    /// Rueckgaengig-Band. Ein Fehlklick im Kontextmenue ist genau die Lage,
+    /// in der das gebraucht wird - die Zeile steht danach nicht mehr in der
+    /// Liste, wenn der Filter auf "offen" steht.
     /// </summary>
     [RelayCommand]
     private void AlsBeglichen(AusgabeZeile? zeile)
@@ -1781,12 +1888,19 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
 
         ErfolgText = null;
         SchreibFehlerText = null;
+        VergissRuecknahme();
 
         var heute = DateOnly.FromDateTime(DateTime.Now);
+        var ids = new[] { zeile.Id };
+        IReadOnlyList<SettledState> vorher = Array.Empty<SettledState>();
 
         SchreibFehlerText = Schreibvorgang.Versuche(
             "Beim Markieren einer Ausgabe als beglichen",
-            () => _expenseRepository.SetSettledMany(new[] { zeile.Id }, heute));
+            () =>
+            {
+                vorher = MerkeBeglichenStand(ids);
+                _expenseRepository.SetSettledMany(ids, heute);
+            });
 
         if (SchreibFehlerText is not null)
         {
@@ -1794,9 +1908,44 @@ public sealed partial class AusgabenlisteViewModel : ViewModelBase
             return;
         }
 
-        ErfolgText = $"Als beglichen markiert: {zeile.Beschreibung}";
+        BieteRuecknahmeAn(
+            $"Als beglichen markiert: {zeile.Beschreibung}",
+            BeglichenRuecknahme(vorher));
+
         _messenger.Send(new BuchungenGeaendertNachricht());
     }
+
+    /// <summary>
+    /// Haelt fest, welches Begleichungsdatum die Buchungen VOR dem Abhaken
+    /// trugen. Gelesen wird aus der Datenbank und nicht aus den
+    /// Anzeigezeilen: dort steht ein fertiger Satz ("beglichen am
+    /// 05.08.2026"), und aus einem Text zurueckzurechnen waere eine
+    /// Fehlerquelle ohne Not.
+    /// </summary>
+    private IReadOnlyList<SettledState> MerkeBeglichenStand(IReadOnlyList<int> ids) =>
+        _expenseRepository.GetByIds(ids)
+                          .Select(buchung => new SettledState(buchung.Id, buchung.SettledDate))
+                          .ToList();
+
+    /// <summary>
+    /// Der Weg zurueck aus einem Abhaken: jede Buchung bekommt genau das
+    /// Datum wieder, das vorher dort stand - meist "offen" (NULL), bei einer
+    /// ueberschriebenen Zeile aber ihr altes Datum.
+    /// </summary>
+    private Ruecknahme BeglichenRuecknahme(IReadOnlyList<SettledState> vorher) =>
+        new("Beim Zuruecknehmen des Abhakens",
+            "Setzt den Beglichen-Status auf den Stand von vorher zurück",
+            () =>
+            {
+                _expenseRepository.RestoreSettledDates(vorher);
+
+                // Ohne Zahl: "3 Buchungen sind wieder offen" waere falsch,
+                // sobald eine davon vorher schon ein aelteres
+                // Begleichungsdatum trug oder eine eigene Ausgabe war, die
+                // nie einen Beglichen-Status hatte (Regel 4).
+                return "Abhaken zurückgenommen — der Beglichen-Status "
+                       + "steht wieder wie vorher.";
+            });
 
     // ---------------- Als Vorlage ----------------
 

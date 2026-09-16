@@ -131,8 +131,11 @@ public class SammelaktionenTests : IDisposable
         Assert.Null(_ausgaben.GetById(eigene.Id)!.SettledDate);
         Assert.Equal(Heute, _ausgaben.GetById(fremde.Id)!.SettledDate);
 
-        Assert.Contains("1 Buchung als beglichen markiert", vm.ErfolgText);
-        Assert.Contains("eigenen Ausgaben", vm.ErfolgText);
+        // Der Satz steht im Rueckgaengig-Band, weil das Abhaken umkehrbar
+        // ist - ein Erfolgsband ohne Knopf verschwiege das.
+        Assert.Contains("1 Buchung als beglichen markiert", vm.RueckgaengigText);
+        Assert.Contains("eigenen Ausgaben", vm.RueckgaengigText);
+        Assert.Null(vm.ErfolgText);
     }
 
     // Der Einzelfall aus dem Kontextmenue der Zeile - ohne vorher zu
@@ -148,7 +151,7 @@ public class SammelaktionenTests : IDisposable
         vm.AlsBeglichenCommand.Execute(vm.Zeilen.Single(z => z.Id == fremde.Id));
 
         Assert.Equal(Heute, _ausgaben.GetById(fremde.Id)!.SettledDate);
-        Assert.Contains("Als beglichen markiert", vm.ErfolgText);
+        Assert.Contains("Als beglichen markiert", vm.RueckgaengigText);
     }
 
     [Fact]
@@ -164,6 +167,7 @@ public class SammelaktionenTests : IDisposable
 
         Assert.Null(_ausgaben.GetById(eigene.Id)!.SettledDate);
         Assert.Null(vm.ErfolgText);
+        Assert.Null(vm.RueckgaengigText);
     }
 
     [Fact]

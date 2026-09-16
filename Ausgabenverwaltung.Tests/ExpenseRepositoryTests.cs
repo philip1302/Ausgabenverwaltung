@@ -420,6 +420,51 @@ public class ExpenseRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void RestoreSettledDates_schreibt_je_Zeile_den_alten_Stand_zurueck()
+    {
+        // Der Weg zurueck aus einem Abhaken: eine Zeile war vorher offen,
+        // die andere trug ein aelteres Datum. Ein pauschales NULL waere
+        // fuer die zweite ein anderer Stand als der vor dem Abhaken.
+        var warOffen = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _otherId);
+        var warBeglichen = _repository.Create(
+            _categoryId, 2000, new DateOnly(2026, 3, 2), _otherId,
+            settledDate: new DateOnly(2026, 3, 4));
+
+        _repository.SetSettledMany(
+            new[] { warOffen.Id, warBeglichen.Id }, new DateOnly(2026, 3, 10));
+
+        var zurueckgenommen = _repository.RestoreSettledDates(new[]
+        {
+            new SettledState(warOffen.Id, null),
+            new SettledState(warBeglichen.Id, new DateOnly(2026, 3, 4)),
+        });
+
+        Assert.Equal(2, zurueckgenommen);
+        Assert.Null(_repository.GetById(warOffen.Id)!.SettledDate);
+        Assert.Equal(new DateOnly(2026, 3, 4), _repository.GetById(warBeglichen.Id)!.SettledDate);
+    }
+
+    [Fact]
+    public void RestoreSettledDates_uebergeht_eine_inzwischen_geloeschte_Zeile()
+    {
+        // Sie kommt nicht zurueck - das ist Sache des
+        // Loeschen-Rueckgaengig. Die uebrigen Zeilen muessen trotzdem
+        // durchlaufen.
+        var vorhanden = _repository.Create(
+            _categoryId, 1000, new DateOnly(2026, 3, 1), _otherId,
+            settledDate: new DateOnly(2026, 3, 10));
+
+        var zurueckgenommen = _repository.RestoreSettledDates(new[]
+        {
+            new SettledState(vorhanden.Id, null),
+            new SettledState(vorhanden.Id + 999, null),
+        });
+
+        Assert.Equal(1, zurueckgenommen);
+        Assert.Null(_repository.GetById(vorhanden.Id)!.SettledDate);
+    }
+
+    [Fact]
     public void Eine_leere_Auswahl_veraendert_nichts()
     {
         var eins = _repository.Create(_categoryId, 1000, new DateOnly(2026, 3, 1), _otherId);
@@ -428,6 +473,7 @@ public class ExpenseRepositoryTests : IDisposable
         Assert.Equal(0, _repository.SetCategoryMany(leer, _categoryId));
         Assert.Equal(0, _repository.SetPayerMany(leer, _selfId));
         Assert.Equal(0, _repository.SetSettledMany(leer, new DateOnly(2026, 3, 10)));
+        Assert.Equal(0, _repository.RestoreSettledDates(Array.Empty<SettledState>()));
 
         Assert.Equal(_otherId, _repository.GetById(eins.Id)!.PayerId);
         Assert.Null(_repository.GetById(eins.Id)!.SettledDate);

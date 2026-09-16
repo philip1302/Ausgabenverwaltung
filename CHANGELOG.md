@@ -34,6 +34,17 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
   über alle Personen hinweg, und was man gerade nicht sieht, soll es nicht
   miterwischen.
 
+### Buchungsliste
+
+- „Als beglichen markieren“ lässt sich jetzt zurücknehmen — beim einzelnen
+  Rechtsklick auf eine Zeile genauso wie bei mehreren markierten Zeilen. Der
+  Hinweis darüber bietet „Rückgängig“ an, so wie das Löschen es schon lange tut.
+  Ein Fehlklick im Kontextmenü war vorher nur über das Bearbeiten-Formular
+  wieder geradezurücken, und bei einem Filter auf offene Posten war die Zeile
+  dafür nicht mehr zu sehen.
+- Wird dabei ein älteres Begleichungsdatum überschrieben, bekommt die Buchung
+  beim Rückgängigmachen genau dieses Datum wieder und nicht einfach „offen“.
+
 ### Kategorien
 
 - Sind noch keine Kategorien angelegt, sagt die Kategorienliste das jetzt und

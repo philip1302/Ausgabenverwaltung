@@ -100,7 +100,7 @@ public class LoeschenRueckgaengigTests : IDisposable
         var vm = NeueListe();
         vm.LoeschenCommand.Execute(vm.Zeilen.Single(z => z.Id == buchung.Id));
 
-        vm.LoeschenRueckgaengigCommand.Execute(null);
+        vm.RueckgaengigCommand.Execute(null);
 
         // Die Id ist eine neue - alles uebrige steht wieder so da wie
         // vorher, einschliesslich CreatedUtc.
@@ -141,7 +141,7 @@ public class LoeschenRueckgaengigTests : IDisposable
         Assert.Single(vm.Zeilen);
         Assert.Contains("2 Buchungen gelöscht", vm.RueckgaengigText!);
 
-        vm.LoeschenRueckgaengigCommand.Execute(null);
+        vm.RueckgaengigCommand.Execute(null);
 
         Assert.Equal(3, vm.Zeilen.Count);
         Assert.Equal(6000, vm.Zeilen.Sum(z => z.AmountCents));
@@ -163,7 +163,7 @@ public class LoeschenRueckgaengigTests : IDisposable
 
         var vm = NeueListe();
         vm.LoeschenCommand.Execute(vm.Zeilen.Single(z => z.Id == ausVorlage.Id));
-        vm.LoeschenRueckgaengigCommand.Execute(null);
+        vm.RueckgaengigCommand.Execute(null);
 
         var zurueck = Assert.Single(vm.Zeilen);
         Assert.True(zurueck.IstAusVorlage);
@@ -185,7 +185,7 @@ public class LoeschenRueckgaengigTests : IDisposable
 
         // Der Vorrat ist mit dem Band weg: ein zweiter Druck holt nichts
         // mehr zurueck.
-        vm.LoeschenRueckgaengigCommand.Execute(null);
+        vm.RueckgaengigCommand.Execute(null);
         Assert.Empty(vm.Zeilen);
     }
 
@@ -203,7 +203,7 @@ public class LoeschenRueckgaengigTests : IDisposable
 
         Assert.False(vm.RueckgaengigSichtbar);
 
-        vm.LoeschenRueckgaengigCommand.Execute(null);
+        vm.RueckgaengigCommand.Execute(null);
         Assert.Empty(vm.Zeilen);
     }
 

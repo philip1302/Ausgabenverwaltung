@@ -560,7 +560,7 @@
 
                     <Button Classes="secondary" Content="Als beglichen markieren"
                             Margin="0,0,8,4"
-                            ToolTip.Tip="Trägt das heutige Datum ein. Eigene Ausgaben haben keinen Beglichen-Status und bleiben unverändert."
+                            ToolTip.Tip="Trägt das heutige Datum ein. Eigene Ausgaben haben keinen Beglichen-Status und bleiben unverändert. Lässt sich danach rückgängig machen."
                             Command="{Binding SammelAlsBeglichenCommand}" />
 
                     <Button Classes="danger" Content="Löschen"
@@ -620,12 +620,16 @@
                 </Grid>
             </Border>
 
-            <!-- Rückgängig nach dem Löschen. Es tritt an die Stelle der
-                 früheren Sicherheitsabfrage: eine Nachfrage vor jedem
-                 Löschen wird nach dem dritten Mal blind bestätigt, ein
-                 Rückgängig-Band schützt auch den, der zu schnell geklickt
-                 hat. Es verschwindet NICHT von selbst — erst beim
-                 Bereichswechsel oder auf „Schließen“. -->
+            <!-- Rückgängig nach einem umkehrbaren Vorgang: Löschen und
+                 Abhaken (einzeln aus dem Kontextmenü wie über die
+                 Aktionsleiste). Es tritt an die Stelle der früheren
+                 Sicherheitsabfrage: eine Nachfrage vor jedem Löschen wird
+                 nach dem dritten Mal blind bestätigt, ein Rückgängig-Band
+                 schützt auch den, der zu schnell geklickt hat. Es
+                 verschwindet NICHT von selbst — erst beim Bereichswechsel,
+                 beim nächsten Vorgang oder auf „Schließen“.
+                 Der Hinweis am Knopf kommt aus dem ViewModel: er sagt je
+                 Vorgang etwas anderes. -->
             <Border DockPanel.Dock="Top" Classes="banner hinweis"
                     IsVisible="{Binding RueckgaengigSichtbar}"
                     Margin="0,0,0,10">
@@ -634,8 +638,8 @@
                                TextWrapping="Wrap" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Classes="secondary" Content="Rückgängig"
                             VerticalAlignment="Top"
-                            ToolTip.Tip="Legt die gelöschten Buchungen wieder an"
-                            Command="{Binding LoeschenRueckgaengigCommand}" />
+                            ToolTip.Tip="{Binding RueckgaengigTipp}"
+                            Command="{Binding RueckgaengigCommand}" />
                     <Button Grid.Column="2" Classes="ghost" Content="Schließen"
                             VerticalAlignment="Top"
                             Command="{Binding RueckgaengigSchliessenCommand}" />
@@ -786,7 +790,7 @@
                                          dasselbe Menü haben. -->
                                     <MenuItem Header="Als beglichen markieren"
                                               IsEnabled="{Binding IstOffen}"
-                                              ToolTip.Tip="Trägt das heutige Datum ein. Eigene Ausgaben haben keinen Beglichen-Status."
+                                              ToolTip.Tip="Trägt das heutige Datum ein. Lässt sich danach rückgängig machen. Eigene Ausgaben haben keinen Beglichen-Status."
                                               Command="{Binding #Wurzel.((vm:AusgabenlisteViewModel)DataContext).AlsBeglichenCommand}"
                                               CommandParameter="{Binding}" />
 
