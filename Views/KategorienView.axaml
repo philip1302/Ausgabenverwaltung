@@ -210,7 +210,32 @@
              und jede Zeile traegt ihre Aktionen selbst statt einer
              Werkzeugleiste, die erst eine Baumauswahl voraussetzt. -->
         <Border Classes="karte" Padding="8,4">
-            <ScrollViewer>
+            <Panel>
+                <!-- Leerzustand in derselben Bauform wie in den uebrigen
+                     Listen (Stil "empty-state" in App.axaml). Zwei Lagen,
+                     weil es zwei verschiedene Lagen SIND: beim allerersten
+                     Start gibt es noch gar keine Kategorie - das Schema
+                     saet keine -, und ohne Kategorie kann man nichts
+                     erfassen. Etwas ganz anderes ist eine Liste, die nur
+                     deshalb leer aussieht, weil alles archiviert und
+                     ausgeblendet ist; da fehlt nichts. -->
+                <StackPanel Classes="empty-state" IsVisible="{Binding NochKeineKategorie}">
+                    <Path Data="{DynamicResource IconKategorien}"
+                          Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}" />
+                    <TextBlock Text="Noch keine Kategorie angelegt. Jede Ausgabe gehört zu einer Kategorie — eine einzige genügt zum Anfangen." />
+                    <Button Classes="primary" Content="Kategorie anlegen"
+                            Command="{Binding NeueOberkategorieCommand}" />
+                </StackPanel>
+
+                <StackPanel Classes="empty-state" IsVisible="{Binding NurArchivierteVorhanden}">
+                    <Path Data="{DynamicResource IconKategorien}"
+                          Width="{anzeige:Breite 40}" Height="{anzeige:Breite 40}" />
+                    <TextBlock Text="Alle Kategorien sind archiviert. Verloren ist nichts — sie sind nur ausgeblendet." />
+                    <Button Classes="secondary" Content="Archivierte anzeigen"
+                            Command="{Binding ArchivierteEinblendenCommand}" />
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding !NochKeineKategorie}">
                 <TreeView x:Name="Baum"
                           ItemsSource="{Binding Wurzelknoten}"
                           SelectedItem="{Binding AusgewaehlterKnoten}"
@@ -323,7 +348,8 @@
                         </TreeDataTemplate>
                     </TreeView.ItemTemplate>
                 </TreeView>
-            </ScrollViewer>
+                </ScrollViewer>
+            </Panel>
         </Border>
     </DockPanel>
 </UserControl>

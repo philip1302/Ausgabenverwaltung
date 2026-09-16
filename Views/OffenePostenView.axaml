@@ -162,9 +162,38 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:PersonenGruppe">
                         <StackPanel Margin="0,0,0,16">
-                            <TextBlock Text="{Binding PersonName}" Classes="ueberschrift" Margin="0,8,0,4" />
+                            <!-- Kopf der Personengruppe, aufklappbar. Derselbe
+                                 Pfeil und derselbe Stil wie im Report und im
+                                 Jahresrueckblick (Button.aufklapp in
+                                 App.axaml) - wer den Kategoriebaum dort
+                                 zuklappt, erwartet es hier genauso.
 
-                            <ItemsControl ItemsSource="{Binding Zeilen}">
+                                 Wer nur wissen will, wie viel mit jemandem
+                                 offen ist, liest Anzahl und Zwischensumme;
+                                 die Einzelposten braucht er erst beim
+                                 Abarbeiten. Bei mehreren Zahlern mit langen
+                                 Listen war sonst jede zweite Person nur
+                                 durch Blaettern erreichbar.
+
+                                 Anzahl und Zwischensumme bleiben im
+                                 zugeklappten Zustand sichtbar: eine Gruppe,
+                                 die zugeklappt nichts mehr aussagt, waere
+                                 nur noch eine Ueberschrift. -->
+                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,4">
+                                <Button Classes="aufklapp"
+                                        Content="{Binding AufklappZeichen}"
+                                        ToolTip.Tip="Posten dieser Person ein- oder ausblenden"
+                                        Command="{Binding #Wurzel.((vm:OffenePostenViewModel)DataContext).GruppeUmschaltenCommand}"
+                                        CommandParameter="{Binding}" />
+                                <TextBlock Text="{Binding PersonName}" Classes="ueberschrift"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding AnzahlOffenText}" Classes="klein"
+                                           Foreground="{DynamicResource TextTertiaerFarbe}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding Zeilen}"
+                                          IsVisible="{Binding IstAufgeklappt}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:OffenerPostenZeile">
                                         <Border BorderBrush="{DynamicResource BorderDezentFarbe}" BorderThickness="0,0,0,1" Padding="4,6">

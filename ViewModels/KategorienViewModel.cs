@@ -32,6 +32,25 @@ public sealed partial class KategorienViewModel : ViewModelBase
     public ObservableCollection<KategorieKnoten> Wurzelknoten { get; } = new();
 
     /// <summary>
+    /// Es gibt ueberhaupt keine Kategorie - auch keine archivierte. Das
+    /// ist der allererste Start: das Schema saet keine Kategorien
+    /// (docs/schema_v4.sql), und ohne Kategorie laesst sich nichts
+    /// erfassen. Der Leerzustand nennt deshalb nicht nur das Fehlen,
+    /// sondern den naechsten Schritt.
+    /// </summary>
+    [ObservableProperty]
+    private bool _nochKeineKategorie;
+
+    /// <summary>
+    /// Es gibt Kategorien, aber alle sind archiviert und damit
+    /// ausgeblendet. Andere Lage als <see cref="NochKeineKategorie"/>
+    /// und deshalb ein anderer Satz: hier fehlt nichts, es ist nur
+    /// nichts zu sehen - wie "kein Treffer trotz Daten" im Report.
+    /// </summary>
+    [ObservableProperty]
+    private bool _nurArchivierteVorhanden;
+
+    /// <summary>
     /// Die waehlbaren Farben: die feste Palette aus Core und zusaetzlich
     /// "keine eigene Farbe". Kein freier Farbwaehler - siehe
     /// <see cref="CategoryColorPalette"/>.
@@ -107,11 +126,28 @@ public sealed partial class KategorienViewModel : ViewModelBase
 
     partial void OnArchivierteAnzeigenChanged(bool value) => LadeBaum();
 
+    /// <summary>
+    /// Knopf des Leerzustands "alles archiviert". Setzt denselben
+    /// Schalter, den die Werkzeugleiste traegt - der Leerzustand bietet
+    /// keinen zweiten Weg an, sondern den vorhandenen.
+    /// </summary>
+    [RelayCommand]
+    private void ArchivierteEinblenden() => ArchivierteAnzeigen = true;
+
     [RelayCommand]
     private void NeueOberkategorie()
     {
         var knoten = new KategorieKnoten(id: null, parentId: null, name: string.Empty, isArchived: false, ausgabenAnzahl: 0);
         Wurzelknoten.Add(knoten);
+
+        // Der Leerzustand muss JETZT weichen und nicht erst beim naechsten
+        // LadeBaum: die neue Zeile wartet auf ihren Namen, und das
+        // Eingabefeld dafuer steckt im Baum. Bliebe der Leerzustand
+        // stehen, haette der Anwender auf "Kategorie anlegen" gedrueckt
+        // und saehe unveraendert denselben Satz.
+        NochKeineKategorie = false;
+        NurArchivierteVorhanden = false;
+
         AusgewaehlterKnoten = knoten;
         StarteBearbeitung(knoten);
     }
@@ -779,10 +815,26 @@ public sealed partial class KategorienViewModel : ViewModelBase
         var anzahlGesamt = 0;
         var maxEbene = 0;
         ZaehleBaum(Wurzelknoten, ebene: 1, ref anzahlGesamt, ref maxEbene);
+
+        // Gezaehlt wird zweimal: sichtbar (Wurzelknoten, ohne die vom
+        // Schalter ausgeblendeten archivierten) und roh (baum, mit
+        // allen). Erst der Vergleich unterscheidet "es gibt noch
+        // nichts" von "es ist nur gerade nichts zu sehen".
+        var anzahlMitArchivierten = ZaehleRoh(baum);
+        NochKeineKategorie = anzahlMitArchivierten == 0;
+        NurArchivierteVorhanden = anzahlGesamt == 0 && anzahlMitArchivierten > 0;
+
         UebersichtText =
             $"{anzahlGesamt} {(anzahlGesamt == 1 ? "Kategorie" : "Kategorien")}, " +
             $"{maxEbene} {(maxEbene == 1 ? "Ebene" : "Ebenen")}";
     }
+
+    /// <summary>
+    /// Zaehlt den Baum, wie er aus der Datenbank kommt - einschliesslich
+    /// der archivierten Kategorien, die der Schalter ausblendet.
+    /// </summary>
+    private static int ZaehleRoh(IEnumerable<CategoryNode> knoten) =>
+        knoten.Sum(k => 1 + ZaehleRoh(k.Children));
 
     private static void ZaehleBaum(IEnumerable<KategorieKnoten> knoten, int ebene, ref int anzahl, ref int maxEbene)
     {

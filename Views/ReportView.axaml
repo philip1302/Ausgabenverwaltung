@@ -538,6 +538,76 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Summenzeile. Eigener Aufbau statt derselben
+                         Vorlage: sie braucht weder Einrueckung noch
+                         Aufklapp-Pfeil, dafuer eine kraeftigere
+                         Abgrenzung nach oben. Als ContentControl,
+                         damit sie ohne Auswertung schlicht
+                         wegbleibt (Content = NULL).
+
+                         Unten FESTGENAGELT, spiegelbildlich zur
+                         Kopfzeile oben, und deshalb ausserhalb des
+                         senkrechten Bildlaufs: als letzte Zeile IM
+                         Bildlauf war sie bei vielen Kategorien nur
+                         nach dem Blaettern zu sehen und stiess dort
+                         an die untere Kante. Die Gesamtsumme ist der
+                         meistgelesene Wert der Auswertung - sie darf
+                         nicht diejenige sein, die man sich erst
+                         erblaettern muss. Innerhalb des WAAGERECHTEN
+                         Bildlaufs bleibt sie, damit ihre Zellen unter
+                         den Spalten stehen, zu denen sie gehoeren. -->
+                    <ContentControl DockPanel.Dock="Bottom"
+                                    Content="{Binding SummenZeile}">
+                        <ContentControl.ContentTemplate>
+                            <DataTemplate x:DataType="vm:ReportZeile">
+                                <Border BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="0,1,0,0"
+                                        Padding="0,6,0,4" Margin="0,2,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Classes="fixspalte"
+                                                Classes.verschoben="{Binding #Wurzel.SpalteVerschoben}"
+                                                RenderTransform="{Binding #Wurzel.SpaltenVersatz}">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="Bold"
+                                                       VerticalAlignment="Center" />
+                                        </Border>
+                                        <ItemsControl ItemsSource="{Binding Zellen}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ReportZelle">
+                                                    <Button Classes="zelle" Width="{anzeige:Breite 125}"
+                                                            FontWeight="Bold"
+                                                            Classes.einnahme="{Binding IstEinnahme}"
+                                                            Content="{Binding Text}"
+                                                            IsEnabled="{Binding HatWerte}"
+                                                            ToolTip.Tip="{Binding Beschreibung}"
+                                                            Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZelleOeffnenCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button Classes="zelle" Width="{anzeige:Breite 145}"
+                                                FontWeight="Bold"
+                                                Classes.einnahme="{Binding Summe.IstEinnahme}"
+                                                Content="{Binding Summe.Text}"
+                                                IsEnabled="{Binding Summe.HatWerte}"
+                                                ToolTip.Tip="{Binding Summe.Beschreibung}"
+                                                Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZelleOeffnenCommand}"
+                                                CommandParameter="{Binding Summe}" />
+                                        <TextBlock Classes="tabellenzelle zahl" Width="{anzeige:Breite 145}"
+                                                   FontWeight="Bold"
+                                                   Classes.einnahme="{Binding DurchschnittIstEinnahme}"
+                                                   Text="{Binding DurchschnittText}"
+                                                   ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ContentControl.ContentTemplate>
+                    </ContentControl>
+
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto">
                         <StackPanel>
@@ -637,63 +707,6 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-
-                            <!-- Summenzeile. Eigener Aufbau statt derselben
-                                 Vorlage: sie braucht weder Einrueckung noch
-                                 Aufklapp-Pfeil, dafuer eine kraeftigere
-                                 Abgrenzung nach oben. Als ContentControl,
-                                 damit sie ohne Auswertung schlicht
-                                 wegbleibt (Content = NULL). -->
-                            <ContentControl Content="{Binding SummenZeile}">
-                                <ContentControl.ContentTemplate>
-                                    <DataTemplate x:DataType="vm:ReportZeile">
-                                        <Border BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="0,1,0,0"
-                                                Padding="0,6,0,0" Margin="0,2,0,0">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Border Classes="fixspalte"
-                                                        Classes.verschoben="{Binding #Wurzel.SpalteVerschoben}"
-                                                        RenderTransform="{Binding #Wurzel.SpaltenVersatz}">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontWeight="Bold"
-                                                               VerticalAlignment="Center" />
-                                                </Border>
-                                                <ItemsControl ItemsSource="{Binding Zellen}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <StackPanel Orientation="Horizontal" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:ReportZelle">
-                                                            <Button Classes="zelle" Width="{anzeige:Breite 125}"
-                                                                    FontWeight="Bold"
-                                                                    Classes.einnahme="{Binding IstEinnahme}"
-                                                                    Content="{Binding Text}"
-                                                                    IsEnabled="{Binding HatWerte}"
-                                                                    ToolTip.Tip="{Binding Beschreibung}"
-                                                                    Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZelleOeffnenCommand}"
-                                                                    CommandParameter="{Binding}" />
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                                <Button Classes="zelle" Width="{anzeige:Breite 145}"
-                                                        FontWeight="Bold"
-                                                        Classes.einnahme="{Binding Summe.IstEinnahme}"
-                                                        Content="{Binding Summe.Text}"
-                                                        IsEnabled="{Binding Summe.HatWerte}"
-                                                        ToolTip.Tip="{Binding Summe.Beschreibung}"
-                                                        Command="{Binding #Wurzel.((vm:ReportViewModel)DataContext).ZelleOeffnenCommand}"
-                                                        CommandParameter="{Binding Summe}" />
-                                                <TextBlock Classes="tabellenzelle zahl" Width="{anzeige:Breite 145}"
-                                                           FontWeight="Bold"
-                                                           Classes.einnahme="{Binding DurchschnittIstEinnahme}"
-                                                           Text="{Binding DurchschnittText}"
-                                                           ToolTip.Tip="Durchschnitt je angezeigtem Zeitabschnitt über den gesamten ausgewählten Zeitraum" />
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ContentControl.ContentTemplate>
-                            </ContentControl>
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>

@@ -34,6 +34,15 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     private CancellationTokenSource? _rueckgaengigCts;
     private IReadOnlyList<int> _rueckgaengigIds = Array.Empty<int>();
 
+    // Welche Personen zugeklappt sind - NICHT welche aufgeklappt sind:
+    // aufgeklappt ist der Normalfall, und eine neu hinzugekommene Person
+    // soll sichtbar sein und nicht versteckt. Ueberlebt das Neuladen der
+    // Liste (Sortieren, Abhaken, BuchungenGeaendertNachricht), damit ein
+    // zugeklappter Zahler nicht bei jeder Aenderung wieder aufspringt.
+    // Bewusst nicht in den Einstellungen abgelegt: der Zustand gilt fuer
+    // die laufende Sitzung, so wie der Aufklappzustand im Report auch.
+    private readonly HashSet<string> _zugeklappteZahler = new(StringComparer.CurrentCultureIgnoreCase);
+
     public ObservableCollection<PersonenGruppe> Gruppen { get; } = new();
 
     [ObservableProperty]
@@ -80,6 +89,36 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
     [RelayCommand]
     private void SchreibFehlerSchliessen() => SchreibFehlerText = null;
+
+    /// <summary>
+    /// Klappt die Posten einer Person auf oder zu. Zugeklappt verliert
+    /// die Gruppe ihre Auswahl: "Ausgewählte abhaken" greift ueber ALLE
+    /// Gruppen hinweg, und was man nicht sieht, soll es nicht mit
+    /// erwischen.
+    /// </summary>
+    [RelayCommand]
+    private void GruppeUmschalten(PersonenGruppe? gruppe)
+    {
+        if (gruppe is null)
+        {
+            return;
+        }
+
+        gruppe.IstAufgeklappt = !gruppe.IstAufgeklappt;
+
+        if (gruppe.IstAufgeklappt)
+        {
+            _zugeklappteZahler.Remove(gruppe.PersonName);
+            return;
+        }
+
+        _zugeklappteZahler.Add(gruppe.PersonName);
+
+        foreach (var zeile in gruppe.Zeilen)
+        {
+            zeile.IstAusgewaehlt = false;
+        }
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DatumHeaderText))]
@@ -447,6 +486,7 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
 
             SortiereGruppe(personenGruppe);
             personenGruppe.AktualisiereZwischensumme();
+            personenGruppe.IstAufgeklappt = !_zugeklappteZahler.Contains(gruppierung.Key);
             Gruppen.Add(personenGruppe);
         }
 

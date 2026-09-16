@@ -13,6 +13,36 @@ ganzen Sätzen.
 Ganz oben sammelt „Unveröffentlicht", was noch in keiner Fassung steckt;
 beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
+## Unveröffentlicht
+
+### Auswertung
+
+- Die Summenzeile der Auswertung steht jetzt fest am unteren Rand der Tabelle,
+  so wie die Spaltenüberschriften fest am oberen stehen. Bei vielen Kategorien
+  war sie vorher nur nach dem Blättern zu sehen und stieß dort an die untere
+  Kante. Der meistgelesene Wert der ganzen Seite sollte nicht derjenige sein,
+  den man sich erst suchen muss.
+
+### Offene Posten
+
+- Die Posten einer Person lassen sich jetzt zuklappen — über den Pfeil vor dem
+  Namen, denselben wie im Kategorienbaum. Name, Anzahl und Zwischensumme bleiben
+  dabei stehen. Wer mit mehreren Personen etwas offen hat, sieht so alle
+  Zwischensummen nebeneinander, statt sich durch lange Listen zu blättern.
+- Neben jedem Namen steht die Anzahl der offenen Posten.
+- Eine zugeklappte Person verliert ihre Häkchen. „Ausgewählte abhaken" wirkt
+  über alle Personen hinweg, und was man gerade nicht sieht, soll es nicht
+  miterwischen.
+
+### Kategorien
+
+- Sind noch keine Kategorien angelegt, sagt die Kategorienliste das jetzt und
+  bietet das Anlegen gleich an, statt eine leere Fläche zu zeigen. Das betrifft
+  vor allem den allerersten Start: ohne Kategorie lässt sich keine Ausgabe
+  erfassen.
+- Sind alle Kategorien archiviert, steht dort stattdessen, dass sie nur
+  ausgeblendet sind, mit einem Knopf zum Einblenden — verloren ist nichts.
+
 ## 1.6.0 — 14.09.2026
 
 ### Startseite
