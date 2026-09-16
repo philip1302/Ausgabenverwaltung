@@ -1,4 +1,4 @@
-using System.Globalization;
+using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core.Backups;
 
@@ -16,7 +16,6 @@ namespace Ausgabenverwaltung.Core.Backups;
 /// </summary>
 public static class BackupHealthText
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     public static string Ueberschrift(BackupHealthLevel level) => level switch
     {
@@ -66,7 +65,7 @@ public static class BackupHealthText
     public static string Zeitangabe(BackupHealth health, DateTime nowLocal, DateTime nowUtc)
     {
         var ziel1 = health.LastLocalBackup is DateTime letzte
-            ? $"Zuletzt {Tagesangabe(letzte, nowLocal)} {letzte.ToString("HH:mm", DeDe)} Uhr "
+            ? $"Zuletzt {Tagesangabe(letzte, nowLocal)} {letzte.ToString("HH:mm", Kultur.DeDe)} Uhr "
               + "auf diesem Rechner"
             : "Auf diesem Rechner liegt noch keine Sicherung";
 
@@ -88,7 +87,7 @@ public static class BackupHealthText
         {
             <= 0 => "heute",
             1 => "gestern",
-            _ => "am " + zeitpunkt.ToString("dd.MM.yyyy", DeDe),
+            _ => "am " + zeitpunkt.ToString("dd.MM.yyyy", Kultur.DeDe),
         };
     }
 }

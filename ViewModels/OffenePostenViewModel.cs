@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Ausgabenverwaltung.Core.Display;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.OpenItems;
@@ -214,25 +215,13 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     [RelayCommand]
     private void SpalteSortieren(string spalte)
     {
-        var neueSpalte = spalte switch
+        if (Sortierung.Spalte<OpenItemsSortColumn>(spalte) is not { } geklickt)
         {
-            "Datum" => OpenItemsSortColumn.Datum,
-            "Kategorie" => OpenItemsSortColumn.Kategorie,
-            "Betrag" => OpenItemsSortColumn.Betrag,
-            "Bemerkung" => OpenItemsSortColumn.Bemerkung,
-            "TageOffen" => OpenItemsSortColumn.TageOffen,
-            _ => SortSpalte,
-        };
+            return;
+        }
 
-        if (neueSpalte == SortSpalte)
-        {
-            SortAufsteigend = !SortAufsteigend;
-        }
-        else
-        {
-            SortSpalte = neueSpalte;
-            SortAufsteigend = true;
-        }
+        (SortSpalte, SortAufsteigend) =
+            Sortierung.NaechsteRichtung(geklickt, SortSpalte, SortAufsteigend);
 
         foreach (var gruppe in Gruppen)
         {
@@ -540,5 +529,5 @@ public sealed partial class OffenePostenViewModel : ViewModelBase
     }
 
     private string KopfText(string bezeichnung, OpenItemsSortColumn spalte) =>
-        SortSpalte == spalte ? $"{bezeichnung} {(SortAufsteigend ? "▲" : "▼")}" : bezeichnung;
+        Sortierung.KopfText(bezeichnung, spalte, SortSpalte, SortAufsteigend);
 }

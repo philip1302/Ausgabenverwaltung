@@ -1,4 +1,3 @@
-using System.Globalization;
 using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core.YearInReview;
@@ -15,7 +14,6 @@ namespace Ausgabenverwaltung.Core.YearInReview;
 /// </summary>
 public static class ReviewText
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     // Dieselbe Ueberlegung wie in EuroText: zwischen Zahl und Zeichen ein
     // geschuetztes Leerzeichen, damit der Umbruch die beiden nicht trennt.
@@ -255,13 +253,13 @@ public static class ReviewText
             return "unverändert";
         }
 
-        var zahl = prozent.ToString("0", DeDe) + NonBreakingSpace + "%";
+        var zahl = prozent.ToString("0", Kultur.DeDe) + NonBreakingSpace + "%";
         return wert > 0 ? zahl + " mehr" : zahl + " weniger";
     }
 
     /// <summary>Ein Anteil als Prozentangabe ohne Richtung, z. B. "18 %".</summary>
     public static string AnteilText(decimal anteil) =>
-        Math.Round(anteil * 100m, MidpointRounding.AwayFromZero).ToString("0", DeDe)
+        Math.Round(anteil * 100m, MidpointRounding.AwayFromZero).ToString("0", Kultur.DeDe)
         + NonBreakingSpace + "%";
 
     /// <summary>
@@ -337,7 +335,7 @@ public static class ReviewText
     private static string Betrag(long cents) => EuroText.Format(Math.Abs(cents));
 
     private static string Anzahl(int anzahl) =>
-        anzahl == 1 ? "eine Buchung" : $"{anzahl.ToString("N0", DeDe)} Buchungen";
+        anzahl == 1 ? "eine Buchung" : $"{Kultur.Anzahl(anzahl)} Buchungen";
 
     private static long Schnitt(ReviewFinding befund) =>
         befund.CurrentCount == 0 ? 0 : befund.CurrentCents / befund.CurrentCount;

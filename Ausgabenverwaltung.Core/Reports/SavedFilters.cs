@@ -1,4 +1,4 @@
-using System.Globalization;
+using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core.Reports;
 
@@ -32,8 +32,7 @@ public static class SavedFilters
     // nicht hinter "Z". Fest verdrahtet wie bei den Betraegen (Regel 1)
     // und nicht ueber die Kultur des Rechners, damit die Reihenfolge
     // ueberall dieselbe ist.
-    private static readonly StringComparer Vergleich =
-        StringComparer.Create(CultureInfo.GetCultureInfo("de-DE"), ignoreCase: true);
+    private static readonly StringComparer Vergleich = Kultur.NamensVergleich;
 
     /// <summary>
     /// Prueft den eingegebenen Namen. NULL = in Ordnung, sonst der Text,

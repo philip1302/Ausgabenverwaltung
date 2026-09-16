@@ -1,4 +1,6 @@
 ﻿using Ausgabenverwaltung.Core.Display;
+using Ausgabenverwaltung.Core.Expenses;
+using Ausgabenverwaltung.Core.OpenItems;
 using Ausgabenverwaltung.Core.Settings;
 
 namespace Ausgabenverwaltung.Tests;
@@ -239,5 +241,99 @@ public class AppSettingsStoreTests : IDisposable
             """);
 
         Assert.Null(new AppSettingsStore(SettingsPath).Load().LastSeenVersion);
+    }
+
+    // ---------------- Aufzaehlungen aus der Datei ----------------
+
+    // Der Grund fuer das Enum.IsDefined in AppSettingsStore: Enum.TryParse
+    // nimmt auch ZAHLEN an. Ohne die Pruefung kaeme aus dieser Datei die
+    // Sortierspalte (ExpenseSortColumn)99 heraus - kein Wert, den es gibt.
+    // Aufgefallen waere das erst weit spaeter in der ORDER-BY-Weissliste
+    // von ExpenseRepository, und zwar als ArgumentOutOfRangeException
+    // mitten im Laden der Ausgabenliste: die Ansicht liesse sich nicht
+    // mehr oeffnen, bis jemand die Datei von Hand berichtigt.
+    [Fact]
+    public void Eine_Zahl_als_Sortierspalte_faellt_auf_die_Vorgabe_zurueck()
+    {
+        File.WriteAllText(SettingsPath, """
+            {
+              "ExpenseListSortColumn": "99",
+              "OpenItemsSortColumn": "-1",
+              "ThemeMode": "3"
+            }
+            """);
+
+        var gelesen = new AppSettingsStore(SettingsPath).Load();
+
+        Assert.Equal(ExpenseSortColumn.Datum, gelesen.ExpenseListSortColumn);
+        Assert.Equal(OpenItemsSortColumn.Datum, gelesen.OpenItemsSortColumn);
+        Assert.Equal(ThemeMode.System, gelesen.ThemeMode);
+
+        // Und zwar als Werte, die es wirklich gibt - die Vorgabe ist hier
+        // nicht bloss "irgendetwas Unauffaelliges".
+        Assert.True(Enum.IsDefined(gelesen.ExpenseListSortColumn));
+        Assert.True(Enum.IsDefined(gelesen.OpenItemsSortColumn));
+        Assert.True(Enum.IsDefined(gelesen.ThemeMode));
+    }
+
+    // Dasselbe eine Ebene tiefer, im gespeicherten Filter: eine erfundene
+    // Gruppierung laesst die eingestellte stehen (NULL), sie stellt sie
+    // nicht auf einen Wert um, den es nicht gibt.
+    [Fact]
+    public void Eine_Zahl_als_Gruppierung_gilt_als_nicht_gespeichert()
+    {
+        File.WriteAllText(SettingsPath, """
+            {
+              "SavedFilters": [ { "Name": "Haushalt", "Grouping": "42" } ]
+            }
+            """);
+
+        var filter = Assert.Single(new AppSettingsStore(SettingsPath).Load().SavedFilters);
+
+        Assert.Equal("Haushalt", filter.Name);
+        Assert.Null(filter.Grouping);
+    }
+
+    // Die Nachsicht bleibt: ein verschriebener NAME faellt weiter auf die
+    // Vorgabe zurueck, statt die ganze Datei zu verwerfen.
+    [Fact]
+    public void Ein_unbekannter_Name_faellt_weiter_auf_die_Vorgabe_zurueck()
+    {
+        File.WriteAllText(SettingsPath, """
+            {
+              "ExpenseListSortColumn": "Waehrung",
+              "ExternalFolderPath": "D:\\Sicherungen"
+            }
+            """);
+
+        var gelesen = new AppSettingsStore(SettingsPath).Load();
+
+        Assert.Equal(ExpenseSortColumn.Datum, gelesen.ExpenseListSortColumn);
+
+        // Der Rest der Datei ueberlebt den verschriebenen Namen.
+        Assert.Equal(@"D:\Sicherungen", gelesen.ExternalFolderPath);
+    }
+
+    // Gueltige Namen kommen weiterhin durch - die Pruefung darf nicht
+    // versehentlich alles wegwerfen.
+    [Fact]
+    public void Gueltige_Sortierspalten_kommen_unveraendert_zurueck()
+    {
+        var speicher = new AppSettingsStore(SettingsPath);
+
+        speicher.Save(new AppSettings
+        {
+            ExpenseListSortColumn = ExpenseSortColumn.Betrag,
+            ExpenseListSortAscending = true,
+            OpenItemsSortColumn = OpenItemsSortColumn.TageOffen,
+            ThemeMode = ThemeMode.Dark,
+        });
+
+        var gelesen = speicher.Load();
+
+        Assert.Equal(ExpenseSortColumn.Betrag, gelesen.ExpenseListSortColumn);
+        Assert.True(gelesen.ExpenseListSortAscending);
+        Assert.Equal(OpenItemsSortColumn.TageOffen, gelesen.OpenItemsSortColumn);
+        Assert.Equal(ThemeMode.Dark, gelesen.ThemeMode);
     }
 }

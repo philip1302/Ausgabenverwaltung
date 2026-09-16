@@ -1,4 +1,4 @@
-using System.Globalization;
+using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core.Backups;
 
@@ -12,7 +12,6 @@ namespace Ausgabenverwaltung.Core.Backups;
 /// </summary>
 public static class BackupVerificationText
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     public static string Merkmal(BackupVerificationResult ergebnis)
     {
@@ -23,7 +22,7 @@ public static class BackupVerificationText
 
         var buchungen = ergebnis.ExpenseCount == 1
             ? "1 Buchung"
-            : $"{ergebnis.ExpenseCount?.ToString("N0", DeDe)} Buchungen";
+            : $"{Kultur.Anzahl(ergebnis.ExpenseCount ?? 0)} Buchungen";
 
         var kern = $"geprüft ✓ · Schema {ergebnis.SchemaVersion} · {buchungen}";
 

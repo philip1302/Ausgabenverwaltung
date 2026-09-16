@@ -76,10 +76,7 @@ public sealed class AppSettingsStore
 
                 // Ein unbekannter oder fehlender Text (aeltere Datei) faellt
                 // auf "System" zurueck - das bisherige, einzige Verhalten.
-                ThemeMode = document.ThemeMode is string modusText
-                    && Enum.TryParse<ThemeMode>(modusText, out var modus)
-                    ? modus
-                    : ThemeMode.System,
+                ThemeMode = LiesAufzaehlung(document.ThemeMode, ThemeMode.System),
 
                 // Fehlt der Wert (Datei aus einer aelteren Fassung), gilt
                 // die Vorgabe "eingeschaltet". Wer die Suche abgeschaltet
@@ -201,9 +198,22 @@ public sealed class AppSettingsStore
 
     // Ein unbekannter Name (Datei aus einer neueren Fassung, von Hand
     // verschrieben) faellt auf die Vorgabe zurueck, statt die ganze Datei
-    // zu verwerfen - dieselbe Nachsicht wie beim Thema.
+    // zu verwerfen - dieselbe Nachsicht wie ueberall hier.
     private static T LiesAufzaehlung<T>(string? text, T vorgabe) where T : struct, Enum
-        => text is not null && Enum.TryParse<T>(text, out var wert) ? wert : vorgabe;
+        => LiesAufzaehlungOderNull<T>(text) ?? vorgabe;
+
+    // Gelesen wird ueber Aufzaehlung.NachName und nicht mit einem blossen
+    // Enum.TryParse: das nimmt auch Zahlen an und machte aus einem von
+    // Hand verschriebenen "99" eine Sortierspalte, die es nicht gibt -
+    // aufgefallen waere sie erst weit spaeter in der ORDER-BY-Weissliste
+    // von ExpenseRepository, als Ausnahme mitten im Laden der Liste. Genau
+    // das soll die Nachsicht dieser Datei ja verhindern.
+    //
+    // NULL heisst hier "nichts Brauchbares gelesen"; was daraus wird,
+    // entscheidet der Aufrufer - Vorgabe (siehe oben) oder ebenfalls NULL
+    // (siehe die Gruppierung eines gespeicherten Filters).
+    private static T? LiesAufzaehlungOderNull<T>(string? text) where T : struct, Enum
+        => Aufzaehlung.NachName<T>(text);
 
     // Alle vier Zahlen muessen da sein. Fehlt eine, ist die Lage
     // unbrauchbar: ein Fenster mit Position aber ohne Groesse (oder
@@ -271,10 +281,7 @@ public sealed class AppSettingsStore
                 // Ein unbekannter Name faellt auf NULL zurueck: "keine
                 // Gruppierung gespeichert" laesst die eingestellte
                 // stehen, eine erfundene wuerde sie umstellen.
-                Grouping = document.Grouping is string gruppe
-                    && Enum.TryParse<ReportGrouping>(gruppe, out var wert)
-                        ? wert
-                        : null,
+                Grouping = LiesAufzaehlungOderNull<ReportGrouping>(document.Grouping),
             });
         }
 

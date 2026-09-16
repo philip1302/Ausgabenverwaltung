@@ -1,5 +1,5 @@
 using System;
-using System.Globalization;
+using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Backups;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -17,14 +17,13 @@ namespace Ausgabenverwaltung.ViewModels;
 /// </summary>
 public sealed partial class SicherungZeile : ObservableObject
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     public SicherungZeile(BackupFile datei)
     {
         VollerPfad = datei.FullPath;
         Dateiname = datei.FileName;
         Zeitpunkt = datei.Timestamp;
-        DatumText = datei.Timestamp.ToString("dd.MM.yyyy HH:mm", DeDe);
+        DatumText = datei.Timestamp.ToString("dd.MM.yyyy HH:mm", Kultur.DeDe);
         GroesseText = BackupSizeText.Format(datei.SizeBytes);
     }
 

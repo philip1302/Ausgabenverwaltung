@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Ausgabenverwaltung.Anzeige;
@@ -298,9 +297,7 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     public void Aktualisiere()
     {
         var heute = DateOnly.FromDateTime(DateTime.Now);
-        var de = CultureInfo.GetCultureInfo("de-DE");
-
-        MonatUeberschrift = heute.ToString("MMMM yyyy", de) + " · hier ist der Überblick über eure Finanzen";
+        MonatUeberschrift = heute.ToString("MMMM yyyy", Kultur.DeDe) + " · hier ist der Überblick über eure Finanzen";
 
         AktualisiereMonatsKacheln(heute);
         AktualisiereOffenePosten();

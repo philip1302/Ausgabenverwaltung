@@ -35,7 +35,6 @@ public sealed record RueckblickSprung(
 /// </summary>
 public sealed partial class JahresrueckblickViewModel : ViewModelBase
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     private readonly YearInReviewService _service;
     private readonly CategoryRepository _categoryRepository;
@@ -309,7 +308,7 @@ public sealed partial class JahresrueckblickViewModel : ViewModelBase
         foreach (var k in knoten
                      .OrderByDescending(k => k.CurrentCents)
                      .ThenByDescending(k => k.PreviousCents)
-                     .ThenBy(k => k.Name, StringComparer.Create(DeDe, ignoreCase: false)))
+                     .ThenBy(k => k.Name, StringComparer.Create(Kultur.DeDe, ignoreCase: false)))
         {
             var aufgeklappt = _aufgeklappteKategorien.Contains(k.CategoryId);
 

@@ -18,7 +18,10 @@ namespace Ausgabenverwaltung.Core.Formatting;
 /// </summary>
 public static class EuroText
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
+    // Die eine Kultur der Anwendung, siehe Kultur.DeDe. Hier als
+    // Abkuerzung gebunden, weil sie in dieser Datei in jeder zweiten
+    // Zeile vorkommt.
+    private static readonly CultureInfo DeDe = Kultur.DeDe;
 
     // Als Zahlenwert und nicht als Zeichen geschrieben: ein geschuetztes
     // Leerzeichen im Quelltext waere von einem gewoehnlichen nicht zu

@@ -28,7 +28,6 @@ public static class ReportCsv
     private const string Separator = ";";
     private const string LineBreak = "\r\n";
 
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     /// <param name="visibleRows">
     /// Die Zeilen in genau der Reihenfolge, in der sie gerade auf dem
@@ -198,7 +197,7 @@ public static class ReportCsv
     // Datum als "07.08.2026" und nicht im Speicherformat: die Datei liest
     // ein Mensch in einem deutschen Excel, nicht die Datenbank.
     // Unquotiert, damit Excel eine Datumsspalte daraus macht.
-    private static string Datum(DateOnly datum) => datum.ToString("dd.MM.yyyy", DeDe);
+    private static string Datum(DateOnly datum) => Kultur.Datum(datum);
 
     private static void AppendLine(StringBuilder text, IReadOnlyList<string> fields)
     {
@@ -238,7 +237,7 @@ public static class ReportCsv
     private static string Anteil(long partCents, long totalCents) =>
         totalCents == 0
             ? string.Empty
-            : (partCents * 100m / totalCents).ToString("0.00", DeDe);
+            : (partCents * 100m / totalCents).ToString("0.00", Kultur.DeDe);
 
     // Textfelder stehen immer in Anfuehrungszeichen - sonst wirft Excel
     // die fuehrenden Leerzeichen der Einrueckung weg, und ein Semikolon

@@ -15,6 +15,14 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ## Unveröffentlicht
 
+### Allgemein
+
+- Eine beschädigte Einstellungsdatei kostet die betroffene Einstellung und nicht
+  mehr die ganze Ansicht. Stand dort eine Sortierung, die es nicht gibt, ließ
+  sich die Buchungsliste zuletzt überhaupt nicht mehr öffnen — sie meldete bei
+  jedem Versuch einen Fehler. Jetzt gilt in so einem Fall wieder die
+  voreingestellte Sortierung, und der Rest der Einstellungen bleibt erhalten.
+
 ### Auswertung
 
 - Die Summenzeile der Auswertung steht jetzt fest am unteren Rand der Tabelle,

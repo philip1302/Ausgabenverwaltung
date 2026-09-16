@@ -1,4 +1,4 @@
-using System.Globalization;
+using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core.Backups;
 
@@ -9,7 +9,6 @@ namespace Ausgabenverwaltung.Core.Backups;
 /// </summary>
 public static class BackupSizeText
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     private const long Kilobyte = 1024;
     private const long Megabyte = 1024 * Kilobyte;
@@ -25,9 +24,9 @@ public static class BackupSizeText
         {
             // Kilobyte ohne Nachkommastelle: bei Sicherungen dieser
             // Groessenordnung interessiert die Zahl nur als Hausnummer.
-            return $"{((double)bytes / Kilobyte).ToString("N0", DeDe)} KB";
+            return $"{((double)bytes / Kilobyte).ToString("N0", Kultur.DeDe)} KB";
         }
 
-        return $"{((double)bytes / Megabyte).ToString("N1", DeDe)} MB";
+        return $"{((double)bytes / Megabyte).ToString("N1", Kultur.DeDe)} MB";
     }
 }

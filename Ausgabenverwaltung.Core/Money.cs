@@ -1,4 +1,5 @@
 using System.Globalization;
+using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core;
 
@@ -33,9 +34,7 @@ public static class Money
             NumberStyles.AllowLeadingSign |
             NumberStyles.AllowLeadingWhite |
             NumberStyles.AllowTrailingWhite;
-        var deDE = CultureInfo.GetCultureInfo("de-DE");
-
-        if (decimal.TryParse(text, styles, deDE, out var amount))
+        if (decimal.TryParse(text, styles, Kultur.DeDe, out var amount))
         {
             cents = ToCents(amount);
             return true;

@@ -1,4 +1,4 @@
-using System.Globalization;
+using Ausgabenverwaltung.Core.Formatting;
 
 namespace Ausgabenverwaltung.Core.Backups;
 
@@ -16,7 +16,6 @@ namespace Ausgabenverwaltung.Core.Backups;
 /// </summary>
 public static class RestoreText
 {
-    private static readonly CultureInfo DeDe = CultureInfo.GetCultureInfo("de-DE");
 
     /// <summary>
     /// Was das Einspielen dieser Sicherung bedeutet - der Text ueber der
@@ -102,7 +101,7 @@ public static class RestoreText
 
     // Tausenderpunkt, damit "1.284" nicht als "1284" ueberflogen wird -
     // bei einer Zahl, die eine Entscheidung traegt, zaehlt jede Stelle.
-    private static string Zahl(int anzahl) => anzahl.ToString("N0", DeDe);
+    private static string Zahl(int anzahl) => Kultur.Anzahl(anzahl);
 
     private static string Buchungen(int anzahl) => anzahl == 1 ? "Buchung" : "Buchungen";
 
