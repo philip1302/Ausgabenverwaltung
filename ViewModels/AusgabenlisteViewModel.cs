@@ -637,6 +637,45 @@ public sealed partial class AusgabenlisteViewModel : FilterleisteViewModel
     }
 
     /// <summary>
+    /// Zeigt die AUSGABEN einer Kategorie in einem Monat. Wird aus der
+    /// Karte "Wofuer diesen Monat" auf der Startseite heraus aufgerufen.
+    ///
+    /// Anders als <see cref="ZeigeKategorieZeitraum"/> schraenkt diese
+    /// Fassung zusaetzlich ein - genau so, wie die Karte gerechnet ist:
+    /// nur Ausgaben, und davon nur die selbst getragenen (eigene plus noch
+    /// offene fremde, also "Meine Kosten"). Ohne diese beiden Haekchen
+    /// stuenden in der Liste Buchungen, die zur Zahl auf der Karte gar
+    /// nichts beigetragen haben - eine schon zurueckgezahlte Auslage etwa.
+    /// </summary>
+    public void ZeigeKategorieAusgabenImMonat(
+        int kategorieId, DateOnly von, DateOnly bisEinschliesslich)
+    {
+        LadenGesperrt = true;
+        AktiverZeitraumSchluessel = null;
+        FilterAuswahlLeeren();
+        Suchtext = string.Empty;
+
+        _vorlageFilterId = null;
+        VorlageFilterText = null;
+        EinzelfilterLeeren();
+
+        HakeKategorieAn(KategorieWurzeln, kategorieId);
+
+        VonText = GermanDateInput.ToText(von);
+        BisText = GermanDateInput.ToText(bisEinschliesslich);
+
+        NurAusgaben = true;
+        MeineKosten = true;
+
+        SortSpalte = ExpenseSortColumn.Datum;
+        SortAufsteigend = false;
+        LadenGesperrt = false;
+
+        OnPropertyChanged(nameof(KategorieFilterText));
+        LadeDaten();
+    }
+
+    /// <summary>
     /// Zeigt die Buchungen einer Kategorie in einem Zeitraum. Wird aus dem
     /// Jahresrueckblick heraus aufgerufen: hinter jeder Karte und jeder
     /// Tabellenzeile dort stehen genau diese Buchungen.

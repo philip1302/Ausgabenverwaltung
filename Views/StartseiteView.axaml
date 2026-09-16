@@ -88,6 +88,17 @@
                                       Points="{Binding AusgabenVerlauf}" />
                         </Border>
 
+                        <!-- Die Einordnung beantwortet, was eine Zahl allein
+                             nicht sagt: ist das viel? Sie bleibt weg, solange
+                             es zu wenige Vormonate gibt (siehe
+                             MonthComparison) - eine leere Aussage ist
+                             schlechter als keine. -->
+                        <TextBlock Classes="kpi-hinweis einordnung"
+                                   Text="{Binding AusgabenMonatEinordnung}"
+                                   IsVisible="{Binding AusgabenMonatEinordnungVorhanden}"
+                                   ToolTip.Tip="{Binding AusgabenMonatEinordnungHinweis}"
+                                   TextWrapping="Wrap" />
+
                         <TextBlock Classes="kpi-hinweis" Text="{Binding AusgabenMonatHinweis}" />
                     </StackPanel>
                 </Border>
@@ -114,6 +125,12 @@
                                       IsVisible="{Binding EinnahmenVerlaufVorhanden}"
                                       Points="{Binding EinnahmenVerlauf}" />
                         </Border>
+
+                        <TextBlock Classes="kpi-hinweis einordnung"
+                                   Text="{Binding EinnahmenMonatEinordnung}"
+                                   IsVisible="{Binding EinnahmenMonatEinordnungVorhanden}"
+                                   ToolTip.Tip="{Binding EinnahmenMonatEinordnungHinweis}"
+                                   TextWrapping="Wrap" />
 
                         <TextBlock Classes="kpi-hinweis" Text="{Binding EinnahmenMonatHinweis}" />
                     </StackPanel>
@@ -380,7 +397,65 @@
                     </DockPanel>
                 </Border>
 
-                <Border Grid.Column="2" Classes="karte">
+                <!-- Rechte Spalte: zwei Karten uebereinander. Oben "wofuer",
+                     unten "was zuletzt" - die Karte oben beantwortet die eine
+                     Frage, die das Diagramm daneben nicht beantwortet. -->
+                <Grid Grid.Column="2" RowDefinitions="Auto,16,*">
+
+                <Border Grid.Row="0" Classes="karte">
+                    <StackPanel Spacing="10">
+                        <TextBlock Classes="ueberschrift" TextWrapping="Wrap"
+                                   Text="{Binding MonatsKategorienUeberschrift}" />
+
+                        <TextBlock IsVisible="{Binding !MonatsKategorienVorhanden}"
+                                   Classes="kpi-hinweis" TextWrapping="Wrap"
+                                   Text="Sobald in diesem Monat etwas erfasst ist, steht hier, wofür." />
+
+                        <ItemsControl ItemsSource="{Binding MonatsKategorien}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MonatsKategorieZeile">
+                                    <!-- Die ganze Zeile ist der Knopf und fuehrt in
+                                         die Buchungen dieses Astes. Die Sammelzeile
+                                         "Übrige" steht fuer mehrere Kategorien und
+                                         bleibt deshalb ausgegraut. -->
+                                    <Button Classes="zeile"
+                                            IsEnabled="{Binding Anklickbar}"
+                                            ToolTip.Tip="{Binding Hinweis}"
+                                            Command="{Binding #Wurzel.((vm:StartseiteViewModel)DataContext).KategorieOeffnenCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Spacing="4" Margin="0,6">
+                                            <Grid ColumnDefinitions="Auto,8,*,8,Auto">
+                                                <!-- Farbe als Zusatz zum Namen (Regel 10). -->
+                                                <Border Grid.Column="0" VerticalAlignment="Center"
+                                                        Width="{anzeige:Breite 10}" Height="{anzeige:Breite 10}"
+                                                        CornerRadius="2" Background="{Binding Farbe}" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Name}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="4" Text="{Binding BetragText}" />
+                                            </Grid>
+
+                                            <!-- Der Anteilsstreifen: zwei Spalten, die
+                                                 sich den Platz im Verhaeltnis teilen -
+                                                 keine feste Breite (Regel 9). -->
+                                            <Grid Height="{anzeige:Breite 4}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding AnteilBreite}" />
+                                                    <ColumnDefinition Width="{Binding RestBreite}" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" CornerRadius="2"
+                                                        Background="{Binding Farbe}" />
+                                                <Border Grid.Column="1" CornerRadius="2"
+                                                        Background="{DynamicResource BorderDezentFarbe}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="2" Classes="karte">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Classes="ueberschrift" Text="Letzte Buchungen" Margin="0,0,0,10" />
 
@@ -417,6 +492,8 @@
                         </ItemsControl>
                     </DockPanel>
                 </Border>
+
+                </Grid>
             </Grid>
         </StackPanel>
     </ScrollViewer>

@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Charts;
 using Ausgabenverwaltung.Core.Database;
@@ -96,6 +96,7 @@ public class BalkenKlickTests : IDisposable
             new OpenItemsRepository(_connection),
             new RecurringExpenseRepository(_connection),
             new ReportRepository(_connection),
+            _kategorien,
             new WeakReferenceMessenger());
 
         seite.Aktualisiere();

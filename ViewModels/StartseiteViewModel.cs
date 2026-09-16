@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Media;
 using Ausgabenverwaltung.Anzeige;
+using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Charts;
+using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.OpenItems;
@@ -37,6 +41,7 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     private readonly OpenItemsRepository _openItemsRepository;
     private readonly RecurringExpenseRepository _recurringExpenseRepository;
     private readonly ReportRepository _reportRepository;
+    private readonly CategoryRepository _categoryRepository;
 
     /// <summary>Wird ausgeloest, wenn "Ausgabe erfassen" gewaehlt wird - siehe MainViewModel.</summary>
     public event EventHandler? ErfassenAngefordert;
@@ -65,10 +70,31 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     /// angeklickt wird - siehe MainViewModel.</summary>
     public event EventHandler<LetzteAusgabeZeile>? BuchungAngefordert;
 
+    /// <summary>
+    /// Eine Zeile der Karte "Wofuer diesen Monat" wurde angeklickt: die
+    /// Ausgaben dieser Kategorie in diesem Monat sollen gezeigt werden.
+    /// </summary>
+    public event EventHandler<KategorieSprung>? KategorieAngefordert;
+
     [ObservableProperty] private string _monatUeberschrift = string.Empty;
 
     [ObservableProperty] private string _ausgabenMonatText = string.Empty;
     [ObservableProperty] private string _ausgabenMonatHinweis = string.Empty;
+
+    /// <summary>
+    /// Die Einordnung unter der Zahl ("Bis heute 14 % über dem Schnitt der
+    /// letzten 6 Monate") und der Kurzhinweis dazu, der den Schnitt als
+    /// Betrag nennt. Beides leer, solange sich nichts sagen laesst - siehe
+    /// <see cref="MonthComparison"/>.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AusgabenMonatEinordnungVorhanden))]
+    private string _ausgabenMonatEinordnung = string.Empty;
+
+    [ObservableProperty] private string _ausgabenMonatEinordnungHinweis = string.Empty;
+
+    public bool AusgabenMonatEinordnungVorhanden
+        => !string.IsNullOrEmpty(AusgabenMonatEinordnung);
 
     /// <summary>
     /// Ob die Kachel ueberhaupt etwas zu zeigen hat. Ist sie leer, bleibt
@@ -80,6 +106,15 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     [ObservableProperty] private string _einnahmenMonatText = string.Empty;
     [ObservableProperty] private string _einnahmenMonatHinweis = string.Empty;
     [ObservableProperty] private bool _einnahmenMonatVorhanden;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EinnahmenMonatEinordnungVorhanden))]
+    private string _einnahmenMonatEinordnung = string.Empty;
+
+    [ObservableProperty] private string _einnahmenMonatEinordnungHinweis = string.Empty;
+
+    public bool EinnahmenMonatEinordnungVorhanden
+        => !string.IsNullOrEmpty(EinnahmenMonatEinordnung);
 
     [ObservableProperty] private string _offenePostenText = string.Empty;
     [ObservableProperty] private string _offenePostenHinweis = string.Empty;
@@ -100,6 +135,29 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     private DateOnly _kachelMonat;
 
     public ObservableCollection<LetzteAusgabeZeile> LetzteBuchungen { get; } = new();
+
+    // ================= Wofuer diesen Monat =================
+    //
+    // Die Karte beantwortet die einzige Frage, die das Diagramm NICHT
+    // beantwortet: es zeigt, wieviel in einem Monat zusammenkam, aber nie,
+    // wofuer. Dafuer musste man bisher in die Auswertung wechseln.
+    //
+    // Gezaehlt wird nach OBERSTER Kategorie und nicht nach der gebuchten:
+    // die Anteile ergeben so zusammen den ganzen Monat, und fuenf Zeilen
+    // reichen fuer einen Ueberblick. Wer es genauer braucht, klickt hinein.
+
+    /// <summary>Wieviele Kategorien einzeln genannt werden.</summary>
+    private const int KategorienAufDerKarte = 5;
+
+    public ObservableCollection<MonatsKategorieZeile> MonatsKategorien { get; } = new();
+
+    [ObservableProperty] private bool _monatsKategorienVorhanden;
+
+    /// <summary>
+    /// Die Ueberschrift der Karte nennt den Monat mit - sie steht neben
+    /// dem Diagramm, das einen ganz anderen Zeitraum zeigen kann.
+    /// </summary>
+    [ObservableProperty] private string _monatsKategorienUeberschrift = string.Empty;
 
     // ================= Diagramm =================
     //
@@ -186,6 +244,24 @@ public sealed partial class StartseiteViewModel : ViewModelBase
     private void EinnahmenMonatOeffnen()
         => EinnahmenMonatAngefordert?.Invoke(this, _kachelMonat);
 
+    /// <summary>
+    /// Klick auf eine Zeile der Karte "Wofuer": zeigt die Ausgaben dieses
+    /// Astes in diesem Monat. Die Sammelzeile "Übrige" fuehrt bewusst
+    /// nirgendwohin - sie steht fuer mehrere Kategorien, und ein Sprung
+    /// muesste sich fuer eine davon entscheiden.
+    /// </summary>
+    [RelayCommand]
+    private void KategorieOeffnen(MonatsKategorieZeile? zeile)
+    {
+        if (zeile?.KategorieId is not int id)
+        {
+            return;
+        }
+
+        KategorieAngefordert?.Invoke(this, new KategorieSprung(
+            id, _kachelMonat, _kachelMonat.AddMonths(1).AddDays(-1)));
+    }
+
     [RelayCommand]
     private void OffenePostenOeffnen()
         => OffenePostenAngefordert?.Invoke(this, EventArgs.Empty);
@@ -217,12 +293,14 @@ public sealed partial class StartseiteViewModel : ViewModelBase
         OpenItemsRepository openItemsRepository,
         RecurringExpenseRepository recurringExpenseRepository,
         ReportRepository reportRepository,
+        CategoryRepository categoryRepository,
         IMessenger messenger)
     {
         _expenseRepository = expenseRepository;
         _openItemsRepository = openItemsRepository;
         _recurringExpenseRepository = recurringExpenseRepository;
         _reportRepository = reportRepository;
+        _categoryRepository = categoryRepository;
 
         // Die Randbreiten haengen an der eingestellten Schriftgroesse -
         // wird sie verstellt, muss das Diagramm neu vermessen werden.
@@ -307,6 +385,7 @@ public sealed partial class StartseiteViewModel : ViewModelBase
         MonatUeberschrift = heute.ToString("MMMM yyyy", Kultur.DeDe) + " · hier ist der Überblick über eure Finanzen";
 
         AktualisiereMonatsKacheln(heute);
+        AktualisiereEinordnung(heute);
         AktualisiereOffenePosten();
         AktualisiereNaechsteFaelligkeit(heute);
         LadeAbschnitte();
@@ -355,6 +434,154 @@ public sealed partial class StartseiteViewModel : ViewModelBase
         EinnahmenMonatHinweis = einnahmen.Count == 0
             ? "Noch keine Einnahme diesen Monat"
             : $"{einnahmen.Count} {(einnahmen.Count == 1 ? "Buchung" : "Buchungen")}";
+
+        // Dieselben Ausgaben noch einmal, nur anders sortiert - deshalb
+        // hier und nicht in einer eigenen Abfrage.
+        AktualisiereMonatsKategorien(ausgaben, monatsAnfang);
+    }
+
+    /// <summary>
+    /// Die Karte "Wofuer": die Ausgaben des Monats auf ihre obersten
+    /// Kategorien zusammengezogen.
+    ///
+    /// Gebucht wird auf Blaetter ("Wohnen › Nebenkosten › Strom"), gezeigt
+    /// wird der Ast ganz oben ("Wohnen"). Nur so ergeben die Anteile
+    /// zusammen den ganzen Monat, und nur so bleiben es wenige Zeilen. Der
+    /// Klick fuehrt anschliessend in genau diesen Ast - ein angehakter
+    /// Knoten meint in der Filterleiste immer seinen ganzen Unterbaum.
+    /// </summary>
+    private void AktualisiereMonatsKategorien(
+        IReadOnlyList<ExpenseListItem> ausgaben, DateOnly monatsAnfang)
+    {
+        MonatsKategorien.Clear();
+        MonatsKategorienUeberschrift =
+            "Wofür im " + monatsAnfang.ToString("MMMM", Kultur.DeDe);
+
+        if (ausgaben.Count == 0)
+        {
+            MonatsKategorienVorhanden = false;
+            return;
+        }
+
+        var baum = _categoryRepository.GetTree();
+        var farben = CategoryColors.Resolve(baum);
+        var wurzelJeKategorie = WurzelZuordnung(baum);
+
+        // Eine Buchung, deren Kategorie nicht mehr im Baum steht, kann es
+        // eigentlich nicht geben (ON DELETE RESTRICT, Regel 8). Sollte sie
+        // doch auftauchen, zaehlt sie unter ihrer eigenen Id mit, statt die
+        // Karte um ihren Betrag falsch zu machen.
+        var summen = ausgaben
+            .GroupBy(buchung => wurzelJeKategorie.TryGetValue(buchung.CategoryId, out var wurzel)
+                ? wurzel
+                : (buchung.CategoryId, ErsterAbschnitt(buchung.CategoryFullPath)))
+            .Select(gruppe => new CategorySum(
+                gruppe.Key.Item1, gruppe.Key.Item2, gruppe.Sum(b => b.AmountCents)))
+            .ToList();
+
+        foreach (var zeile in CategoryShares.Top(summen, KategorienAufDerKarte))
+        {
+            MonatsKategorien.Add(new MonatsKategorieZeile(
+                zeile,
+                zeile.CategoryId is int id
+                    ? CategoryColors.Of(farben, id)
+                    : CategoryColorPalette.DefaultHex));
+        }
+
+        MonatsKategorienVorhanden = MonatsKategorien.Count > 0;
+    }
+
+    /// <summary>Jede Kategorie-Id auf Id und Namen ihres obersten Astes.</summary>
+    private static Dictionary<int, (int, string)> WurzelZuordnung(
+        IReadOnlyList<CategoryNode> baum)
+    {
+        var zuordnung = new Dictionary<int, (int, string)>();
+
+        void Sammle(IReadOnlyList<CategoryNode> knoten, (int, string)? wurzel)
+        {
+            foreach (var eintrag in knoten)
+            {
+                var eigene = wurzel ?? (eintrag.Category.Id, eintrag.Category.Name);
+                zuordnung[eintrag.Category.Id] = eigene;
+                Sammle(eintrag.Children, eigene);
+            }
+        }
+
+        Sammle(baum, null);
+        return zuordnung;
+    }
+
+    private static string ErsterAbschnitt(string pfad)
+    {
+        var trenner = pfad.IndexOf(CategoryPaths.Separator, StringComparison.Ordinal);
+        return trenner < 0 ? pfad : pfad[..trenner];
+    }
+
+    /// <summary>
+    /// Die Zeile unter den beiden Monatszahlen: steht dieser Monat hoch
+    /// oder niedrig?
+    ///
+    /// Verglichen wird BIS ZUM SELBEN TAG - der laufende Monat ist noch
+    /// nicht zu Ende, und ein ganzer Vormonat waere deshalb kein Massstab,
+    /// sondern eine Fehlmeldung ("80 % unter dem Schnitt" am Dritten).
+    /// Dafuer wird je Monat eine eigene, kleine Abfrage gestellt: der
+    /// Zeitraumfilter kennt keinen Stichtag innerhalb des Monats, und
+    /// sechs Aggregate gegen eine oertliche Datei kosten nichts - dieselbe
+    /// Ueberlegung wie bei <see cref="LadeVerlauf"/>.
+    /// </summary>
+    private void AktualisiereEinordnung(DateOnly heute)
+    {
+        const int vormonate = 6;
+
+        var monatsAnfang = new DateOnly(heute.Year, heute.Month, 1);
+        var tage = heute.Day;
+
+        var ausgaben = new List<long>(vormonate);
+        var einnahmen = new List<long>(vormonate);
+
+        for (var zurueck = vormonate; zurueck >= 1; zurueck--)
+        {
+            var (getragen, zugeflossen) = BisZumTag(monatsAnfang.AddMonths(-zurueck), tage);
+            ausgaben.Add(getragen);
+            einnahmen.Add(zugeflossen);
+        }
+
+        var (ausgabenJetzt, einnahmenJetzt) = BisZumTag(monatsAnfang, tage);
+
+        // "Laeuft noch" heisst: heute ist nicht der letzte Tag des Monats.
+        // Am Monatsletzten ist der Vergleich einer ganzer Monate, und dann
+        // soll der Satz auch nicht mehr "bis heute" sagen.
+        var monatLaeuft = heute < monatsAnfang.AddMonths(1).AddDays(-1);
+
+        var einordnungAusgaben = MonthComparison.Describe(ausgabenJetzt, ausgaben, monatLaeuft);
+        AusgabenMonatEinordnung = einordnungAusgaben?.Text ?? string.Empty;
+        AusgabenMonatEinordnungHinweis = einordnungAusgaben?.Hinweis ?? string.Empty;
+
+        var einordnungEinnahmen = MonthComparison.Describe(einnahmenJetzt, einnahmen, monatLaeuft);
+        EinnahmenMonatEinordnung = einordnungEinnahmen?.Text ?? string.Empty;
+        EinnahmenMonatEinordnungHinweis = einordnungEinnahmen?.Hinweis ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Getragene Ausgaben und zugeflossene Einnahmen eines Monats, gezaehlt
+    /// bis einschliesslich Tag <paramref name="tage"/>. Kuerzere Monate
+    /// enden mit ihrem letzten Tag - der 31. eines 30-Tage-Monats ist kein
+    /// halber Februar, sondern schlicht der ganze Monat.
+    /// </summary>
+    private (long Ausgaben, long Einnahmen) BisZumTag(DateOnly monatsAnfang, int tage)
+    {
+        var naechsterMonat = monatsAnfang.AddMonths(1);
+        var bisAusschliesslich = monatsAnfang.AddDays(tage) < naechsterMonat
+            ? monatsAnfang.AddDays(tage)
+            : naechsterMonat;
+
+        var zeile = _reportRepository
+            .EvaluateTrend(new DateRange(monatsAnfang, bisAusschliesslich), ReportGrouping.Month)
+            .FirstOrDefault();
+
+        return (
+            (zeile?.OwnExpenseCents ?? 0) + (zeile?.ForeignOpenExpenseCents ?? 0),
+            zeile?.IncomeCents ?? 0);
     }
 
     private void AktualisiereOffenePosten()
@@ -739,6 +966,68 @@ public sealed partial class StartseiteViewModel : ViewModelBase
         }
     }
 }
+
+/// <summary>
+/// Eine Zeile der Karte "Wofuer diesen Monat", fertig fuer die Ansicht.
+///
+/// Die Farbe kommt aus der Kategorie (Regel 10: aus der Palette, geerbt
+/// vom naechsten Vorfahren) und steht IMMER neben dem Namen, nie an
+/// seiner Stelle. Der Anteil ist eine Zahl zwischen 0 und 1; die Ansicht
+/// macht daraus die Breite eines Streifens.
+/// </summary>
+public sealed class MonatsKategorieZeile
+{
+    public MonatsKategorieZeile(CategoryShare anteil, string farbe)
+    {
+        KategorieId = anteil.CategoryId;
+        Name = anteil.Name;
+        BetragText = EuroText.Format(anteil.SumCents);
+        Anteil = anteil.Share;
+        AnteilText = $"{Math.Round(anteil.Share * 100)} %";
+        Farbe = Farbpinsel.Fuer(farbe);
+
+        // Der Streifen wird ueber zwei Spalten geteilt statt ueber eine
+        // feste Breite: so waechst er mit der Karte und mit der
+        // eingestellten Schriftgroesse mit (Regel 9).
+        AnteilBreite = new GridLength(anteil.Share, GridUnitType.Star);
+        RestBreite = new GridLength(Math.Max(0, 1 - anteil.Share), GridUnitType.Star);
+
+        Hinweis = KategorieId is null
+            ? $"{Name}: {BetragText} · {AnteilText} der Ausgaben dieses Monats"
+            : $"{Name}: {BetragText} · {AnteilText} der Ausgaben dieses Monats"
+              + "\n\nKlicken zeigt diese Buchungen";
+    }
+
+    /// <summary>NULL bei der Sammelzeile - sie fuehrt nirgendwohin.</summary>
+    public int? KategorieId { get; }
+
+    public string Name { get; }
+    public string BetragText { get; }
+    public string AnteilText { get; }
+    public double Anteil { get; }
+    public GridLength AnteilBreite { get; }
+    public GridLength RestBreite { get; }
+
+    /// <summary>
+    /// Die Farbe der Kategorie, aufgeloest wie in der Buchungsliste
+    /// (siehe AusgabeZeile.Farbe) - immer ein Zusatz zum Namen, nie sein
+    /// Ersatz (Regel 10).
+    /// </summary>
+    public IBrush Farbe { get; }
+
+    public string Hinweis { get; }
+
+    /// <summary>Nur eine einzelne Kategorie laesst sich anspringen.</summary>
+    public bool Anklickbar => KategorieId is not null;
+}
+
+/// <summary>
+/// Was ein Klick auf eine Kategoriezeile anfordert: der Ast und der
+/// Monat, aus dem die Zahl stammt. Beide Grenzen einschliessend, so wie
+/// die Filterleiste ihre Felder versteht.
+/// </summary>
+public sealed record KategorieSprung(
+    int KategorieId, DateOnly Von, DateOnly BisEinschliesslich);
 
 /// <summary>
 /// Was ein Klick auf einen Balken anfordert: der Zeitabschnitt UND der

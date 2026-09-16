@@ -503,6 +503,12 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="20" />
+
+            <!-- Alle Kacheln einer Reihe gleich hoch: sie tragen
+                 unterschiedlich viele Zeilen (die beiden Monatskacheln eine
+                 Einordnung mehr), und ungleich hohe Karten nebeneinander
+                 sehen aus wie ein Fehler. -->
+            <Setter Property="VerticalAlignment" Value="Stretch" />
         </Style>
         <Style Selector="TextBlock.kpi-label">
             <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
@@ -537,6 +543,12 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Stretch" />
+
+            <!-- Die Kachel fuellt ihr Feld aus, statt darin zu schweben:
+                 sonst stehen vier Karten mit unterschiedlich vielen Zeilen
+                 auf vier verschiedenen Hoehen nebeneinander, jede fuer sich
+                 mittig - das sieht aus wie ein Fehler im Raster. -->
+            <Setter Property="VerticalAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Button.kachel /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
@@ -975,6 +987,14 @@
              kennzeichnen - ein roter Balken und ein roter Betrag meinen
              dasselbe. Was welche Farbe bedeutet, steht zusaetzlich als
              Text in der Legende (Regel 10). -->
+
+        <!-- Die Einordnung unter einer Monatszahl ("Bis heute 14 % über dem
+             Schnitt der letzten 6 Monate"). Sie steht zwischen Zahl und
+             Zusatzzeile und traegt deshalb den kraeftigeren der beiden
+             dezenten Toene - sie ist eine Aussage, keine Fussnote. -->
+        <Style Selector="TextBlock.kpi-hinweis.einordnung">
+            <Setter Property="Foreground" Value="{DynamicResource TextSekundaerFarbe}" />
+        </Style>
 
         <!-- Ein Balken ist ein Knopf, damit der Klick in die Buchungen
              springt und die Flaeche mit der Tastatur erreichbar bleibt.

@@ -1,4 +1,4 @@
-using Ausgabenverwaltung.Core.Categories;
+﻿using Ausgabenverwaltung.Core.Categories;
 using Ausgabenverwaltung.Core.Database;
 using Ausgabenverwaltung.Core.Expenses;
 using Ausgabenverwaltung.Core.OpenItems;
@@ -51,6 +51,7 @@ public class StartseiteVerlaufTests : IDisposable
         new OpenItemsRepository(_connection),
         new RecurringExpenseRepository(_connection),
         new ReportRepository(_connection),
+        new CategoryRepository(_connection),
         new WeakReferenceMessenger());
 
     /// <summary>Eine Ausgabe im Monat <paramref name="vorMonaten"/> zurueck.</summary>

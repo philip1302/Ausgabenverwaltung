@@ -295,6 +295,17 @@ public sealed partial class MainViewModel : ViewModelBase
                 .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
         };
 
+        // Eine Zeile der Karte "Wofuer diesen Monat": dieselbe Mechanik wie
+        // beim Balken - erst den Filter setzen, dann wechseln.
+        startseite.KategorieAngefordert += (_, sprung) =>
+        {
+            _ausgabenliste.ZeigeKategorieAusgabenImMonat(
+                sprung.KategorieId, sprung.Von, sprung.BisEinschliesslich);
+
+            SelectedNavigationItem = NavigationItems
+                .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
+        };
+
         // Die vier KPI-Kacheln der Startseite fuehren dorthin, wo ihre Zahl
         // herkommt. Wie beim Balken-Klick oben gilt ueberall: erst den
         // Filter setzen, dann wechseln - AktualisiereListe laedt danach nur

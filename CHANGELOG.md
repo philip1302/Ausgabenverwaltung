@@ -64,6 +64,17 @@ beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
 ### Startseite
 
+- Neben dem Diagramm steht jetzt die Karte „Wofür im …": die fünf größten
+  Kategorien dieses Monats mit Betrag, Anteil und ihrer Farbe, der Rest in einer
+  Zeile zusammengefasst. Das Diagramm zeigt, wie viel in einem Monat
+  zusammenkam, aber nie, wofür — dafür musste man bisher in die Auswertung
+  wechseln. Ein Klick auf eine Zeile zeigt genau die Buchungen dahinter.
+- Unter den Zahlen für Ausgaben und Einnahmen dieses Monats steht jetzt, wie sie
+  im Vergleich zu den Vormonaten dastehen — „Bis heute 14 % über dem Schnitt der
+  letzten 6 Monate". Verglichen wird dabei bis zum selben Tag des Monats, sonst
+  stünde am Dritten jedes Monats, man liege weit unter dem Schnitt. Wie viel der
+  Schnitt in Euro ist, steht im Kurzhinweis an der Zeile. Gibt es noch zu wenige
+  Monate zum Vergleichen, bleibt die Zeile weg.
 - Ein Balken im Diagramm nimmt den Klick jetzt überall dort an, wo auch sein
   Kurzhinweis erscheint. Bisher zählte der Klick erst beim Loslassen der Taste,
   und nur, wenn der Zeiger dann noch genau auf dem Balken stand — bei einem
