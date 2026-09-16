@@ -13,7 +13,7 @@ ganzen Sätzen.
 Ganz oben sammelt „Unveröffentlicht", was noch in keiner Fassung steckt;
 beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
-## Unveröffentlicht
+## 1.7.0 — 16.09.2026
 
 ### Allgemein
 
