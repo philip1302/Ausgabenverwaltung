@@ -13,6 +13,38 @@ ganzen Sätzen.
 Ganz oben sammelt „Unveröffentlicht", was noch in keiner Fassung steckt;
 beim Anheben der Versionsnummer wird diese Überschrift zur Fassung.
 
+## Unveröffentlicht
+
+### Hinweise und Meldungen
+
+- Die Hinweisbänder am oberen Rand sagen jetzt in einer Zeile, worum es geht.
+  Vorne steht ein Zeichen für die Art des Hinweises, daneben eine Überschrift
+  und ein Satz dazu — der vollständige Text steht hinter „Details“. Das Band
+  zur neuen Fassung war bisher ein Absatz von fünf Zeilen quer über das ganze
+  Fenster, in dem die eigentliche Nachricht genauso aussah wie alles andere.
+- Es erscheint immer nur ein Band auf einmal. Standen mehrere Hinweise an —
+  eine neue Fassung, eine misslungene Sicherung, erzeugte wiederkehrende
+  Buchungen —, stapelten sie sich bisher übereinander und schoben die Ansicht
+  weit nach unten. Der dringendste steht jetzt vorne, die übrigen lassen sich
+  mit „Weiter“ durchsehen; verloren geht keiner.
+- „Schließen“ am Band schließt nur den Hinweis, der gerade zu sehen ist.
+- Auf dem Band ist genau ein Knopf hervorgehoben. Bisher standen dort drei
+  gleich große nebeneinander, und der auffälligste war ausgerechnet der, der
+  die Anwendung beendet.
+- Wer eine neue Fassung mit „Später“ wegklickt, bekommt das Band für diese
+  Fassung nicht wieder zu sehen — auch nach einem Neustart nicht. Dass es sie
+  gibt, steht weiterhin unten links in der Seitenleiste; ein Klick darauf holt
+  den Hinweis zurück.
+- Die Meldung „Die Sicherung beim Start ist misslungen“ hat einen Knopf
+  bekommen, der direkt zur Datensicherung führt.
+- Kurze Bestätigungen wie „Gespeichert.“ erscheinen jetzt unten rechts und
+  verschwinden nach fünf Sekunden von selbst. Vorher schoben sie beim
+  Erscheinen alles darunter nach unten und beim Verschwinden wieder hoch —
+  genau während man den nächsten Betrag tippte. Sie stehen außerdem etwas
+  länger: zwei Sekunden waren oft vorbei, bevor der Blick sie fand.
+- Der hervorgehobene Knopf auf einem farbigen Band ist wieder lesbar. Er trug
+  dunkle Schrift auf dunklem Grund.
+
 ## 1.7.0 — 16.09.2026
 
 ### Allgemein

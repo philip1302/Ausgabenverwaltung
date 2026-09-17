@@ -14,6 +14,14 @@ namespace Ausgabenverwaltung.Core.Errors;
 /// Programmdatei (siehe Database.AppPaths). Genau das sagen diese Texte
 /// deshalb ausdruecklich, statt es den Anwender vermuten zu lassen.
 ///
+/// Die drei Meldungen, die im BAND erscheinen, liefern seit dem Umbau der
+/// Hinweisbaender eine <see cref="Bandmeldung"/> statt eines langen
+/// Textes: Titel, eine Zeile, und der Rest hinter "Details". Der Grund
+/// steht bei <see cref="Bandmeldung"/>. Die beiden uebrigen
+/// (<see cref="AustauschGescheitert"/>,
+/// <see cref="WasIstNeuEinleitung"/>) bleiben Text - sie stehen in einem
+/// Dialog bzw. auf einer ganzen Seite und haben dort den Platz.
+///
 /// Reine Textbildung, deshalb vollstaendig pruefbar (Regel 7).
 /// </summary>
 public static class UpdateText
@@ -21,18 +29,28 @@ public static class UpdateText
     /// <summary>
     /// Eine neue Fassung liegt geladen und geprueft bereit. Kein Fehler,
     /// sondern die eigentliche gute Nachricht dieser Funktion.
+    ///
+    /// Der Titel sagt die Sache, die Zeile darunter sagt, was der Knopf
+    /// daneben tut, und die Beruhigung ueber den Verbleib der Daten steht
+    /// vollstaendig in den Details. Vorher stand alles zusammen im Band -
+    /// und die Nachricht ging in der Beruhigung unter.
     /// </summary>
-    public static string Bereitgelegt(string version)
+    public static Bandmeldung Bereitgelegt(string version)
     {
-        return $"Die neue Fassung {version} wurde geladen und geprüft. "
+        return new Bandmeldung(
+            Bandrang.Hinweis,
+            $"Fassung {version} ist bereit",
+            "Ein Neustart übernimmt sie — Ihre Buchungen bleiben unverändert.",
+            "Die neue Fassung wurde geladen und geprüft. Sie liegt bereit und "
+            + "wartet nur noch darauf, übernommen zu werden.\n\n"
             + "Ihre Daten sind davon nicht betroffen: Buchungen, Sicherungen und "
             + "Einstellungen liegen getrennt von der Programmdatei und bleiben, "
             + "wo sie sind.\n\n"
             + "„Jetzt neu starten“ übernimmt sie sofort — die Anwendung schließt "
             + "sich und öffnet sich gleich wieder, danach steht einmalig, was sich "
-            + "geändert hat. Wer gerade mitten in etwas ist, schließt dieses Band "
+            + "geändert hat. Wer gerade mitten in etwas ist, schließt das Band "
             + "einfach: übernommen wird sie dann beim nächsten Start von selbst, "
-            + "und bis dahin läuft alles unverändert weiter.";
+            + "und bis dahin läuft alles unverändert weiter.");
     }
 
     /// <summary>
@@ -40,19 +58,29 @@ public static class UpdateText
     /// Entwarnung: die geladene Fassung ist NICHT verloren, sie wartet
     /// weiter - der Anwender muss nur selbst schliessen und oeffnen.
     /// </summary>
-    public static string NeustartGescheitert()
+    public static Bandmeldung NeustartGescheitert()
     {
-        return "Die Anwendung ließ sich nicht von selbst neu starten.\n\n"
+        return new Bandmeldung(
+            Bandrang.Warnung,
+            "Der Neustart hat nicht geklappt",
+            "Die geladene Fassung wartet weiter — bitte einmal schließen und wieder öffnen.",
+            "Die Anwendung ließ sich nicht von selbst neu starten.\n\n"
             + "Die geladene Fassung liegt weiterhin bereit und wird übernommen, "
             + "sobald die Anwendung das nächste Mal gestartet wird — bitte dazu "
             + "einmal schließen und wieder öffnen. Ihre Daten sind unverändert, "
-            + "und es ist nichts verloren gegangen.";
+            + "und es ist nichts verloren gegangen.");
     }
 
     /// <summary>
     /// Es gibt etwas Neueres, aber es laesst sich nicht selbst
     /// uebernehmen - fehlende Datei fuer diese Plattform, fehlende
     /// Pruefsumme oder ein schreibgeschuetzter Programmordner.
+    ///
+    /// Die nummerierte Anleitung stand frueher im Band selbst. Eine
+    /// Schrittfolge in einer Statusleiste ist die falsche Form: sie macht
+    /// das Band vier Zeilen hoch und wird trotzdem erst gelesen, wenn
+    /// jemand sie wirklich abarbeiten will. Sie steht deshalb jetzt in den
+    /// Details.
     /// </summary>
     /// <param name="dateiname">
     /// Die Datei, die auf der Veroeffentlichungsseite fuer dieses System
@@ -65,10 +93,28 @@ public static class UpdateText
     /// ganzes Bundle. Der Unterschied gehoert in die Anleitung, sonst
     /// sucht dort jemand nach einer .exe.
     /// </param>
-    public static string NurHinweis(
+    public static Bandmeldung NurHinweis(
         string version, UpdateHindernis hindernis, string? dateiname = null, bool istBundle = false)
     {
-        var kopf = $"Es gibt eine neuere Fassung: {version}.";
+        // Die Kurzzeile nennt den Grund, warum von selbst nichts
+        // geschieht. Alles Weitere - dass nichts verändert wurde und wie
+        // es von Hand geht - steht in den Details.
+        var kurz = hindernis switch
+        {
+            UpdateHindernis.OrdnerSchreibgeschuetzt =>
+                "Sie lässt sich hier nicht selbst einspielen: in den Ordner der "
+                + "Anwendung darf nicht geschrieben werden.",
+
+            UpdateHindernis.KeineDateiFuerDiesesSystem =>
+                "Für dieses Betriebssystem ist zu dieser Fassung keine fertige "
+                + "Datei hinterlegt.",
+
+            UpdateHindernis.OhnePruefsumme =>
+                "Sie wird nicht selbst eingespielt, weil sich ihre Unversehrtheit "
+                + "nicht nachprüfen lässt.",
+
+            _ => "Sie lässt sich hier nicht selbst einspielen.",
+        };
 
         var erklaerung = hindernis switch
         {
@@ -91,12 +137,15 @@ public static class UpdateText
         var zustand = "Die Anwendung läuft in der bisherigen Fassung ganz normal "
             + "weiter, es wurde nichts verändert.";
 
+        var titel = $"Neuere Fassung {version} verfügbar";
+
         // Ohne Datei fuer dieses System gibt es nichts anzuleiten - eine
         // Schrittfolge, an deren Ende nichts steht, ist schlimmer als
         // keine.
         if (dateiname is null)
         {
-            return kopf + " " + erklaerung + "\n\n" + zustand;
+            return new Bandmeldung(
+                Bandrang.Hinweis, titel, kurz, erklaerung + "\n\n" + zustand);
         }
 
         var was = istBundle ? "das Programm" : "die Programmdatei";
@@ -107,13 +156,15 @@ public static class UpdateText
         // Nummerierte Schritte statt eines Satzes, und mit dem KONKRETEN
         // Dateinamen: "die passende Datei" laesst genau die Frage offen,
         // die auf einer Seite mit drei Dateien im Weg steht.
-        return kopf + " " + erklaerung + "\n\n" + zustand + "\n\n"
+        var details = erklaerung + "\n\n" + zustand + "\n\n"
             + "Von Hand geht es so:\n"
             + "1. Anwendung schließen.\n"
             + $"2. Auf der Veröffentlichungsseite „{dateiname}“ herunterladen "
             + "und entpacken.\n"
             + $"3. {char.ToUpperInvariant(was[0]) + was[1..]} daraus {wohin}.\n"
             + "4. Anwendung wieder starten.";
+
+        return new Bandmeldung(Bandrang.Hinweis, titel, kurz, details);
     }
 
     /// <summary>

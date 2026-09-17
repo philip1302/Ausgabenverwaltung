@@ -63,7 +63,7 @@ public class FilterleisteTests : IDisposable
     {
         "Ausgabenliste" => new AusgabenlisteViewModel(
             _ausgaben, _kategorien, _personen,
-            _einstellungen.Store, new WeakReferenceMessenger()),
+            _einstellungen.Store, new WeakReferenceMessenger(), new ToastViewModel()),
 
         "Auswertung" => new ReportViewModel(
             _auswertung, _ausgaben, _kategorien, _personen,

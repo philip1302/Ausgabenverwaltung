@@ -57,7 +57,8 @@ public class AbhakenRueckgaengigTests : IDisposable
     }
 
     private AusgabenlisteViewModel NeueListe() =>
-        new(_ausgaben, _kategorien, _personen, _einstellungen.Store, new WeakReferenceMessenger());
+        new(_ausgaben, _kategorien, _personen, _einstellungen.Store,
+            new WeakReferenceMessenger(), new ToastViewModel());
 
     private static DateOnly Heute => DateOnly.FromDateTime(DateTime.Now);
 

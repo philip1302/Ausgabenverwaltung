@@ -72,6 +72,23 @@ public sealed record AppSettings
     public DateTime? LastUpdateCheckUtc { get; init; }
 
     /// <summary>
+    /// Die Fassung, deren Hinweisband der Anwender mit "Später"
+    /// weggeklickt hat ("1.7.0"). Fuer genau diese Nummer erscheint das
+    /// Band nicht wieder.
+    ///
+    /// Vorher hielt "Später" nur bis zum Programmende: beim naechsten
+    /// Start stand dasselbe Band von neuem da. Wer eine Fassung bewusst
+    /// zurueckstellt, meint das aber ueber den Tag hinaus. Verloren geht
+    /// die Auskunft trotzdem nicht - sie steht weiter in der
+    /// Sidebar-Fusszeile (siehe AktualisierungViewModel.FusszeilenText).
+    ///
+    /// NULL = nichts zurueckgestellt. Erscheint spaeter eine noch neuere
+    /// Fassung, stimmt die gemerkte Nummer nicht mehr ueberein und das
+    /// Band kommt wieder.
+    /// </summary>
+    public string? DismissedUpdateVersion { get; init; }
+
+    /// <summary>
     /// Die zuletzt gesehene Fassung der Anwendung ("1.4.0"). Steigt sie
     /// zwischen zwei Starts, erscheint einmalig die Seite "Was ist neu"
     /// mit den Abschnitten der Aenderungsliste, die seither dazugekommen

@@ -85,6 +85,11 @@ public sealed class AppSettingsStore
                 AutoUpdate = document.AutoUpdate ?? true,
                 LastUpdateCheckUtc = ParseOrNull(document.LastUpdateCheckUtc),
 
+                // Leerer Text und fehlender Eintrag sind dasselbe:
+                // "nichts zurueckgestellt". Dann erscheint das Band zur
+                // neuen Fassung wie gewohnt.
+                DismissedUpdateVersion = LeerAlsNull(document.DismissedUpdateVersion),
+
                 // Fehlt der Wert (Datei aus einer aelteren Fassung), gilt
                 // die Vorgabe "aus" - ein leeres Formular nach dem
                 // Speichern, wie bisher.
@@ -139,6 +144,7 @@ public sealed class AppSettingsStore
             LastUpdateCheckUtc = settings.LastUpdateCheckUtc is DateTime geprueft
                 ? IsoDateTime.ToUtcText(geprueft)
                 : null,
+            DismissedUpdateVersion = settings.DismissedUpdateVersion,
             KeepEntryValues = settings.KeepEntryValues,
             LastSeenVersion = settings.LastSeenVersion,
 
@@ -341,6 +347,7 @@ public sealed class AppSettingsStore
         public string? ThemeMode { get; set; }
         public bool? AutoUpdate { get; set; }
         public string? LastUpdateCheckUtc { get; set; }
+        public string? DismissedUpdateVersion { get; set; }
         public bool? KeepEntryValues { get; set; }
         public string? LastSeenVersion { get; set; }
         public PlacementDocument? WindowPlacement { get; set; }

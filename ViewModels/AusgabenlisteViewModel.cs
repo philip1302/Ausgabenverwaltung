@@ -311,13 +311,33 @@ public sealed partial class AusgabenlisteViewModel : FilterleisteViewModel
     /// Satz bliebe offen, ob ueberhaupt etwas passiert ist.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ErfolgSichtbar))]
     private string? _erfolgText;
 
-    public bool ErfolgSichtbar => ErfolgText is not null;
+    /// <summary>
+    /// Wohin eine geglueckte Aktion gemeldet wird. Der Text stand frueher
+    /// als Band ueber der Liste und schob sie beim Erscheinen nach unten -
+    /// ausgerechnet die Liste, in der man gerade nachsieht, ob die Aktion
+    /// gewirkt hat. Als schwebender Hinweis unten rechts verschiebt er
+    /// nichts.
+    ///
+    /// <see cref="ErfolgText"/> bleibt dabei die Quelle: der Toast wird
+    /// nachgezogen, nicht umgekehrt. So braucht keine der Stellen, die
+    /// einen Erfolgstext setzen oder raeumen, etwas davon zu wissen.
+    /// </summary>
+    private readonly ToastViewModel _toast;
 
-    [RelayCommand]
-    private void ErfolgSchliessen() => ErfolgText = null;
+    partial void OnErfolgTextChanged(string? value)
+    {
+        if (value is null)
+        {
+            _toast.Schliessen();
+        }
+        else
+        {
+            _toast.Zeige(value);
+        }
+    }
+
 
     // ================= CSV-Export =================
 
@@ -341,11 +361,13 @@ public sealed partial class AusgabenlisteViewModel : FilterleisteViewModel
         CategoryRepository categoryRepository,
         PersonRepository personRepository,
         AppSettingsStore settingsStore,
-        IMessenger messenger)
+        IMessenger messenger,
+        ToastViewModel toast)
         : base(categoryRepository, personRepository, settingsStore)
     {
         _expenseRepository = expenseRepository;
         _messenger = messenger;
+        _toast = toast;
 
         LadenGesperrt = true;
 

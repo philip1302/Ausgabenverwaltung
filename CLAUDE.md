@@ -188,6 +188,13 @@ Kategorien, wiederkehrenden Buchungen und Auswertungen.
 - Zur Pruefung nur `dotnet build` und `dotnet test` ausfuehren.
   **Niemals `dotnet run` zur Pruefung** - die Avalonia-App blockiert das
   Terminal, weil sie auf die GUI-Ereignisschleife wartet.
+- **Bindungen werden beim Bauen aufgeloest**
+  (`AvaloniaUseCompiledBindingsByDefault`). Jede Ansicht braucht deshalb
+  ein `x:DataType` an der Wurzel und jedes `DataTemplate` eines an sich
+  selbst; ein Tippfehler in `{Binding ...}` ist dann ein Build-Fehler
+  (`AVLN2000`) und nicht mehr ein stilles leeres Feld. Gibt es
+  ausnahmsweise keinen festen Typ, steht `x:CompileBindings="False"` an
+  genau der Stelle - mit Begruendung daneben, nicht projektweit.
 
 ## graphify
 

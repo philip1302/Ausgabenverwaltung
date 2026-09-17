@@ -201,10 +201,6 @@
                     </StackPanel>
                 </Border>
 
-                <Border Classes="banner erfolg" IsVisible="{Binding BestaetigungSichtbar}">
-                    <TextBlock Text="Gespeichert." />
-                </Border>
-
                 <!-- Schreibfehler: das Formular bleibt darunter unveraendert
                      stehen, damit keine Eingabe verloren geht. -->
                 <Border Classes="banner fehler" IsVisible="{Binding SpeicherFehlerSichtbar}">

@@ -53,7 +53,8 @@ public class SerienerfassungTests : IDisposable
         => new(Path.Combine(_tempDir.FullName, "settings.json"));
 
     private ErfassenViewModel NeueErfassung(AppSettingsStore? speicher = null)
-        => new(_ausgaben, _kategorien, _personen, speicher ?? Speicher(), _messenger);
+        => new(_ausgaben, _kategorien, _personen, speicher ?? Speicher(), _messenger,
+            new ToastViewModel());
 
     [Fact]
     public async Task Ohne_Serienerfassung_ist_die_Kategorie_danach_leer()

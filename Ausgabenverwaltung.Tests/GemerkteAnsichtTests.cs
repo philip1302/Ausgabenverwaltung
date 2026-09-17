@@ -51,7 +51,8 @@ public class GemerkteAnsichtTests : IDisposable
     }
 
     private AusgabenlisteViewModel NeueListe() => new(
-        _ausgaben, _kategorien, _personen, _einstellungen.Store, new WeakReferenceMessenger());
+        _ausgaben, _kategorien, _personen, _einstellungen.Store,
+        new WeakReferenceMessenger(), new ToastViewModel());
 
     private OffenePostenViewModel NeueOffenePosten() => new(
         _offenePosten, _einstellungen.Store, new WeakReferenceMessenger());

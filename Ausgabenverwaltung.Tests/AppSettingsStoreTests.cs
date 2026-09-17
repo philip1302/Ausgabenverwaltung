@@ -13,6 +13,44 @@ public class AppSettingsStoreTests : IDisposable
 
     public void Dispose() => _tempDir.Delete(recursive: true);
 
+    // Die allgemeine Absicherung gegen genau den Fehler, der beim Einbau
+    // von DismissedUpdateVersion passiert ist: die Einstellung wurde zu
+    // AppSettings hinzugefuegt, aber nicht zum SettingsDocument, mit dem
+    // die Datei tatsaechlich geschrieben wird. Gemerkt hat sich die
+    // Anwendung den Wert dadurch nur bis zum Programmende - und das ist
+    // genau das Gegenteil dessen, wofuer die Einstellung da ist.
+    //
+    // Die Einzelpruefungen darunter listen ihre Felder von Hand auf und
+    // koennen ein neues deshalb nie vermissen. Diese hier kennt sie alle.
+    [Fact]
+    public void Jede_Einstellung_landet_auch_wirklich_in_der_Datei()
+    {
+        var speicher = new AppSettingsStore(SettingsPath);
+        speicher.Save(new AppSettings());
+
+        var geschrieben = File.ReadAllText(SettingsPath);
+
+        foreach (var eigenschaft in typeof(AppSettings).GetProperties())
+        {
+            Assert.True(
+                geschrieben.Contains($"\"{eigenschaft.Name}\"", StringComparison.Ordinal),
+                $"„{eigenschaft.Name}“ steht in AppSettings, wird aber nicht in die "
+                + "Einstellungsdatei geschrieben — vermutlich fehlt das Feld im "
+                + "SettingsDocument von AppSettingsStore.");
+        }
+    }
+
+    [Fact]
+    public void Eine_zurueckgestellte_Fassung_ueberlebt_den_Programmstart()
+    {
+        var speicher = new AppSettingsStore(SettingsPath);
+        speicher.Save(new AppSettings { DismissedUpdateVersion = "1.8.0" });
+
+        // Frisch geladen, wie beim naechsten Start: "Später" soll auch
+        // dann noch gelten.
+        Assert.Equal("1.8.0", new AppSettingsStore(SettingsPath).Load().DismissedUpdateVersion);
+    }
+
     [Fact]
     public void Ohne_Datei_gelten_die_Vorgabewerte()
     {

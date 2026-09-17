@@ -9,6 +9,7 @@ using Ausgabenverwaltung.Core.Logging;
 using Ausgabenverwaltung.Core.Settings;
 using Ausgabenverwaltung.Core.Startup;
 using Ausgabenverwaltung.Core.Updates;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -24,12 +25,19 @@ namespace Ausgabenverwaltung.ViewModels;
 /// schweigt sonst ins Protokoll. Ein nicht erreichbares GitHub ist kein
 /// Ereignis, das jemanden interessiert.
 ///
+/// Das Band gehoert diesem ViewModel nicht mehr selbst: es stellt seine
+/// Meldung in die gemeinsame Bandzone (<see cref="BaenderViewModel"/>),
+/// in der hoechstens ein Band zugleich sichtbar ist.
+///
 /// Keine Fachlogik hier (Regel 7): entschieden wird in
 /// Core.Updates.UpdateEntscheidung, formuliert in
 /// Core.Errors.UpdateText.
 /// </summary>
 public sealed partial class AktualisierungViewModel : ViewModelBase
 {
+    /// <summary>Unter diesem Namen steht das Band in der Bandzone.</summary>
+    private const string BandSchluessel = "aktualisierung";
+
     // Ein HttpClient fuer die Laufzeit dieser Ausfuehrung. Ihn je Abruf
     // neu anzulegen, verbraucht Verbindungen, die noch eine Weile offen
     // bleiben - bei zwei Abrufen pro Programmstart faellt das nicht ins
@@ -37,44 +45,41 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
     private static readonly HttpClient Netz = ErzeugeClient();
 
     private readonly AppSettingsStore _einstellungen;
+    private readonly BaenderViewModel _baender;
 
     /// <summary>Wohin verwiesen wird, wenn nicht selbst eingespielt
     /// werden kann.</summary>
     private string? _seitenAdresse;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(BandSichtbar))]
-    private string? _bandText;
-
     /// <summary>
-    /// Ob das Band zum sofortigen Neustart einlaedt. Beim blossen Hinweis
-    /// (nicht selbst einspielbar) gibt es nichts neu zu starten - dort
-    /// fuehrt der Weg auf die Veroeffentlichungsseite.
+    /// Die gefundene Fassung und ihre fertige Meldung - gemerkt, damit das
+    /// Band nach einem "Später" wieder hervorgeholt werden kann, ohne
+    /// erneut ins Netz zu greifen.
     /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NurSeiteAufrufbar))]
+    private Bandmeldung? _meldung;
+
+    private string? _gefundeneVersion;
+
     private bool _neustartMoeglich;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NurSeiteAufrufbar))]
-    private bool _seiteAufrufbar;
-
     /// <summary>
-    /// Die Veroeffentlichungsseite ist der EINZIGE Weg - es liegt also
-    /// nichts bereit, das ein Neustart uebernehmen koennte.
-    ///
-    /// Das Band zeigt je Lage genau einen hervorgehobenen Knopf. Liegt
-    /// eine Fassung bereit, ist das der Neustart; sonst die Seite. Beide
-    /// nebeneinander sahen aus wie eine Wahl zwischen gleichwertigen
-    /// Wegen, obwohl sie zu verschiedenen Lagen gehoeren.
+    /// Der ruhige Dauerplatz in der Sidebar-Fusszeile. Er ist der Grund,
+    /// warum "Später" wirklich spaeter heissen darf: das Band kommt fuer
+    /// diese Fassung nicht wieder, die Auskunft bleibt trotzdem
+    /// erreichbar. Ohne ihn stuende die Wahl zwischen Nerven (jeder Start
+    /// dasselbe Band) und Vergessen (weggeklickt und nie wieder
+    /// auffindbar).
     /// </summary>
-    public bool NurSeiteAufrufbar => SeiteAufrufbar && !NeustartMoeglich;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FusszeileSichtbar))]
+    private string? _fusszeilenText;
 
-    public bool BandSichtbar => BandText is not null;
+    public bool FusszeileSichtbar => FusszeilenText is not null;
 
-    public AktualisierungViewModel(AppSettingsStore einstellungen)
+    public AktualisierungViewModel(AppSettingsStore einstellungen, BaenderViewModel baender)
     {
         _einstellungen = einstellungen;
+        _baender = baender;
     }
 
     private static HttpClient ErzeugeClient()
@@ -154,9 +159,7 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
 
             if (bereit)
             {
-                BandText = UpdateText.Bereitgelegt(neueVersion);
-                NeustartMoeglich = true;
-                SeiteAufrufbar = _seitenAdresse is not null;
+                Melde(neueVersion, UpdateText.Bereitgelegt(neueVersion), neustartMoeglich: true);
             }
         }
         catch (Exception ex)
@@ -215,13 +218,122 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
         // Der Dateiname fuer dieses System kommt aus derselben Stelle, die
         // ihn auch beim Suchen benutzt - so kann die Anleitung nie eine
         // andere Datei nennen als die, die tatsaechlich gilt.
-        BandText = UpdateText.NurHinweis(
+        var meldung = UpdateText.NurHinweis(
             version,
             hindernis,
             UpdatePlatform.AssetName(),
             istBundle: RuntimeInformation.IsOSPlatform(OSPlatform.OSX));
-        NeustartMoeglich = false;
-        SeiteAufrufbar = _seitenAdresse is not null;
+
+        Melde(version, meldung, neustartMoeglich: false);
+    }
+
+    /// <summary>
+    /// Gemeinsamer Ausgang aller Faelle: merken, die Fusszeile setzen und
+    /// - sofern die Fassung nicht schon einmal weggeklickt wurde - das
+    /// Band stellen.
+    ///
+    /// Die Suche laeuft auf einem Hintergrundstrang (siehe
+    /// App.SucheNachNeuerFassung), die Oberflaeche will aber vom
+    /// Oberflaechenstrang aus geaendert werden - deshalb das Posten.
+    /// </summary>
+    private void Melde(string version, Bandmeldung meldung, bool neustartMoeglich)
+    {
+        _gefundeneVersion = version;
+        _meldung = meldung;
+        _neustartMoeglich = neustartMoeglich;
+
+        var schonWeggeklickt = _einstellungen.Load().DismissedUpdateVersion == version;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            FusszeilenText = $"Fassung {version} verfügbar";
+
+            if (!schonWeggeklickt)
+            {
+                StelleBand();
+            }
+        });
+    }
+
+    /// <summary>
+    /// Stellt die gemerkte Meldung in die Bandzone. Genau EIN
+    /// hervorgehobener Knopf, und je Lage ein anderer: liegt eine Fassung
+    /// bereit, fuehrt der Weg ueber den Neustart; laesst sie sich nicht
+    /// selbst einspielen, ueber die Veroeffentlichungsseite. Beide
+    /// zugleich zu zeigen liess das Band wie eine Wahl unter
+    /// gleichwertigen Wegen aussehen, obwohl sie zu verschiedenen Lagen
+    /// gehoeren.
+    /// </summary>
+    private void StelleBand()
+    {
+        if (_meldung is null)
+        {
+            return;
+        }
+
+        string? text = null;
+        string? tipp = null;
+        Action? aktion = null;
+
+        if (_neustartMoeglich)
+        {
+            text = "Jetzt neu starten";
+            tipp = "Schließt die Anwendung und öffnet sie sofort wieder — dabei "
+                + "wird die neue Fassung übernommen.";
+            aktion = JetztNeuStarten;
+        }
+        else if (_seitenAdresse is not null)
+        {
+            text = "Veröffentlichungsseite";
+            tipp = "Öffnet die Seite, auf der die neue Fassung zum Herunterladen liegt.";
+            aktion = SeiteOeffnen;
+        }
+
+        _baender.Zeige(new Bandeintrag
+        {
+            Schluessel = BandSchluessel,
+            Meldung = _meldung,
+            AktionText = text,
+            AktionTipp = tipp,
+            Aktion = aktion,
+            BeimSchliessen = MerkeVerworfen,
+        });
+    }
+
+    /// <summary>
+    /// Holt das weggeklickte Band zurueck - der Klick auf den Hinweis in
+    /// der Sidebar-Fusszeile.
+    /// </summary>
+    [RelayCommand]
+    private void BandWiederZeigen() => StelleBand();
+
+    /// <summary>
+    /// "Später" heisst wirklich spaeter: die weggeklickte Fassung wird
+    /// gemerkt, damit dasselbe Band nicht bei jedem Start von neuem
+    /// erscheint. Erscheint eine noch neuere Fassung, stimmt die gemerkte
+    /// Nummer nicht mehr ueberein und das Band kommt wieder - genau so
+    /// soll es sein.
+    ///
+    /// Schlaegt das Schreiben fehl, ist das kein Grund fuer eine Meldung:
+    /// die Folge ist lediglich, dass das Band beim naechsten Start noch
+    /// einmal erscheint.
+    /// </summary>
+    private void MerkeVerworfen()
+    {
+        if (_gefundeneVersion is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _einstellungen.Save(
+                _einstellungen.Load() with { DismissedUpdateVersion = _gefundeneVersion });
+        }
+        catch (Exception ex)
+        {
+            AppLog.Current.Exception("Beim Merken der zurueckgestellten Fassung", ex);
+        }
     }
 
     // Der Zeitpunkt ist nur Anzeige und Protokoll - schlaegt das
@@ -266,9 +378,6 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
         await quelle.CopyToAsync(senke, abbruch).ConfigureAwait(false);
     }
 
-    [RelayCommand]
-    private void Schliessen() => BandText = null;
-
     /// <summary>
     /// Startet die Anwendung neu, damit die bereitgelegte Fassung
     /// uebernommen wird.
@@ -291,13 +400,15 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
     /// keiner starten, endet hier NICHTS: sonst waere die Anwendung weg,
     /// und die Aktualisierung haette sie gekostet.
     /// </summary>
-    [RelayCommand]
     private void JetztNeuStarten()
     {
         if (!Neustart.StarteSichSelbst())
         {
-            BandText = UpdateText.NeustartGescheitert();
-            NeustartMoeglich = false;
+            // Das gescheiterte Neustarten loest die bisherige Meldung ab,
+            // statt sich daneben zu stellen - derselbe Schluessel.
+            _meldung = UpdateText.NeustartGescheitert();
+            _neustartMoeglich = false;
+            StelleBand();
             return;
         }
 
@@ -312,7 +423,6 @@ public sealed partial class AktualisierungViewModel : ViewModelBase
     /// Oeffnet die Veroeffentlichungsseite im Browser - fuer die Faelle,
     /// in denen nicht selbst eingespielt werden kann.
     /// </summary>
-    [RelayCommand]
     private void SeiteOeffnen()
     {
         if (_seitenAdresse is null)

@@ -94,11 +94,34 @@ public class MeldungsGrundsaetzeTests
         Nimm("Unerwartet/Speichern", UnerwarteterBericht(
             new UnauthorizedAccessException("x")).Message);
 
+        // ---- Baender ----
+        // Ein Band besteht aus drei Teilen, und jeder einzelne muss fuer
+        // sich bestehen: der Titel als Ueberschrift (kurz, deshalb von den
+        // Laengenregeln ausgenommen), die Kurzzeile und der Langtext.
+        // Nur die Summe zu pruefen liesse zu, dass die Kurzzeile allein
+        // ratlos macht - und sie ist der Teil, den fast jeder liest.
+        void NimmBand(string name, Bandmeldung band)
+        {
+            Nimm($"BandTitel/{name}", band.Titel);
+            Nimm($"{name}/Kurz", band.Kurz);
+
+            if (band.Details is not null)
+            {
+                Nimm($"{name}/Details", band.Details);
+            }
+        }
+
+        NimmBand("Band/Sicherungsfehler", Bandtexte.Sicherungsfehler(StorageProblem.DiskFull));
+        NimmBand("Band/ErzeugteBuchungen", Bandtexte.ErzeugteBuchungen(
+            ["07.08.2026 - 42,90 €", "08.08.2026 - 12,00 € (Zeitung)"]));
+        NimmBand("Band/ErzeugteBuchungenEine", Bandtexte.ErzeugteBuchungen(
+            ["07.08.2026 - 42,90 €"]));
+
         // ---- Selbstaktualisierung ----
-        Nimm("Update/Bereitgelegt", UpdateText.Bereitgelegt("1.2.0"));
+        NimmBand("Update/Bereitgelegt", UpdateText.Bereitgelegt("1.2.0"));
+        NimmBand("Update/NeustartGescheitert", UpdateText.NeustartGescheitert());
         Nimm("Update/Gescheitert", UpdateText.AustauschGescheitert("1.2.0"));
         Nimm("Update/WasIstNeu", UpdateText.WasIstNeuEinleitung("1.2.0"));
-        Nimm("Update/NeustartGescheitert", UpdateText.NeustartGescheitert());
 
         foreach (var hindernis in Enum.GetValues<UpdateHindernis>())
         {
@@ -106,10 +129,10 @@ public class MeldungsGrundsaetzeTests
             // gibt es keine Datei), mit Programmdatei und mit Bundle. Die
             // Anleitung ist der laengste Teil des Textes - sie ungeprueft
             // zu lassen hiesse, gerade das Neue nicht zu pruefen.
-            Nimm($"Update/Hinweis/{hindernis}", UpdateText.NurHinweis("1.2.0", hindernis));
-            Nimm($"Update/HinweisDatei/{hindernis}", UpdateText.NurHinweis(
+            NimmBand($"Update/Hinweis/{hindernis}", UpdateText.NurHinweis("1.2.0", hindernis));
+            NimmBand($"Update/HinweisDatei/{hindernis}", UpdateText.NurHinweis(
                 "1.2.0", hindernis, "Ausgabenverwaltung-win-x64.zip"));
-            Nimm($"Update/HinweisBundle/{hindernis}", UpdateText.NurHinweis(
+            NimmBand($"Update/HinweisBundle/{hindernis}", UpdateText.NurHinweis(
                 "1.2.0", hindernis, "Ausgabenverwaltung-osx-arm64.tar.gz", istBundle: true));
         }
 
@@ -152,9 +175,16 @@ public class MeldungsGrundsaetzeTests
     [MemberData(nameof(AlleHaupttexte))]
     public void Jede_Meldung_besteht_aus_ganzen_Saetzen(string name, string text)
     {
-        Assert.True(
-            text.Contains('.') || text.Contains('?'),
-            $"„{name}“ enthält keinen abgeschlossenen Satz.");
+        // Ueberschriften sind ausgenommen: sie benennen den Fall und sind
+        // deshalb KEIN Satz - "Fassung 1.7.0 ist bereit" gehoert kein
+        // Punkt hinter. Die Forderung nach ganzen Saetzen richtet sich an
+        // den erklaerenden Text darunter, und der bleibt geprueft.
+        if (!IstUeberschrift(name))
+        {
+            Assert.True(
+                text.Contains('.') || text.Contains('?'),
+                $"„{name}“ enthält keinen abgeschlossenen Satz.");
+        }
 
         // Ein ganzer Satz beginnt gross.
         Assert.True(
@@ -268,7 +298,8 @@ public class MeldungsGrundsaetzeTests
     /// </summary>
     private static bool IstUeberschrift(string name)
         => name.StartsWith("StartTitel/", StringComparison.Ordinal)
-           || name.StartsWith("ZustandTitel/", StringComparison.Ordinal);
+           || name.StartsWith("ZustandTitel/", StringComparison.Ordinal)
+           || name.StartsWith("BandTitel/", StringComparison.Ordinal);
 
     private static ErrorReport UnerwarteterBericht(Exception ausnahme)
         => UnexpectedErrorText.Describe("beim Aufbau der Ansicht", ausnahme, @"C:\Logs", "1.0.0-test");

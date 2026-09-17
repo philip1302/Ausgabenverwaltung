@@ -108,7 +108,8 @@ public class BalkenKlickTests : IDisposable
     }
 
     private AusgabenlisteViewModel NeueListe() => new(
-        _ausgaben, _kategorien, _personen, _einstellungen.Store, new WeakReferenceMessenger());
+        _ausgaben, _kategorien, _personen, _einstellungen.Store,
+        new WeakReferenceMessenger(), new ToastViewModel());
 
     /// <summary>
     /// Klickt den ersten Balken der gesuchten Art an und liefert die

@@ -324,6 +324,10 @@ public partial class App : Application
             DateOnly.FromDateTime(DateTime.Now)));
 
         services.AddSingleton(startupResult);
+        // Die eine Bandzone und die Toasts: beide sind Anzeigeorte, die
+        // sich mehrere Bereiche teilen, und deshalb je EINE Instanz.
+        services.AddSingleton<BaenderViewModel>();
+        services.AddSingleton<ToastViewModel>();
         services.AddSingleton<StartupNoticeViewModel>();
         services.AddSingleton<AktualisierungViewModel>();
 

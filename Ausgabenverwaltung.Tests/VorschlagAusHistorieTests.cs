@@ -54,7 +54,7 @@ public class VorschlagAusHistorieTests : IDisposable
     private ErfassenViewModel NeueErfassung() => new(
         _ausgaben, _kategorien, _personen,
         new AppSettingsStore(Path.Combine(_tempDir.FullName, "settings.json")),
-        new WeakReferenceMessenger());
+        new WeakReferenceMessenger(), new ToastViewModel());
 
     /// <summary>
     /// Wartet auf das entprellte Angebot. Gepollt statt fest gewartet,

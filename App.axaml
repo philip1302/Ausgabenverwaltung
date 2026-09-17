@@ -234,6 +234,19 @@
             <!-- Zusaetzliche kleine Icons fuer die KPI-Kacheln der Startseite. -->
             <StreamGeometry x:Key="IconPfeilHoch">M12,19 V5 M6,11 L12,5 L18,11</StreamGeometry>
             <StreamGeometry x:Key="IconPfeilRunter">M12,5 V19 M6,13 L12,19 L18,13</StreamGeometry>
+
+            <!-- Statusicons der Hinweisbaender und Toasts. Sie sind nicht
+                 Schmuck: die Farbe allein traegt die Bedeutung nicht
+                 (Regel 10), und ein Band ohne Icon liest sich ohne
+                 Rangfolge - erst das Zeichen links sagt im Vorbeigehen, ob
+                 hier etwas schiefging oder nur etwas anliegt.
+                 Strichzeichnungen im selben 24x24-Raster wie die
+                 Navigationsicons, damit kein zweiter Icon-Stil entsteht. -->
+            <StreamGeometry x:Key="IconBandHinweis">M12,3 A9,9 0 1 1 11.99,3 Z M12,11 V16.5 M12,7.6 L12.01,7.6</StreamGeometry>
+            <StreamGeometry x:Key="IconBandErfolg">M12,3 A9,9 0 1 1 11.99,3 Z M7.6,12.2 L10.6,15.2 L16.4,9.4</StreamGeometry>
+            <StreamGeometry x:Key="IconBandWarnung">M12,4 L21,19.5 H3 Z M12,10 V14.2 M12,17 L12.01,17</StreamGeometry>
+            <StreamGeometry x:Key="IconBandFehler">M12,3 A9,9 0 1 1 11.99,3 Z M12,7.5 V13 M12,16.4 L12.01,16.4</StreamGeometry>
+            <StreamGeometry x:Key="IconSchliessen">M6,6 L18,18 M18,6 L6,18</StreamGeometry>
         </ResourceDictionary>
     </Application.Resources>
 
@@ -479,10 +492,113 @@
         <Style Selector="Border.banner.hinweis TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource HinweisText}" />
         </Style>
-        <!-- Ein "Schliessen"-/Aktions-Button innerhalb eines Banners soll
-             dessen Textfarbe NICHT erben - sonst waere er auf der eigenen
-             Flaeche kaum vom Text zu unterscheiden. -->
-        <Style Selector="Border.banner Button">
+        <!-- Ein zurueckhaltender Button innerhalb eines Banners soll dessen
+             Textfarbe NICHT erben - sonst waere er auf der eigenen Flaeche
+             kaum vom Text zu unterscheiden.
+
+             Ausdruecklich NUR .ghost und .secondary: vorher galt die Regel
+             fuer JEDEN Button im Banner und damit auch fuer .primary. Der
+             ist gefuellt in der Akzentfarbe und traegt seine Schrift in
+             TextAufAccentFarbe - die Regel hat sie ihm wieder abgenommen
+             und dunkle Schrift auf dunklen Grund gesetzt. -->
+        <Style Selector="Border.banner Button.ghost, Border.banner Button.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+
+        <!-- ==== Anatomie eines Hinweisbands ====
+             Icon | Titel + eine Zeile | Aktionen | Schliessen.
+
+             Der Grund fuer diese Aufteilung steht bei
+             Core.Errors.Bandmeldung: ein Band ist eine Statuszeile und
+             kein Absatz. Vorher stand der ganze Text in EINEM TextBlock,
+             mit Leerzeilen als Absatztrenner, ueber die volle
+             Fensterbreite - vier bis sechs Zeilen, in denen alles dieselbe
+             Groesse und Farbe hatte. -->
+        <Style Selector="TextBlock.bandtitel">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftNormal}" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.bandzeile">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <!-- Zwei Zeilen, dann Auslassungspunkte. Das ist die Zusage,
+                 dass das Band nicht waechst; der vollstaendige Text steht
+                 hinter "Details". -->
+            <Setter Property="MaxLines" Value="2" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <!-- Das Statusicon nimmt die Textfarbe seines Rangs an. -->
+        <Style Selector="Border.banner Path.bandicon">
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="StrokeThickness" Value="1.75" />
+            <Setter Property="StrokeLineCap" Value="Round" />
+            <Setter Property="StrokeJoin" Value="Round" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style Selector="Border.banner.erfolg Path.bandicon">
+            <Setter Property="Stroke" Value="{DynamicResource ErfolgText}" />
+        </Style>
+        <Style Selector="Border.banner.warnung Path.bandicon">
+            <Setter Property="Stroke" Value="{DynamicResource WarnungText}" />
+        </Style>
+        <Style Selector="Border.banner.fehler Path.bandicon">
+            <Setter Property="Stroke" Value="{DynamicResource FehlerText}" />
+        </Style>
+        <Style Selector="Border.banner.hinweis Path.bandicon">
+            <Setter Property="Stroke" Value="{DynamicResource HinweisText}" />
+        </Style>
+
+        <!-- Schliessen als Kreuz und nicht als drittes Wort: im
+             Aktualisierungsband standen "Veröffentlichungsseite",
+             "Jetzt beenden" und "Schließen" als drei gleich grosse
+             Textknoepfe nebeneinander und sahen aus wie eine Wahl unter
+             drei gleichwertigen Wegen. -->
+        <Style Selector="Button.bandschliessen">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style Selector="Button.bandschliessen Path">
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="StrokeThickness" Value="1.75" />
+            <Setter Property="StrokeLineCap" Value="Round" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Setter Property="Stroke" Value="{DynamicResource TextSekundaerFarbe}" />
+        </Style>
+        <Style Selector="Button.bandschliessen:pointerover Path">
+            <Setter Property="Stroke" Value="{DynamicResource TextPrimaerFarbe}" />
+        </Style>
+
+        <!-- Der Zaehler "2 von 3", wenn mehr als eine Meldung ansteht. -->
+        <Style Selector="TextBlock.bandzaehler">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftKlein}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+
+        <!-- ==== Toast ====
+             Die kurze Bestaetigung unten rechts. Sie schwebt ueber dem
+             Inhalt und verschiebt deshalb nichts - das war der eigentliche
+             Fehler der frueheren Loesung, die "Gespeichert." als Band ins
+             Formular schob und zwei Sekunden spaeter wieder herauszog,
+             waehrend der naechste Betrag getippt wurde. -->
+        <Style Selector="Border.toast">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedFarbe}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderDezentFarbe}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Margin" Value="24" />
+            <Setter Property="BoxShadow" Value="0 4 16 0 #2A000000" />
+        </Style>
+        <Style Selector="Border.toast TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource SchriftNormal}" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaerFarbe}" />
         </Style>
 

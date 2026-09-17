@@ -47,92 +47,97 @@
     </Window.Resources>
 
     <DockPanel>
-        <!-- ============ App-weite Hinweisbaender ============
-             Bleiben oben andockbar ueber der ganzen App, unabhaengig vom
-             gewaehlten Bereich (UI/UX-Redesign, Abschnitt 4) - jetzt im
-             einheitlichen Banner-Stil statt hart codierter Hex-Farben. -->
-        <!-- Neue Fassung geladen und bereitgelegt. Erscheint nur, wenn
-             tatsaechlich etwas gefunden wurde - "alles aktuell" ist keine
-             Nachricht und bekommt deshalb kein Band. -->
+        <!-- ============ Die eine app-weite Hinweiszone ============
+             Bleibt oben andockbar ueber der ganzen App, unabhaengig vom
+             gewaehlten Bereich (UI/UX-Redesign, Abschnitt 4).
+
+             Frueher standen hier DREI eigene Baender untereinander -
+             Aktualisierung, Sicherungsfehler und erzeugte wiederkehrende
+             Buchungen. Alle drei zugleich schoben den Inhalt um ein
+             Vielfaches ihrer eigenen Hoehe nach unten, und keines war
+             dadurch wichtiger als das andere. Jetzt gibt es eine Zone, die
+             hoechstens EIN Band zeigt; welches, entscheidet der Rang
+             (Core.Errors.Bandauswahl), die uebrigen lassen sich
+             durchblaettern.
+
+             Aufbau: Icon | Titel + eine Zeile | Aktionen | Kreuz. Der
+             lange Text steht nicht hier, sondern hinter "Details" - die
+             Begruendung dazu bei Core.Errors.Bandmeldung. -->
         <Border DockPanel.Dock="Top"
-                Classes="banner hinweis"
+                Classes="banner"
+                Classes.hinweis="{Binding Baender.IstHinweis}"
+                Classes.erfolg="{Binding Baender.IstErfolg}"
+                Classes.warnung="{Binding Baender.IstWarnung}"
+                Classes.fehler="{Binding Baender.IstFehler}"
                 CornerRadius="0"
                 BorderThickness="0,0,0,1"
-                IsVisible="{Binding Aktualisierung.BandSichtbar}">
-            <!-- Genau EIN hervorgehobener Knopf je Lage. Vorher standen
-                 hier drei nebeneinander — „Veröffentlichungsseite",
-                 „Jetzt beenden" (hervorgehoben) und „Schließen" —, und
-                 der auffälligste war der, der die Anwendung beendet, auf
-                 einem Band, das gleichzeitig beteuert, es laufe alles
-                 weiter. Die beiden ersten gehören zu VERSCHIEDENEN Lagen:
-                 liegt eine Fassung bereit, führt der Weg über den
-                 Neustart; lässt sie sich nicht selbst einspielen, über die
-                 Veröffentlichungsseite. Beide zugleich zu zeigen war der
-                 Grund, warum das Band wie eine Wahl unter drei
-                 gleichwertigen Wegen aussah. -->
-            <Grid ColumnDefinitions="*,Auto,Auto">
-                <TextBlock Grid.Column="0"
-                           Text="{Binding Aktualisierung.BandText}"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Center" />
-                <Button Grid.Column="1"
-                        Classes="primary"
-                        Content="Jetzt neu starten"
-                        IsVisible="{Binding Aktualisierung.NeustartMoeglich}"
-                        ToolTip.Tip="Schließt die Anwendung und öffnet sie sofort wieder — dabei wird die neue Fassung übernommen."
-                        Command="{Binding Aktualisierung.JetztNeuStartenCommand}"
-                        VerticalAlignment="Center" />
-                <Button Grid.Column="1"
-                        Classes="primary"
-                        Content="Veröffentlichungsseite"
-                        IsVisible="{Binding Aktualisierung.NurSeiteAufrufbar}"
-                        Command="{Binding Aktualisierung.SeiteOeffnenCommand}"
-                        VerticalAlignment="Center" />
-                <Button Grid.Column="2" Classes="ghost"
-                        Content="Später"
-                        ToolTip.Tip="Blendet den Hinweis aus. Eine bereitliegende Fassung wird beim nächsten Start trotzdem übernommen."
-                        Command="{Binding Aktualisierung.SchliessenCommand}"
-                        VerticalAlignment="Center" />
+                Padding="20,12"
+                IsVisible="{Binding Baender.Sichtbar}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- Vier Zeichen, je eines je Rang - sichtbar ist immer
+                     genau das des gezeigten Bandes. Farbe allein traegt
+                     die Bedeutung nicht (Regel 10). -->
+                <Panel Grid.Column="0" Margin="0,1,12,0" VerticalAlignment="Top">
+                    <Path Classes="bandicon" Data="{DynamicResource IconBandHinweis}"
+                          Width="{anzeige:Breite 20}" Height="{anzeige:Breite 20}"
+                          IsVisible="{Binding Baender.IstHinweis}" />
+                    <Path Classes="bandicon" Data="{DynamicResource IconBandErfolg}"
+                          Width="{anzeige:Breite 20}" Height="{anzeige:Breite 20}"
+                          IsVisible="{Binding Baender.IstErfolg}" />
+                    <Path Classes="bandicon" Data="{DynamicResource IconBandWarnung}"
+                          Width="{anzeige:Breite 20}" Height="{anzeige:Breite 20}"
+                          IsVisible="{Binding Baender.IstWarnung}" />
+                    <Path Classes="bandicon" Data="{DynamicResource IconBandFehler}"
+                          Width="{anzeige:Breite 20}" Height="{anzeige:Breite 20}"
+                          IsVisible="{Binding Baender.IstFehler}" />
+                </Panel>
+
+                <!-- Gedeckelte Breite: ohne sie liefe die Zeile auf einem
+                     breiten Bildschirm ueber die ganze Fensterbreite, und
+                     eine 1800 Pixel lange Zeile liest niemand. -->
+                <StackPanel Grid.Column="1" Spacing="2"
+                            MaxWidth="{anzeige:Breite 760}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center">
+                    <TextBlock Classes="bandtitel" Text="{Binding Baender.Titel}" />
+                    <TextBlock Classes="bandzeile" Text="{Binding Baender.Kurz}" />
+                </StackPanel>
+
+                <!-- Genau EIN hervorgehobener Knopf (primary). "Details"
+                     tritt dahinter zurueck, "Weiter" erscheint nur, wenn
+                     ueberhaupt mehr als eine Meldung ansteht. -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                            VerticalAlignment="Center">
+                    <TextBlock Classes="bandzaehler"
+                               Text="{Binding Baender.Zaehltext}"
+                               IsVisible="{Binding Baender.MehrereVorhanden}" />
+                    <Button Classes="ghost" Content="Weiter"
+                            IsVisible="{Binding Baender.MehrereVorhanden}"
+                            ToolTip.Tip="Zeigt den nächsten anstehenden Hinweis."
+                            Command="{Binding Baender.WeiterCommand}" />
+                    <Button Classes="secondary" Content="Details"
+                            IsVisible="{Binding Baender.DetailsVorhanden}"
+                            ToolTip.Tip="Zeigt den vollständigen Text zu diesem Hinweis."
+                            Command="{Binding Baender.DetailsCommand}" />
+                    <Button Classes="primary"
+                            Content="{Binding Baender.AktionText}"
+                            IsVisible="{Binding Baender.AktionVorhanden}"
+                            ToolTip.Tip="{Binding Baender.AktionTipp}"
+                            Command="{Binding Baender.AusfuehrenCommand}" />
+                    <Button Classes="bandschliessen"
+                            ToolTip.Tip="Blendet diesen Hinweis aus. Stehen weitere an, rückt der nächste nach."
+                            Command="{Binding Baender.SchliessenCommand}">
+                        <Path Data="{DynamicResource IconSchliessen}"
+                              Width="{anzeige:Breite 14}" Height="{anzeige:Breite 14}" />
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <Border DockPanel.Dock="Top"
-                Classes="banner fehler"
-                CornerRadius="0"
-                BorderThickness="0,0,0,1"
-                IsVisible="{Binding StartupNotice.BackupErrorVisible}">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0"
-                           Text="{Binding StartupNotice.BackupErrorText}"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Center" />
-                <Button Grid.Column="1" Classes="ghost"
-                        Content="Schließen"
-                        Command="{Binding StartupNotice.DismissBackupErrorCommand}" />
-            </Grid>
-        </Border>
-
-        <Border DockPanel.Dock="Top"
-                Classes="banner hinweis"
-                CornerRadius="0"
-                BorderThickness="0,0,0,1"
-                IsVisible="{Binding StartupNotice.IsVisible}">
-            <StackPanel Spacing="8">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Grid.Column="0"
-                               Text="{Binding StartupNotice.SummaryText}"
-                               VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="ghost"
-                            Content="Schließen"
-                            Command="{Binding StartupNotice.DismissCommand}" />
-                </Grid>
-                <Expander Header="Details anzeigen">
-                    <ItemsControl ItemsSource="{Binding StartupNotice.GeneratedExpenseDescriptions}" />
-                </Expander>
-            </StackPanel>
-        </Border>
-
-        <!-- ============ Sidebar + Inhalt ============ -->
+        <!-- ============ Sidebar + Inhalt ============
+             Im Panel, damit Toast und Detailauflage DARUEBER liegen statt
+             im Fluss: beide sollen nichts verschieben. -->
+        <Panel>
         <Grid ColumnDefinitions="Auto,*">
             <Border Grid.Column="0" Classes="sidebar"
                     Width="{anzeige:Breite 240}"
@@ -199,7 +204,31 @@
                          ein Klick wechselt wie jeder andere Bereichswechsel
                          den normalen Anzeigebereich rechts (UI/UX-Redesign,
                          Abschnitt 3). -->
-                    <Button Grid.Row="2" Classes="sidebar-fusszeile"
+                    <StackPanel Grid.Row="2">
+                    <!-- Der ruhige Dauerplatz einer verfuegbaren Fassung.
+                         Er ist der Grund, warum "Später" am Band wirklich
+                         spaeter heissen darf: das Band kommt fuer diese
+                         Fassung nicht wieder, die Auskunft bleibt
+                         trotzdem erreichbar. Ohne ihn stuende die Wahl
+                         zwischen Nerven und Vergessen. -->
+                    <Button Classes="sidebar-fusszeile"
+                            Height="{anzeige:Breite 36}"
+                            BorderThickness="0,1,0,0" Padding="8,0" Margin="0,8,0,0"
+                            IsVisible="{Binding Aktualisierung.FusszeileSichtbar}"
+                            ToolTip.Tip="Zeigt den Hinweis zur neuen Fassung wieder an."
+                            Command="{Binding Aktualisierung.BandWiederZeigenCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Path Data="{DynamicResource IconPfeilHoch}"
+                                  Width="{anzeige:Breite 14}" Height="{anzeige:Breite 14}"
+                                  Stretch="Uniform" StrokeThickness="1.75"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  Fill="Transparent" Stroke="{DynamicResource HinweisText}" />
+                            <TextBlock Classes="klein" Foreground="{DynamicResource HinweisText}"
+                                       Text="{Binding Aktualisierung.FusszeilenText}" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Classes="sidebar-fusszeile"
                             Height="{anzeige:Breite 44}"
                             BorderThickness="0,1,0,0" Padding="8,0" Margin="0,8,0,0"
                             Command="{Binding OeffneDarstellungCommand}">
@@ -213,6 +242,7 @@
                                        Text="{Binding Darstellung.FusszeilenText}" />
                         </StackPanel>
                     </Button>
+                    </StackPanel>
                 </Grid>
             </Border>
 
@@ -220,5 +250,67 @@
                              Background="{DynamicResource CanvasFarbe}"
                              Content="{Binding SelectedNavigationItem.ViewModel}" />
         </Grid>
+
+        <!-- ============ Toast ============
+             Die kurzen Bestaetigungen ("Gespeichert.") - unten rechts,
+             ueber dem Inhalt, selbstloeschend. Sie verschieben nichts:
+             genau das war der Fehler ihrer frueheren Form als Band im
+             Formular. -->
+        <Border Classes="toast" IsVisible="{Binding Toast.Sichtbar}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Path Data="{DynamicResource IconBandErfolg}"
+                      Width="{anzeige:Breite 18}" Height="{anzeige:Breite 18}"
+                      Stretch="Uniform" StrokeThickness="1.75"
+                      StrokeLineCap="Round" StrokeJoin="Round"
+                      Fill="Transparent" Stroke="{DynamicResource ErfolgText}"
+                      VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Toast.Text}" VerticalAlignment="Center" />
+                <Button Classes="ghost klein"
+                        Content="{Binding Toast.AktionText}"
+                        IsVisible="{Binding Toast.AktionVorhanden}"
+                        Command="{Binding Toast.AusfuehrenCommand}" />
+                <Button Classes="bandschliessen" Padding="4"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Blendet die Bestätigung aus."
+                        Command="{Binding Toast.SchliessenCommand}">
+                    <Path Data="{DynamicResource IconSchliessen}"
+                          Width="{anzeige:Breite 12}" Height="{anzeige:Breite 12}" />
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- ============ Der lange Text eines Bandes ============
+             Kein eigenes Fenster, sondern eine Auflage wie ueberall sonst
+             in dieser Anwendung (Vorlagen, Auswertung, Ausgabenliste). Sie
+             traegt das, was frueher im Band selbst stand: die Erklaerung,
+             die Aussage ueber die Daten und - beim Aktualisieren von Hand -
+             die nummerierte Anleitung. -->
+        <Panel IsVisible="{Binding Baender.DetailsAktiv}" Background="#60000000">
+            <Border Background="{DynamicResource SurfaceRaisedFarbe}"
+                    BorderBrush="{DynamicResource BorderStarkFarbe}" BorderThickness="1"
+                    CornerRadius="8" Padding="20" Margin="24"
+                    MaxWidth="{anzeige:Breite 680}"
+                    VerticalAlignment="Center">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="{Binding Baender.DetailsTitel}"
+                               Classes="ueberschrift"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,12" />
+
+                    <Button DockPanel.Dock="Bottom" Classes="primary"
+                            Content="Schließen"
+                            HorizontalAlignment="Right"
+                            Margin="0,16,0,0"
+                            Command="{Binding Baender.DetailsSchliessenCommand}" />
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBlock Text="{Binding Baender.DetailsText}"
+                                   TextWrapping="Wrap" />
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Panel>
+        </Panel>
     </DockPanel>
 </Window>

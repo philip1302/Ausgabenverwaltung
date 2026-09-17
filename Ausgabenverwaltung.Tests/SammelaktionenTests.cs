@@ -56,7 +56,8 @@ public class SammelaktionenTests : IDisposable
     }
 
     private AusgabenlisteViewModel NeueListe() =>
-        new(_ausgaben, _kategorien, _personen, _einstellungen.Store, new WeakReferenceMessenger());
+        new(_ausgaben, _kategorien, _personen, _einstellungen.Store,
+            new WeakReferenceMessenger(), new ToastViewModel());
 
     // Der Vorgabezeitraum der Liste ist nicht das ganze Jahr - die
     // Testbuchungen liegen deshalb auf heute, damit sie in der Liste

@@ -58,9 +58,24 @@ public sealed partial class MainViewModel : ViewModelBase
     public StartupNoticeViewModel StartupNotice { get; }
 
     /// <summary>
-    /// Das Band zur Selbstaktualisierung - erscheint erst, wenn im
-    /// Hintergrund tatsaechlich eine neue Fassung gefunden wurde (siehe
-    /// <see cref="AktualisierungViewModel"/>).
+    /// Die eine Hinweiszone ganz oben. Alle app-weiten Meldungen stellen
+    /// ihr Band hier ein - Aktualisierung, Sicherungsfehler, erzeugte
+    /// wiederkehrende Buchungen -, und sichtbar ist hoechstens eines
+    /// (siehe <see cref="BaenderViewModel"/>).
+    /// </summary>
+    public BaenderViewModel Baender { get; }
+
+    /// <summary>
+    /// Die kurzen Bestaetigungen unten rechts. Sie schweben ueber dem
+    /// Inhalt und verschieben deshalb nichts (siehe
+    /// <see cref="ToastViewModel"/>).
+    /// </summary>
+    public ToastViewModel Toast { get; }
+
+    /// <summary>
+    /// Die Selbstaktualisierung - sie meldet sich ueber
+    /// <see cref="Baender"/> und haelt daneben den ruhigen Hinweis in der
+    /// Sidebar-Fusszeile (siehe <see cref="AktualisierungViewModel"/>).
     /// </summary>
     public AktualisierungViewModel Aktualisierung { get; }
 
@@ -112,6 +127,8 @@ public sealed partial class MainViewModel : ViewModelBase
 
     public MainViewModel(
         StartupNoticeViewModel startupNotice,
+        BaenderViewModel baender,
+        ToastViewModel toast,
         AktualisierungViewModel aktualisierung,
         WasIstNeuViewModel wasIstNeu,
         TastenkuerzelViewModel tastenkuerzel,
@@ -125,6 +142,8 @@ public sealed partial class MainViewModel : ViewModelBase
         RecurringExpenseScheduler scheduler)
     {
         StartupNotice = startupNotice;
+        Baender = baender;
+        Toast = toast;
         Aktualisierung = aktualisierung;
         _startseite = startseite;
         _erfassen = erfassen;
@@ -228,6 +247,16 @@ public sealed partial class MainViewModel : ViewModelBase
             _ausgabenliste.ZeigeVorlagenBuchungen(anfrage.VorlageId, anfrage.Titel);
             SelectedNavigationItem = NavigationItems
                 .First(item => ReferenceEquals(item.ViewModel, _ausgabenliste));
+        };
+
+        // Der Knopf auf dem Band "Die Sicherung beim Start ist misslungen"
+        // fuehrt dorthin, wo sich ein neuer Versuch starten laesst. Das
+        // Band selbst kennt die Navigation nicht - dasselbe Muster wie bei
+        // allen anderen Spruengen hier.
+        startupNotice.SicherungAngefordert += (_, _) =>
+        {
+            SelectedNavigationItem = NavigationItems
+                .First(item => item.Title == "Datensicherung");
         };
 
         // "Ausgabe erfassen" auf der Startseite springt in den

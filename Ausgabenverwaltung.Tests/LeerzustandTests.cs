@@ -52,7 +52,8 @@ public class LeerzustandTests : IDisposable
     }
 
     private AusgabenlisteViewModel NeueListe() => new(
-        _ausgaben, _kategorien, _personen, _einstellungen.Store, new WeakReferenceMessenger());
+        _ausgaben, _kategorien, _personen, _einstellungen.Store,
+        new WeakReferenceMessenger(), new ToastViewModel());
 
     private static DateOnly Heute => DateOnly.FromDateTime(DateTime.Now);
 
@@ -156,7 +157,8 @@ public class LeerzustandTests : IDisposable
     {
         var messenger = new WeakReferenceMessenger();
         var liste = new AusgabenlisteViewModel(
-            _ausgaben, _kategorien, _personen, _einstellungen.Store, messenger);
+            _ausgaben, _kategorien, _personen, _einstellungen.Store, messenger,
+            new ToastViewModel());
 
         Assert.True(liste.NochNichtsErfasst);
 

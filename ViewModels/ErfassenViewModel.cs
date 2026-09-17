@@ -48,6 +48,13 @@ public sealed partial class ErfassenViewModel : ViewModelBase
     private readonly AppSettingsStore _settingsStore;
     private readonly IMessenger _messenger;
 
+    /// <summary>
+    /// Wohin die Bestaetigung nach dem Speichern geht. Sie stand frueher
+    /// als Band im Formular und schob beim Erscheinen alles darunter nach
+    /// unten - genau waehrend der naechste Betrag getippt wird.
+    /// </summary>
+    private readonly ToastViewModel _toast;
+
     public event EventHandler? FokusBetragAngefordert;
 
     /// <summary>
@@ -184,9 +191,6 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
     public bool ZahlerFehlerSichtbar => !string.IsNullOrEmpty(ZahlerFehler);
 
-    [ObservableProperty]
-    private bool _bestaetigungSichtbar;
-
     /// <summary>
     /// Die Rueckfrage bei einem ungewoehnlichen, aber moeglichen Datum
     /// (siehe <see cref="DatePlausibility"/>). Ein Band am Formular, kein
@@ -235,13 +239,15 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         CategoryRepository categoryRepository,
         PersonRepository personRepository,
         AppSettingsStore settingsStore,
-        IMessenger messenger)
+        IMessenger messenger,
+        ToastViewModel toast)
     {
         _expenseRepository = expenseRepository;
         _categoryRepository = categoryRepository;
         _personRepository = personRepository;
         _settingsStore = settingsStore;
         _messenger = messenger;
+        _toast = toast;
 
         // Direkte Feldzuweisung: ueber die Eigenschaft wuerde
         // OnWerteBehaltenChanged den gerade gelesenen Wert sofort wieder
@@ -579,8 +585,13 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         }
     }
 
+    // Gibt eine Task zurueck, obwohl nichts mehr darin abgewartet wird:
+    // das einzige Asynchrone war die Wartezeit des Bestaetigungsbands, und
+    // die ist mit dem Toast weggefallen. Die Signatur bleibt, damit
+    // SpeichernCommand ein AsyncRelayCommand bleibt - Bindung und
+    // Aufrufstellen haengen daran.
     [RelayCommand]
-    private async Task Speichern()
+    private Task Speichern()
     {
         // Die gesamte Pruefung liegt in Core (Regel 7) - hier werden die
         // Meldungen nur auf ihre Felder verteilt.
@@ -602,7 +613,7 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
         if (!pruefung.IsValid)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         // Ungewoehnliches, aber moegliches Datum: einmal nachfragen und
@@ -611,7 +622,7 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         if (pruefung.NeedsConfirmation && !_datumBestaetigt)
         {
             DatumRueckfrageText = pruefung.DateConfirmation;
-            return;
+            return Task.CompletedTask;
         }
 
         // Platte voll, Berechtigung entzogen, Laufwerk getrennt: dann
@@ -629,7 +640,7 @@ public sealed partial class ErfassenViewModel : ViewModelBase
 
         if (SpeicherFehlerText is not null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         _datumBestaetigt = false;
@@ -662,9 +673,9 @@ public sealed partial class ErfassenViewModel : ViewModelBase
         _messenger.Send(new BuchungenGeaendertNachricht());
         FokusBetragAngefordert?.Invoke(this, EventArgs.Empty);
 
-        BestaetigungSichtbar = true;
-        await Task.Delay(TimeSpan.FromSeconds(2));
-        BestaetigungSichtbar = false;
+        _toast.Zeige("Gespeichert.");
+
+        return Task.CompletedTask;
     }
 
     private void LadeLetzteAusgaben()

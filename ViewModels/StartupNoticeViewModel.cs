@@ -1,89 +1,89 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Ausgabenverwaltung.Core.Entities;
 using Ausgabenverwaltung.Core.Errors;
 using Ausgabenverwaltung.Core.Formatting;
 using Ausgabenverwaltung.Core.Startup;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace Ausgabenverwaltung.ViewModels;
 
 /// <summary>
-/// Wegklickbarer Hinweis ueber wiederkehrende Buchungen, die gerade
-/// automatisch erzeugt wurden - beim Programmstart und, weil die Erzeugung
-/// sonst am Start haengen wuerde, auch bei den Laeufen waehrend der
+/// Die beiden Meldungen, die der Start selbst zu berichten hat:
+/// wiederkehrende Buchungen, die gerade automatisch erzeugt wurden, und
+/// eine misslungene Sicherung.
+///
+/// Beide waren frueher je ein eigenes, dauerhaft angedocktes Band. Seit
+/// dem Umbau der Hinweisbaender stellen sie ihre Meldung in die
+/// gemeinsame Bandzone (<see cref="BaenderViewModel"/>), in der
+/// hoechstens eine zugleich sichtbar ist; die Texte kommen aus Core
+/// (<see cref="Bandtexte"/>) und nicht mehr aus diesem ViewModel
+/// (Regel 7 und 12).
+///
+/// Die Erzeugung laeuft nicht nur beim Programmstart, sondern - weil der
+/// Start sonst darauf warten muesste - auch bei den Laeufen waehrend der
 /// Sitzung (siehe <see cref="MainViewModel"/> und
-/// Core.RecurringExpenses.RecurringExpenseScheduler). Baut nur den
-/// Anzeigetext, keine Fachlogik (die steckt in Core).
+/// Core.RecurringExpenses.RecurringExpenseScheduler).
 /// </summary>
-public sealed partial class StartupNoticeViewModel : ViewModelBase
+public sealed class StartupNoticeViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private bool _isVisible;
+    private const string BandSchluesselBuchungen = "erzeugte-buchungen";
+    private const string BandSchluesselSicherung = "sicherung";
 
-    [ObservableProperty]
-    private string _summaryText = string.Empty;
-
-    [ObservableProperty]
-    private int _generatedExpenseCount;
-
-    [ObservableProperty]
-    private IReadOnlyList<string> _generatedExpenseDescriptions = [];
+    private readonly BaenderViewModel _baender;
 
     /// <summary>
-    /// Meldung ueber eine beim Start gescheiterte Sicherung. Sie darf den
-    /// Start nicht verhindern, aber auch nicht unbemerkt bleiben - ein
-    /// Band statt eines Dialogs. Ein nicht erreichbares ZWEITES Ziel
-    /// erscheint hier bewusst nicht: das steht still in den Einstellungen
-    /// (siehe Core.Backups.BackupResult.NeedsAttention).
+    /// Der Weg zur Datensicherung, wenn die Sicherung beim Start
+    /// misslungen ist. Der Text nennt "Verwaltung › Datensicherung" - ein
+    /// Knopf, der auch dorthin fuehrt, erspart das Suchen. Dieses
+    /// ViewModel kennt die Navigation nicht, es meldet nur an; verdrahtet
+    /// wird in <see cref="MainViewModel"/>, wie bei allen anderen
+    /// Spruengen auch.
     /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(BackupErrorVisible))]
-    private string? _backupErrorText;
+    public event EventHandler? SicherungAngefordert;
 
-    public bool BackupErrorVisible => BackupErrorText is not null;
-
-    public StartupNoticeViewModel(StartupResult startupResult)
+    public StartupNoticeViewModel(StartupResult startupResult, BaenderViewModel baender)
     {
+        _baender = baender;
+
         Zeige(startupResult.GeneratedExpenses);
 
         if (startupResult.Backup is { NeedsAttention: true } backup)
         {
-            BackupErrorText =
-                FileErrorText.ForBackup(backup.PrimaryProblem)
-                + "\n\nDie Anwendung läuft normal weiter. Unter "
-                + "„Verwaltung › Datensicherung“ lässt sich ein neuer Versuch starten; "
-                + "dort steht der Hinweis auch dann noch, wenn dieses Band hier "
-                + "weggeklickt ist.";
+            _baender.Zeige(new Bandeintrag
+            {
+                Schluessel = BandSchluesselSicherung,
+                Meldung = Bandtexte.Sicherungsfehler(backup.PrimaryProblem),
+                AktionText = "Zur Datensicherung",
+                AktionTipp = "Öffnet „Verwaltung › Datensicherung“, wo sich ein "
+                    + "neuer Versuch starten lässt.",
+                Aktion = () => SicherungAngefordert?.Invoke(this, EventArgs.Empty),
+            });
         }
     }
 
-    [RelayCommand]
-    private void DismissBackupError() => BackupErrorText = null;
-
     /// <summary>
-    /// Zeigt einen Erzeugungslauf an. Bei null Buchungen bleibt das Banner
-    /// unsichtbar - ein "es war nichts faellig" beim Bereichswechsel waere
-    /// nur Rauschen.
+    /// Zeigt einen Erzeugungslauf an. Bei null Buchungen bleibt es still -
+    /// ein "es war nichts faellig" beim Bereichswechsel waere nur Rauschen.
     /// </summary>
     public void Zeige(IReadOnlyList<Expense> erzeugte)
     {
-        GeneratedExpenseCount = erzeugte.Count;
-        GeneratedExpenseDescriptions = erzeugte
+        if (erzeugte.Count == 0)
+        {
+            return;
+        }
+
+        var beschreibungen = erzeugte
             .Select(expense =>
                 $"{IsoDate.ToDateText(expense.ExpenseDate)} - " +
                 $"{EuroText.Format(expense.AmountCents, expense.IsIncome)}" +
                 (string.IsNullOrEmpty(expense.Note) ? string.Empty : $" ({expense.Note})"))
             .ToList();
 
-        SummaryText = GeneratedExpenseCount == 1
-            ? "1 wiederkehrende Buchung wurde erzeugt."
-            : $"{GeneratedExpenseCount} wiederkehrende Buchungen wurden erzeugt.";
-
-        IsVisible = GeneratedExpenseCount > 0;
+        _baender.Zeige(new Bandeintrag
+        {
+            Schluessel = BandSchluesselBuchungen,
+            Meldung = Bandtexte.ErzeugteBuchungen(beschreibungen),
+        });
     }
-
-    [RelayCommand]
-    private void Dismiss() => IsVisible = false;
 }

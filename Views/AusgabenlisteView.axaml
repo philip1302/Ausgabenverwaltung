@@ -608,17 +608,12 @@
                 </Grid>
             </Border>
 
-            <Border DockPanel.Dock="Top" Classes="banner erfolg"
-                    IsVisible="{Binding ErfolgSichtbar}"
-                    Margin="0,0,0,10">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Grid.Column="0" Text="{Binding ErfolgText}"
-                               TextWrapping="Wrap" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="ghost" Content="Schließen"
-                            VerticalAlignment="Top"
-                            Command="{Binding ErfolgSchliessenCommand}" />
-                </Grid>
-            </Border>
+            <!-- Die Erfolgsmeldung stand hier als Band ueber der Liste und
+                 schob sie beim Erscheinen nach unten - ausgerechnet die
+                 Liste, in der man gerade nachsieht, ob die Aktion gewirkt
+                 hat. Sie erscheint jetzt als Toast unten rechts
+                 (ViewModels/ToastViewModel, Views/MainWindow.axaml);
+                 ErfolgText bleibt dabei die Quelle. -->
 
             <!-- Rückgängig nach einem umkehrbaren Vorgang: Löschen und
                  Abhaken (einzeln aus dem Kontextmenü wie über die

@@ -70,7 +70,8 @@ public class StartseiteWofuerTests : IDisposable
         new WeakReferenceMessenger());
 
     private AusgabenlisteViewModel NeueListe() => new(
-        _ausgaben, _kategorien, _personen, _einstellungen.Store, new WeakReferenceMessenger());
+        _ausgaben, _kategorien, _personen, _einstellungen.Store,
+        new WeakReferenceMessenger(), new ToastViewModel());
 
     private int Buche(int kategorieId, long cents, int? zahlerId = null, DateOnly? datum = null)
         => _ausgaben.Create(

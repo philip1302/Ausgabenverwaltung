@@ -3,6 +3,14 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <!-- Bindungspfade werden beim Bauen aufgeloest statt erst zur
+         Laufzeit. Ohne das ist ein Tippfehler in {Binding ...} kein
+         Fehler, sondern ein stilles leeres Feld - und genau danach sucht
+         man spaeter am laengsten. Voraussetzung ist ein x:DataType an der
+         Wurzel jeder Ansicht und an jedem DataTemplate; wo es keinen
+         festen Typ gibt, steht x:CompileBindings="False" an Ort und
+         Stelle, mit Begruendung. -->
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Symbol der Windows-EXE. Fuer macOS gibt es kein Aequivalent in
          der csproj - dort baut publish.ps1 Assets\AppIcon.icns direkt
